@@ -212,9 +212,11 @@ responses = {
         "Extract audio from a video using this command:\n\n"
         "➢ <b>/aud</b> - Reply to a video message with this command to convert the video into audio.\n\n"
         "➢ <b>/voice</b> - Reply to a audio message with this command to convert the audio into voice message.\n\n"
+        "➢ <b>/vnote</b> - Reply to a video message to convert it into a circular Telegram video note.\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ Ensure you reply directly to a video message with the <code>/aud</code> command to extract audio.\n"
         "2️⃣ Ensure you reply directly to a audio message with the <code>/voice</code> command to  convert it to a voice message.\n\n"
+        "3️⃣ Reply to a short video (≤ 1 minute) with /vnote to turn it into a round video note.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
@@ -227,7 +229,7 @@ responses = {
         "   - Example: <code>/fb https://www.facebook.com/share/v/18VH1yNXoq/</code> (Downloads the specified Facebook video)\n"
         "   - Note: Private Facebook videos cannot be downloaded.\n\n"
         "➢ <b>/pnt [Video URL]</b> - Download a Pinterest video.\n"
-        "   - Example: <code>/pin https://pin.it/6GoDMRwmE</code> (Downloads the specified Pinterest video)\n\n"
+        "   - Example: <code>/pnt https://pin.it/6GoDMRwmE</code> (Downloads the specified Pinterest video)\n\n"
         "➢ <b>/tt [Video URL]</b> - Download a TikTok video.\n"
         "   - Example: <code>/tt https://vt.tiktok.com/ZSMV19Kfu/</code> (Downloads the specified TikTok video)\n\n"
         "➢ <b>/in [Video URL]</b> - Download Instagram Reels.\n"
@@ -273,6 +275,7 @@ responses = {
         "Retrieve detailed information about any user, group, or channel using this command:\n\n"
         "We are still collecting Database Like Sangmata To Give 100% Of User's Info\n\n"
         "➢ <b>/info [target]</b> - Example: <code>/info @abirxdhackz</code> or <code>/info 7303810912</code>\n\n"
+        "➢ <b>/id [target]</b> - Example: <code>/id @TheSmartDev</code> or <code>/id -1002224203739</code>\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ For groups/channels, use their username or numeric ID.\n"
         "2️⃣ Ensure proper input format to get accurate results.\n\n"
@@ -317,8 +320,8 @@ responses = {
          "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
          "<b>✨ Features:</b>\n"
          "Effortlessly Enhance Your Image With high precision and quality.\n\n"
-         "➢ <b>/enhance</b> - Instantly Increase Quality of any image or photo.\n"
-         "   - <b>How to use:</b> Reply to an image with the <code>/enhance</code> command, and the bot will process it for you.\n\n"
+         "➢ <b>/enh</b> - Instantly Increase Quality of any image or photo.\n"
+         "   - <b>How to use:</b> Reply to an image with the <code>/enh</code> command, and the bot will process it for you.\n\n"
          "<b>⚠️ Important Notes:</b>\n"
          "1️⃣ Enhance May Take 1 Minute To Skip Rate Limit\n"
          "2️⃣ Ensure the image is clear for the best results.\n\n"
@@ -500,7 +503,7 @@ responses = {
         f"- 💥 <b>Language:</b> Python 🐍\n"
         f"- 🌟 <b>Framework:</b> Fully Written In Pyrogram And Telethon 📚\n"
         f"- ✨ <b>Database:</b> MongoDB Database 🗄\n"
-        f"- 🇧🇩 <b>Hosting:</b> SurferCloud VPS 🌐\n\n"
+        f"- 🇧🇩 <b>Hosting:</b> Digital Ocean VPS 🌐\n\n"
         f"❄️ <b>About:</b> Smart Tool 💥 The ultimate Telegram toolkit! Education, AI, downloaders, temp mail, finance tools & more—simplify life! 🔥\n\n"
         f"🔔 <b>For Bot Update News</b>: <a href='{{UPDATE_CHANNEL_URL}}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
