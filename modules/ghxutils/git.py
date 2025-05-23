@@ -1,9 +1,10 @@
 # Copyright @ISmartDevs
 # Channel t.me/TheSmartDev
 import os
-import shutil
 import asyncio
 import aiohttp
+import aiofiles
+import aiofiles.os
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.handlers import MessageHandler
@@ -19,233 +20,206 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def check_git_installed():
-    """Check if git is available on server"""
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "git", "--version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        await proc.wait()
-        if proc.returncode != 0:
-            raise Exception("Git is not installed or not working")
-        return True
-    except Exception as e:
-        logger.error(f"Git installation check failed: {e}")
-        # Notify admins
-        await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
-        return False
-
-async def get_repo_branches(repo_url):
-    """Fetch all branches from remote repo"""
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "git", "ls-remote", "--heads", repo_url,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            raise Exception(f"Failed to fetch branches: {stderr.decode()}")
-        return [line.split("refs/heads/")[-1] 
-                for line in stdout.decode().splitlines() 
-                if "refs/heads/" in line]
-    except Exception as e:
-        logger.error(f"Error fetching branches for repo '{repo_url}': {e}")
-        # Notify admins
-        await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
-        return None
-
-async def fetch_github_api(session, url):
-    """Fetch data from GitHub API"""
+async def fetch_github_api(session: aiohttp.ClientSession, url: str) -> dict | None:
+    """Fetch data from GitHub API."""
     try:
         async with session.get(url) as response:
-            response.raise_for_status()  # Raise an exception for non-200 status codes
+            response.raise_for_status()
             return await response.json()
     except aiohttp.ClientError as e:
-        logger.error(f"GitHub API error for URL '{url}': {e}")
-        # Notify admins
+        logger.error(f"GitHub API request failed for '{url}': {str(e)}")
         await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
         return None
 
-async def get_github_repo_details(repo_url):
-    """Get repository details from GitHub API"""
+async def get_repo_branches(session: aiohttp.ClientSession, repo_url: str) -> list | None:
+    """Fetch branches using GitHub API."""
     try:
         parts = repo_url.rstrip('/').split('/')
         user_name = parts[-2]
-        repo_name = parts[-1].replace(".git", "")
-        
-        async with aiohttp.ClientSession() as session:
-            api_url = f"https://api.github.com/repos/{user_name}/{repo_name}"
-            repo_data = await fetch_github_api(session, api_url)
-            
-            if not repo_data:
-                raise Exception("Failed to fetch repo details")
-                
-            return {
-                'forks_count': repo_data.get('forks_count', 0),
-                'description': repo_data.get('description', 'No description available'),
-                'default_branch': repo_data.get('default_branch', 'main')
-            }
+        repo_name = parts[-1].replace('.git', '')
+        api_url = f"https://api.github.com/repos/{user_name}/{repo_name}/branches"
+        logger.info(f"Fetching branches for '{repo_url}' from '{api_url}'")
+        branches_data = await fetch_github_api(session, api_url)
+        if not branches_data:
+            logger.error(f"No branches data received for '{repo_url}'")
+            raise Exception("Failed to fetch branches")
+        return [branch['name'] for branch in branches_data]
     except Exception as e:
-        logger.error(f"Error fetching GitHub repo details for '{repo_url}': {e}")
-        # Notify admins
+        logger.error(f"Error fetching branches for '{repo_url}': {str(e)}")
         await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
         return None
 
-async def git_download_handler(client, message):
-    # Check git installation
-    if not await check_git_installed():
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="<b>❌ This Repo Can Not Be Installed On My Server </b>",
-            parse_mode=ParseMode.HTML
-        )
-        return
-
-    if len(message.command) < 2:
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="<b>⚠️ Please provide a valid GitHub URL</b>",
-            parse_mode=ParseMode.HTML
-        )
-        return
-
-    repo_url = message.command[1]
-    requested_branch = message.command[2] if len(message.command) > 2 else None
-
-    # Validate URL
-    if "github.com" not in repo_url:
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="<b>❌ Invalid Github URL Or Repo Unavailable</b>",
-            parse_mode=ParseMode.HTML
-        )
-        return
-
-    status_msg = await client.send_message(
-        chat_id=message.chat.id,
-        text="<b>🔍 Analyzing The Repository...</b>",
-        parse_mode=ParseMode.HTML
-    )
-
+async def get_github_repo_details(session: aiohttp.ClientSession, repo_url: str) -> dict | None:
+    """Get repository details from GitHub API."""
     try:
-        # Extract repo info from URL
         parts = repo_url.rstrip('/').split('/')
         user_name = parts[-2]
-        repo_name = parts[-1].replace(".git", "")
+        repo_name = parts[-1].replace('.git', '')
+        api_url = f"https://api.github.com/repos/{user_name}/{repo_name}"
+        logger.info(f"Fetching repo details for '{repo_url}' from '{api_url}'")
+        repo_data = await fetch_github_api(session, api_url)
+        if not repo_data:
+            logger.error(f"No repo data received for '{repo_url}'")
+            raise Exception("Failed to fetch repo details")
+        return {
+            'forks_count': repo_data.get('forks_count', 0),
+            'description': repo_data.get('description', 'No description available'),
+            'default_branch': repo_data.get('default_branch', 'main')
+        }
+    except Exception as e:
+        logger.error(f"Error fetching repo details for '{repo_url}': {str(e)}")
+        await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
+        return None
 
-        # Get GitHub API details
-        repo_details = await get_github_repo_details(repo_url)
-        forks_count = repo_details['forks_count'] if repo_details else 0
-        description = repo_details['description'] if repo_details else 'No description available'
+async def download_repo_zip(session: aiohttp.ClientSession, repo_url: str, branch: str, clone_dir: str) -> str | None:
+    """Download repository as zip using GitHub API."""
+    try:
+        parts = repo_url.rstrip('/').split('/')
+        user_name = parts[-2]
+        repo_name = parts[-1].replace('.git', '')
+        zip_url = f"https://api.github.com/repos/{user_name}/{repo_name}/zipball/{branch}"
+        logger.info(f"Downloading zip for '{repo_url}' branch '{branch}' from '{zip_url}'")
+        async with session.get(zip_url) as response:
+            response.raise_for_status()
+            zip_path = f"{clone_dir}.zip"
+            os.makedirs(os.path.dirname(zip_path), exist_ok=True)
+            async with aiofiles.open(zip_path, 'wb') as f:
+                while True:
+                    chunk = await response.content.read(8192)
+                    if not chunk:
+                        break
+                    await f.write(chunk)
+            logger.info(f"Successfully downloaded zip to '{zip_path}'")
+            return zip_path
+    except Exception as e:
+        logger.error(f"Error downloading zip for '{repo_url}' branch '{branch}': {str(e)}")
+        await notify_admin(None, f"{COMMAND_PREFIX}git", e, None)
+        return None
 
-        # Get available branches
-        branches = await get_repo_branches(repo_url)
-        if not branches:
+async def normalize_url(repo_url: str) -> str:
+    """Normalize GitHub URL by adding https:// if missing."""
+    repo_url = repo_url.strip()
+    logger.info(f"Normalizing URL: '{repo_url}'")
+    if not repo_url.startswith(('http://', 'https://')):
+        repo_url = f"https://{repo_url}"
+    if not repo_url.endswith('.git'):
+        repo_url = f"{repo_url.rstrip('/')}.git"
+    logger.info(f"Normalized URL: '{repo_url}'")
+    return repo_url
+
+async def git_download_handler(client: Client, message: Message):
+    """Handle git command to download GitHub repository."""
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(limit=50),
+        timeout=aiohttp.ClientTimeout(total=30)
+    ) as session:
+        if len(message.command) < 2:
+            logger.error("No repository URL provided in command")
             await client.send_message(
                 chat_id=message.chat.id,
-                text="<b>Broh The Repository Is Private </b>",
+                text="<b>Provide a valid GitHub repository URL.</b>",
                 parse_mode=ParseMode.HTML
             )
-            # Notify admins
-            await notify_admin(client, f"{COMMAND_PREFIX}git", Exception("Repository is private or inaccessible"), message)
             return
 
-        # Determine branch to use
-        if requested_branch:
-            if requested_branch not in branches:
-                await client.send_message(
-                    chat_id=message.chat.id,
-                    text=(
-                        f"<b>⚠️ Branch '{requested_branch}' not found</b>\n\n"
-                        f"<b>Available branches:</b>\n{', '.join(branches)}"
-                    ),
-                    parse_mode=ParseMode.HTML
-                )
-                return
-            branch = requested_branch
-        else:
-            branch = "main" if "main" in branches else "master" if "master" in branches else branches[0]
+        repo_url = await normalize_url(message.command[1])
+        requested_branch = message.command[2] if len(message.command) > 2 else None
 
-        await status_msg.edit_text(
-            f"<b>⏬ Downloading {branch} As Zip...</b>",
-            parse_mode=ParseMode.HTML
-        )
+        # Validate URL structure
+        parts = repo_url.rstrip('/').split('/')
+        if len(parts) < 5 or parts[2] != "github.com":
+            logger.error(f"Invalid GitHub URL format: '{repo_url}'")
+            await client.send_message(
+                chat_id=message.chat.id,
+                text="<b>Provide a valid GitHub repository URL.</b>",
+                parse_mode=ParseMode.HTML
+            )
+            return
 
-        # Prepare directories
-        clone_dir = f"repos/{repo_name}_{branch}"
-        os.makedirs("repos", exist_ok=True)
-
-        # Clone repository
-        proc = await asyncio.create_subprocess_exec(
-            "git", "clone", "-b", branch, "--depth", "1", repo_url, clone_dir
-        )
-        await proc.wait()
-
-        if proc.returncode != 0:
-            raise Exception("Failed to clone repository")
-
-        # Create zip archive
-        await status_msg.edit_text(
-            "<b>✨ Compressing The Repository...</b>",
-            parse_mode=ParseMode.HTML
-        )
-        zip_path = f"{clone_dir}.zip"
-        shutil.make_archive(clone_dir, 'zip', clone_dir)
-
-        # Prepare repository details message
-        repo_info = (
-            "<b>📁 Downloaded Repository Details</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Repo Owner:</b> <code>{user_name}</code>\n"
-            f"📂 <b>Repo Name:</b> <code>{repo_name}</code>\n"
-            f"🔀 <b>Forks Count:</b> <code>{forks_count}</code>\n"
-            f"🌿 <b>Branch:</b> <code>{branch}</code>\n"
-            f"🔗 <b>URL:</b> <code>{repo_url}</code>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"📝 <b>Repo Description:</b>\n<code>{description}</code>\n\n"
-            f"🌱 <b>Available Branches:</b> <code>{', '.join(branches)}</code>"
-        )
-
-        # Send results
-        await status_msg.edit_text(
-            "<b>Uploading The Repository...</b>",
-            parse_mode=ParseMode.HTML
-        )
-        await client.send_document(
+        status_msg = await client.send_message(
             chat_id=message.chat.id,
-            document=zip_path,
-            caption=repo_info,
+            text="<b>Downloading repository, please wait...</b>",
             parse_mode=ParseMode.HTML
         )
 
-    except Exception as e:
-        logger.error(f"Error downloading GitHub repo '{repo_url}': {e}")
-        # Notify admins
-        await notify_admin(client, f"{COMMAND_PREFIX}git", e, message)
-        # Send user-facing error message
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="<b>❌ Sorry Bro Github Repo Dl API Dead</b>",
-            parse_mode=ParseMode.HTML
-        )
-    finally:
-        # Cleanup
         try:
-            await status_msg.delete()
-            if 'clone_dir' in locals() and os.path.exists(clone_dir):
-                shutil.rmtree(clone_dir)
-            if 'zip_path' in locals() and os.path.exists(zip_path):
-                os.remove(zip_path)
-        except Exception as e:
-            logger.error(f"Cleanup error: {e}")
-            # Notify admins
-            await notify_admin(client, f"{COMMAND_PREFIX}git", e, message)
+            # Extract repo info
+            user_name = parts[-2]
+            repo_name = parts[-1].replace('.git', '')
+            logger.info(f"Processing repo: '{user_name}/{repo_name}'")
 
-def setup_git_handler(app):
-    """Register git command handler"""
+            # Concurrently fetch repo details and branches
+            repo_details_task = get_github_repo_details(session, repo_url)
+            branches_task = get_repo_branches(session, repo_url)
+            repo_details, branches = await asyncio.gather(repo_details_task, branches_task)
+
+            if not branches or not repo_details:
+                logger.error(f"Failed to fetch repo details or branches for '{repo_url}'")
+                raise Exception("Repository is private or inaccessible")
+
+            forks_count = repo_details['forks_count']
+            description = repo_details['description']
+
+            # Determine branch
+            if requested_branch:
+                if requested_branch not in branches:
+                    logger.error(f"Branch '{requested_branch}' not found in '{repo_url}'. Available branches: {branches}")
+                    raise Exception(f"Branch '{requested_branch}' not found")
+                branch = requested_branch
+            else:
+                branch = "main" if "main" in branches else "master" if "master" in branches else branches[0]
+            logger.info(f"Selected branch: '{branch}'")
+
+            # Download repository as zip
+            clone_dir = f"repos/{repo_name}_{branch}"
+            zip_path = await download_repo_zip(session, repo_url, branch, clone_dir)
+            if not zip_path:
+                logger.error(f"Failed to download zip for '{repo_url}' branch '{branch}'")
+                raise Exception("Failed to download repository zip")
+
+            # Prepare repository details message
+            repo_info = (
+                "<b>📁 Repository Details</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 <b>Owner:</b> <code>{user_name}</code>\n"
+                f"📂 <b>Name:</b> <code>{repo_name}</code>\n"
+                f"🔀 <b>Forks:</b> <code>{forks_count}</code>\n"
+                f"🌿 <b>Branch:</b> <code>{branch}</code>\n"
+                f"🔗 <b>URL:</b> <code>{repo_url}</code>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📝 <b>Description:</b>\n<code>{description}</code>\n\n"
+                f"🌱 <b>Branches:</b> <code>{', '.join(branches)}</code>"
+            )
+
+            # Send results and delete status message
+            await status_msg.delete()
+            await client.send_document(
+                chat_id=message.chat.id,
+                document=zip_path,
+                caption=repo_info,
+                parse_mode=ParseMode.HTML
+            )
+            logger.info(f"Successfully sent zip file for '{repo_url}' branch '{branch}'")
+
+        except Exception as e:
+            logger.error(f"Error downloading repo '{repo_url}': {str(e)}")
+            await notify_admin(client, f"{COMMAND_PREFIX}git", e, message)
+            await status_msg.edit_text(
+                "<b>Provide a valid GitHub repository URL.</b>",
+                parse_mode=ParseMode.HTML
+            )
+        finally:
+            # Async cleanup
+            try:
+                if 'zip_path' in locals() and os.path.exists(zip_path):
+                    await aiofiles.os.remove(zip_path)
+                    logger.info(f"Cleaned up zip file: '{zip_path}'")
+            except Exception as e:
+                logger.error(f"Cleanup error for '{repo_url}': {str(e)}")
+                await notify_admin(client, f"{COMMAND_PREFIX}git", e, message)
+
+def setup_git_handler(app: Client):
+    """Register git command handler."""
     app.add_handler(
         MessageHandler(
             git_download_handler,
