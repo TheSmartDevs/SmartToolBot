@@ -21,3 +21,4 @@ psutil
 pydub
 moviepy
 speedtest-cli
+lxml
