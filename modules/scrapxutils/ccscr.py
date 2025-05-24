@@ -4,10 +4,9 @@
 import re
 import os
 import asyncio
-import logging
 import aiofiles
 from pyrogram import Client, filters
-from user import user
+from user import user 
 from pyrogram.errors import (
     UserAlreadyParticipant,
     InviteHashExpired,
@@ -23,10 +22,7 @@ from config import (
     COMMAND_PREFIX,
     MULTI_CCSCR_LIMIT
 )
-
-# Setup logging For Capturing Errors
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from utils import LOGGER
 
 async def scrape_messages(client, channel_username, limit, start_number=None, bank_name=None):
     messages = []
@@ -34,7 +30,7 @@ async def scrape_messages(client, channel_username, limit, start_number=None, ba
     pattern = r'\d{16}\D*\d{2}\D*\d{2,4}\D*\d{3,4}'
     bin_pattern = re.compile(r'^\d{6}') if start_number else None
 
-    logger.info(f"Starting to scrape messages from {channel_username} with limit {limit}")
+    LOGGER.info(f"Starting to scrape messages from {channel_username} with limit {limit}")
 
     # Fetch messages in batches
     async for message in user.search_messages(channel_username):
@@ -61,13 +57,13 @@ async def scrape_messages(client, channel_username, limit, start_number=None, ba
                             formatted_messages.append(f"{card_number}|{mo}|{year}|{cvv}")
                 messages.extend(formatted_messages)
                 count += len(formatted_messages)
-    logger.info(f"Scraped {len(messages)} messages from {channel_username}")
+    LOGGER.info(f"Scraped {len(messages)} messages from {channel_username}")
     return messages[:limit]
 
 def remove_duplicates(messages):
     unique_messages = list(set(messages))
     duplicates_removed = len(messages) - len(unique_messages)
-    logger.info(f"Removed {duplicates_removed} duplicates")
+    LOGGER.info(f"Removed {duplicates_removed} duplicates")
     return unique_messages, duplicates_removed
 
 async def send_results(client, message, unique_messages, duplicates_removed, source_name, bin_filter=None, bank_filter=None):
@@ -100,10 +96,10 @@ async def send_results(client, message, unique_messages, duplicates_removed, sou
             await message.delete()
             await client.send_document(message.chat.id, file_name, caption=caption)
         os.remove(file_name)
-        logger.info(f"Results sent successfully for {source_name}")
+        LOGGER.info(f"Results sent successfully for {source_name}")
     else:
         await message.edit_text("<b>Sorry Bro ❌ No Credit Card Found</b>")
-        logger.info("No credit cards found")
+        LOGGER.info("No credit cards found")
 
 async def get_user_link(message):
     if message.from_user is None:
@@ -117,28 +113,28 @@ async def get_user_link(message):
 async def join_private_chat(client, invite_link):
     try:
         await client.join_chat(invite_link)
-        logger.info(f"Joined chat via invite link: {invite_link}")
+        LOGGER.info(f"Joined chat via invite link: {invite_link}")
         return True
     except UserAlreadyParticipant:
-        logger.info(f"Already a participant in the chat: {invite_link}")
+        LOGGER.info(f"Already a participant in the chat: {invite_link}")
         return True
     except InviteRequestSent:
-        logger.info(f"Join request sent to the chat: {invite_link}")
+        LOGGER.info(f"Join request sent to the chat: {invite_link}")
         return False
     except (InviteHashExpired, InviteHashInvalid) as e:
-        logger.error(f"Failed to join chat {invite_link}: {e}")
+        LOGGER.error(f"Failed to join chat {invite_link}: {e}")
         return False
 
 async def send_join_request(client, invite_link, message):
     try:
         await client.join_chat(invite_link)
-        logger.info(f"Sent join request to chat: {invite_link}")
+        LOGGER.info(f"Sent join request to chat: {invite_link}")
         return True
     except PeerIdInvalid as e:
-        logger.error(f"Failed to send join request to chat {invite_link}: {e}")
+        LOGGER.error(f"Failed to send join request to chat {invite_link}: {e}")
         return False
     except InviteRequestSent:
-        logger.info(f"Join request sent to the chat: {invite_link}")
+        LOGGER.info(f"Join request sent to the chat: {invite_link}")
         await message.edit_text("<b>Hey Bro I Have Sent Join Request✅</b>")
         return False
 
@@ -150,7 +146,7 @@ def setup_scr_handler(app):
 
         if len(args) < 2:
             await client.send_message(message.chat.id, "<b>⚠️ Provide channel username and amount to scrape ❌</b>")
-            logger.warning("Invalid command: Missing arguments")
+            LOGGER.warning("Invalid command: Missing arguments")
             return
 
         # Extract channel identifier (username, invite link, or chat ID)
@@ -167,10 +163,10 @@ def setup_scr_handler(app):
                 # Fetch the chat details
                 chat = await user.get_chat(chat_id)
                 channel_name = chat.title
-                logger.info(f"Scraping from private channel: {channel_name} (ID: {chat_id})")
+                LOGGER.info(f"Scraping from private channel: {channel_name} (ID: {chat_id})")
             except Exception as e:
                 await client.send_message(message.chat.id, "<b>Hey Bro! 🥲 Invalid chat ID ❌</b>")
-                logger.error(f"Failed to fetch private channel: {e}")
+                LOGGER.error(f"Failed to fetch private channel: {e}")
                 return
         else:
             # Handle public channels or private invite links
@@ -187,7 +183,7 @@ def setup_scr_handler(app):
                     await temporary_msg.delete()
                     chat = await user.get_chat(invite_link)
                     channel_name = chat.title
-                    logger.info(f"Joined private channel via link: {channel_name}")
+                    LOGGER.info(f"Joined private channel via link: {channel_name}")
             elif channel_identifier.startswith("https://t.me/"):
                 # Remove "https://t.me/" for regular links
                 channel_username = channel_identifier[13:]
@@ -203,19 +199,19 @@ def setup_scr_handler(app):
                     # Fetch the chat details
                     chat = await user.get_chat(channel_username)
                     channel_name = chat.title
-                    logger.info(f"Scraping from public channel: {channel_name} (Username: {channel_username})")
+                    LOGGER.info(f"Scraping from public channel: {channel_name} (Username: {channel_username})")
                 except Exception as e:
                     await client.send_message(message.chat.id, "<b>Hey Bro! 🥲 Incorrect username or chat ID ❌</b>")
-                    logger.error(f"Failed to fetch public channel: {e}")
+                    LOGGER.error(f"Failed to fetch public channel: {e}")
                     return
 
         # Extract limit (second argument)
         try:
             limit = int(args[1])
-            logger.info(f"Scraping limit set to: {limit}")
+            LOGGER.info(f"Scraping limit set to: {limit}")
         except ValueError:
             await client.send_message(message.chat.id, "<b>⚠️ Invalid limit value. Please provide a valid number ❌</b>")
-            logger.warning("Invalid limit value provided")
+            LOGGER.warning("Invalid limit value provided")
             return
 
         # Extract optional arguments (starting number or bank name)
@@ -227,17 +223,17 @@ def setup_scr_handler(app):
             if args[2].isdigit():
                 start_number = args[2]
                 bin_filter = args[2][:6]  # Extract first 6 digits as BIN filter
-                logger.info(f"BIN filter applied: {bin_filter}")
+                LOGGER.info(f"BIN filter applied: {bin_filter}")
             else:
                 # Otherwise, treat it as a bank name
                 bank_name = " ".join(args[2:])
-                logger.info(f"Bank filter applied: {bank_name}")
+                LOGGER.info(f"Bank filter applied: {bank_name}")
 
         # Enforce maximum limit based on user role
         max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_IDS else CC_SCRAPPER_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
-            logger.warning(f"Limit exceeded: {limit} > {max_lim}")
+            LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
             return
 
         # Send a temporary message to check the username
@@ -259,7 +255,7 @@ def setup_scr_handler(app):
         args = message.text.split()[1:]
         if len(args) < 2:
             await client.send_message(message.chat.id, "<b>⚠️ Provide at least one channel username</b>")
-            logger.warning("Invalid command: Missing arguments")
+            LOGGER.warning("Invalid command: Missing arguments")
             return
 
         channel_identifiers = args[:-1]
@@ -269,7 +265,7 @@ def setup_scr_handler(app):
         max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_IDS else MULTI_CCSCR_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
-            logger.warning(f"Limit exceeded: {limit} > {max_lim}")
+            LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
             return
 
         temporary_msg = await client.send_message(message.chat.id, "<b>Scraping In Progress✨</b>")
@@ -314,6 +310,5 @@ async def scrape_messages_task(client, channel_username, limit, bot_client, mess
         return await scrape_messages(client, chat.id, limit)
     except Exception as e:
         await bot_client.send_message(message.chat.id, f"<b>Hey Bro! 🥲 Incorrect username for {channel_username} ❌</b>")
-        logger.error(f"Failed to scrape from {channel_username}: {e}")
+        LOGGER.error(f"Failed to scrape from {channel_username}: {e}")
         return []
-
