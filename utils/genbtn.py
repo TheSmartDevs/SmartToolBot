@@ -6,30 +6,30 @@ from pyrogram.enums import ParseMode
 
 # Inline Keyboard Buttons Setup By @abirxdhackz & @ISmartDevs
 main_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("AI Utils", callback_data="ai_tools"), InlineKeyboardButton("CC Utils", callback_data="credit_cards")],
-    [InlineKeyboardButton("Crypto Utils", callback_data="crypto"), InlineKeyboardButton("Converte Utils", callback_data="converter")],
-    [InlineKeyboardButton("Decoders Utils", callback_data="decoders"), InlineKeyboardButton("Downloader Utils", callback_data="downloaders")],
-    [InlineKeyboardButton("Domain Tools", callback_data="domain_check"), InlineKeyboardButton("Education Utils", callback_data="education_utils")],
-    [InlineKeyboardButton("Qr Utils", callback_data="txtqr"), InlineKeyboardButton("ImageGen Utils", callback_data="aigen")],
-    [InlineKeyboardButton("Github Utils", callback_data="github"), InlineKeyboardButton("UserInfo Utils", callback_data="info")],
+    [InlineKeyboardButton("AI Tools", callback_data="ai_tools"), InlineKeyboardButton("Calculator", callback_data="calculator")],
+    [InlineKeyboardButton("CC Tools", callback_data="credit_cards"), InlineKeyboardButton("Crypto", callback_data="crypto")],
+    [InlineKeyboardButton("Converter", callback_data="converter"), InlineKeyboardButton("Decoders", callback_data="decoders")],
+    [InlineKeyboardButton("Downloaders", callback_data="downloaders"), InlineKeyboardButton("Domain Check", callback_data="domain_check")],
+    [InlineKeyboardButton("Education Utils", callback_data="education_utils"), InlineKeyboardButton("Editing Utils", callback_data="rembg")],
     [InlineKeyboardButton("Next ➡️", callback_data="next_1"), InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
 second_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Mail Utils", callback_data="mail_tools"), InlineKeyboardButton("Network Utils", callback_data="network_tools")],
-    [InlineKeyboardButton("Fake Address", callback_data="random_address"), InlineKeyboardButton("String Session", callback_data="string_session")],
-    [InlineKeyboardButton("Stripe Hunter", callback_data="stripe_keys"), InlineKeyboardButton("Sticker Utils", callback_data="sticker")],
-    [InlineKeyboardButton("Smart Clock", callback_data="time_date"), InlineKeyboardButton("Google Translate", callback_data="translate")],
-    [InlineKeyboardButton("Tempmail Tools", callback_data="tempmail"), InlineKeyboardButton("Text OCR", callback_data="text_ocr")],
+    [InlineKeyboardButton("Github Utils", callback_data="github"), InlineKeyboardButton("Info", callback_data="info")],
+    [InlineKeyboardButton("Mail Tools", callback_data="mail_tools"), InlineKeyboardButton("Network Tools", callback_data="network_tools")],
+    [InlineKeyboardButton("Random Address", callback_data="random_address"), InlineKeyboardButton("String Session", callback_data="string_session")],
+    [InlineKeyboardButton("Stripe Keys", callback_data="stripe_keys"), InlineKeyboardButton("Sticker", callback_data="sticker")],
+    [InlineKeyboardButton("Time Date", callback_data="time_date"), InlineKeyboardButton("Txt Spilt", callback_data="text_split")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_1"), InlineKeyboardButton("Next ➡️", callback_data="next_2")],
     [InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
 third_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Web Utils", callback_data="web_capture"), InlineKeyboardButton("Yt Utils", callback_data="yt_tools")],
-    [InlineKeyboardButton("Protectron Utils", callback_data="protectron_utils"), InlineKeyboardButton("SpiltText Utils", callback_data="text_split")],
-    [InlineKeyboardButton("Weather Utils", callback_data="weather"), InlineKeyboardButton("Smart Calculator", callback_data="calculator")],
-    [InlineKeyboardButton("GroupHelp", callback_data="admin"), InlineKeyboardButton("Editing Utils", callback_data="rembg")],
+    [InlineKeyboardButton("Translate", callback_data="translate"), InlineKeyboardButton("Temp Mail", callback_data="tempmail")],
+    [InlineKeyboardButton("Text OCR", callback_data="text_ocr"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
+    [InlineKeyboardButton("Yt Tools", callback_data="yt_tools"), InlineKeyboardButton("Qr Utils", callback_data="txtqr")],
+    [InlineKeyboardButton("ImageGen Utils", callback_data="aigen"), InlineKeyboardButton("Weather Utils", callback_data="weather")],
+    [InlineKeyboardButton("Protectron Utils", callback_data="protectron_utils"), InlineKeyboardButton("GroupHelp", callback_data="admin")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_2"), InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
@@ -126,10 +126,10 @@ responses = {
         "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>USAGE:</b>\n"
         "Use the following command to check the registration status and availability of domains:\n\n"
-        "➢ <b>/dmn [domain_name]</b> - Example: <code>/dmn google.com</code>\n\n"
+        "➢ <b>/dmn [domain_name]</b> - Example: <code>/dmn example.com</code>\n\n"
         "<b>Multi-Domain Check:</b>\n"
         "You can check up to 20 domains at a time by separating them with spaces.\n"
-        "Example: <code>/dmn google.com youtube.com demo.net</code>\n\n"
+        "Example: <code>/dmn example.com test.com demo.net</code>\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ The maximum limit for a single check is 20 domains.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
@@ -140,8 +140,8 @@ responses = {
         "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>USAGE:</b>\n\n"
         "➢ <b>/git [url] [branch]</b> - Download Github Repository or Specific Branch.\n"
-        "   - Example: <code>/git https://github.com/yt-dlp/yt-dlp master</code>\n"
-        "   - Example: <code>/git https://github.com/abirxdhack/Chat-ID-Bot</code>\n\n"
+        "   - Example: <code>/git https://github.com/user/repo main</code>\n"
+        "   - Example: <code>/git https://github.com/user/repo</code>\n\n"
         "<b>INSTRUCTIONS:</b>\n"
         "1. Use the <code>/git</code> command followed by a valid GitHub repository URL.\n"
         "2. Optionally, specify the branch name to download a specific branch.\n"
@@ -180,8 +180,8 @@ responses = {
         "➢ <b>/mbin [Text File or Message]</b> - Check up to 20 BINs at a time from a text file or message.\n"
         "   - Example: Reply to a message or a .txt file containing BINs and use <code>/mbin</code> to validate all.\n\n"
         "➢ <b>/scr [Chat Link or Username] [Amount]</b> - Scrape credit cards from a chat.\n"
-        "   - Example: <code>/scr @abir_x_official 100</code> (Scrapes 100 CC details from the specified chat)\n"
-        "   - Target BIN Example: <code>/scr @abir_x_official 100 460827 </code> (Scrapes 100 CC details with BIN 460827 from the chat)\n\n"
+        "   - Example: <code>/scr @abcdxyz 100</code> (Scrapes 100 CC details from the specified chat)\n"
+        "   - Target BIN Example: <code>/scr @abcxyz 100 460827 </code> (Scrapes 100 CC details with BIN 460827 from the chat)\n\n"
         "➢ <b>/fcc [File]</b> - Filter CC details from a file.\n"
         "   - Example: Reply to a .txt file containing CC details with <code>/fcc</code> to extract valid CC data.\n\n"
         "➢ <b>/extp [File or BIN]</b> - Extrapolate credit card data from a BIN.\n"
@@ -189,7 +189,7 @@ responses = {
         "➢ <b>/mgen [BINs] [Amount]</b> - Generate CC details using multiple BINs.\n"
         "   - Example: <code>/mgen 460827,537637 10</code> (Generates 10 CC details for each BIN provided)\n\n"
         "➢ <b>/mc [Chat Link or Usernames] [Amount]</b> - Scrape CC details from multiple chats.\n"
-        "   - Example: <code>/mc @abir_x_official_chat @ModVipRM_Discussion 200</code> (Scrapes 200 CC details from both chats)\n\n"
+        "   - Example: <code>/mc @Group1 @Group2 200</code> (Scrapes 200 CC details from both chats)\n\n"
         "➢ <b>/topbin [File]</b> - Find the top 20 most used BINs from a combo.\n"
         "   - Example: Reply to a .txt file with <code>/topbin</code> to extract the top 20 BINs.\n\n"
         "➢ <b>/binbank [Bank Name]</b> - Find BIN database by bank name.\n"
@@ -226,21 +226,21 @@ responses = {
         "<b>USAGE:</b>\n"
         "Download videos and tracks from popular platforms using these commands:\n\n"
         "➢ <b>/fb [Video URL]</b> - Download a Facebook video.\n"
-        "   - Example: <code>/fb https://www.facebook.com/share/v/18VH1yNXoq/</code> (Downloads the specified Facebook video)\n"
+        "   - Example: <code>/fb https://facebook.com/video/example</code> (Downloads the specified Facebook video)\n"
         "   - Note: Private Facebook videos cannot be downloaded.\n\n"
         "➢ <b>/pnt [Video URL]</b> - Download a Pinterest video.\n"
-        "   - Example: <code>/pnt https://pin.it/6GoDMRwmE</code> (Downloads the specified Pinterest video)\n\n"
+        "   - Example: <code>/pnt https://pinterest.com/pin/example</code> (Downloads the specified Pinterest video)\n\n"
         "➢ <b>/tt [Video URL]</b> - Download a TikTok video.\n"
-        "   - Example: <code>/tt https://vt.tiktok.com/ZSMV19Kfu/</code> (Downloads the specified TikTok video)\n\n"
-        "➢ <b>/in [Video URL]</b> - Download Instagram Reels.\n"
-        "   - Example: <code>/in https://www.instagram.com/reel/C_vOYErJBm7/?igsh=YzljYTk1ODg3Zg==</code> (Downloads the specified Instagram reel)\n"
+        "   - Example: <code>/tt https://www.tiktok.com/@user/video/1234567890</code> (Downloads the specified TikTok video)\n\n"
+        "➢ <b>/in [Video URL]</b> - Download Instagram Reels& Posts.\n"
+        "   - Example: <code>/in https://instagram.com/reel/example</code> (Downloads the specified Instagram reel/post)\n"
         "   - Note: 18+ Instagram Reels cannot be downloaded.\n\n"
         "➢ <b>/sp [Track URL]</b> - Download a Spotify track.\n"
-        "   - Example: <code>/sp https://open.spotify.com/track/7ouBSPZKQpm7zQz2leJXta</code> (Downloads the specified Spotify track)\n\n"
+        "   - Example: <code>/sp https://spotify.com/track/example</code> (Downloads the specified Spotify track)\n\n"
         "➢ <b>/yt [Video URL]</b> - Download a YouTube video.\n"
-        "   - Example: <code>/yt https://youtu.be/In8bfGnXavw</code> (Downloads the specified YouTube video)\n\n"
+        "   - Example: <code>/yt https://youtube.com/video/example</code> (Downloads the specified YouTube video)\n\n"
         "➢ <b>/song [Video URL]</b> - Download a YouTube video as an MP3 file.\n"
-        "   - Example: <code>/song https://youtu.be/In8bfGnXavw</code> (Converts and downloads the video as MP3)\n\n"
+        "   - Example: <code>/song https://youtube.com/video/example</code> (Converts and downloads the video as MP3)\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ Provide a valid public URL for each platform to download successfully.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
@@ -274,8 +274,8 @@ responses = {
         "<b>USAGE:</b>\n"
         "Retrieve detailed information about any user, group, or channel using this command:\n\n"
         "We are still collecting Database Like Sangmata To Give 100% Of User's Info\n\n"
-        "➢ <b>/info [target]</b> - Example: <code>/info @abirxdhackz</code> or <code>/info 7303810912</code>\n\n"
-        "➢ <b>/id [target]</b> - Example: <code>/id @TheSmartDev</code> or <code>/id -1002224203739</code>\n\n"
+        "➢ <b>/info [target]</b> - Example: <code>/info @username</code> or <code>/info -123456789</code>\n\n"
+        "➢ <b>/id [target]</b> - Example: <code>/id @username</code> or <code>/id -1001234567892</code>\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ For groups/channels, use their username or numeric ID.\n"
         "2️⃣ Ensure proper input format to get accurate results.\n\n"
@@ -485,9 +485,9 @@ responses = {
         "<b>USAGE:</b>\n"
         "Easily extract tags or download thumbnails from YouTube videos using these commands:\n\n"
         "➢ <b>/ytag [YouTube Video URL]</b> - Extract all tags from a YouTube video.\n"
-        "   - Example: <code>/ytag https://youtu.be/In8bfGnXavw</code> (Fetches tags for the specified video)\n\n"
+        "   - Example: <code>/ytag https://youtu.be/example</code> (Fetches tags for the specified video)\n\n"
         "➢ <b>/yth [YouTube Video URL]</b> - Download the thumbnail of a YouTube video.\n"
-        "   - Example: <code>/yth https://youtu.be/In8bfGnXavw</code> (Downloads the thumbnail of the specified video)\n\n"
+        "   - Example: <code>/yth https://youtu.be/example</code> (Downloads the thumbnail of the specified video)\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ Ensure you provide a valid YouTube video URL with the commands.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
