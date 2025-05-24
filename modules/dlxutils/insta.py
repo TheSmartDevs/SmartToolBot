@@ -27,7 +27,7 @@ class InstagramDownloader:
 
     async def download_content(self, url: str, downloading_message: Message, content_type: str) -> Optional[dict]:
         self.temp_dir.mkdir(exist_ok=True)
-        api_url = f"https://insta.bdbots.xyz/dl?url={url}"
+        api_url = f"https://its-smart-dev.vercel.app/download?url={url}"
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -40,17 +40,21 @@ class InstagramDownloader:
                     if data.get("status") != "success":
                         return None
                     
-                    api_content_type = data["data"]["type"]
+                    # Infer content type (video or carousel) from URL and media count
+                    api_content_type = "video" if "/reel/" in url or len(data["media_urls"]) == 1 and data["media_urls"][0].endswith('.mp4') else "carousel"
                     await downloading_message.edit_text(
-                        "**Found ☑️ Downloading...**" if content_type == "video" else "`📤 Uploading...`",
+                        "**Found ☑️ Downloading...**" if api_content_type == "video" else "`📤 Uploading...`",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     media_files = []
                     # Download all media files concurrently
                     tasks = [
-                        self._download_file(session, media["url"], 
-                            self.temp_dir / f"{data['data']['username']}_{data['data']['metadata']['shortcode']}_{index}.{ 'mp4' if media['type'] == 'video' else 'jpg' }")
-                        for index, media in enumerate(data["data"]["media"])
+                        self._download_file(
+                            session, 
+                            media_url, 
+                            self.temp_dir / f"{data['author']}_{time.time()}_{index}.{ 'mp4' if media_url.endswith('.mp4') else 'jpg' }"
+                        )
+                        for index, media_url in enumerate(data["media_urls"])
                     ]
                     downloaded_files = await asyncio.gather(*tasks, return_exceptions=True)
                     
@@ -60,22 +64,22 @@ class InstagramDownloader:
                             continue
                         media_files.append({
                             "filename": str(result),
-                            "type": data["data"]["media"][index]["type"]
+                            "type": "video" if data["media_urls"][index].endswith('.mp4') else "image"
                         })
                     
                     if not media_files:
                         return None
                         
                     return {
-                        "title": data["data"].get("caption", "Instagram Reel"),
+                        "title": data.get("title", "Instagram Reel"),
                         "media_files": media_files,
                         "webpage_url": url,
-                        "username": data["data"]["username"],
+                        "username": data["author"],
                         "type": api_content_type
                     }
         except Exception as e:
             LOGGER.error(f"Instagram download error: {e}")
-            await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}in", e, downloading_message)
+            await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}in|ig|insta", e, downloading_message)
             return None
 
     async def _download_file(self, session: aiohttp.ClientSession, url: str, dest: Path) -> Path:
@@ -91,8 +95,9 @@ def setup_insta_handlers(app: Client):
     ig_downloader = InstagramDownloader(Config.TEMP_DIR)
 
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
+    command_suffix_regex = r"(in|ig|insta)"
 
-    @app.on_message(filters.regex(rf"^{command_prefix_regex}in(\s+https?://\S+)?$") & (filters.private | filters.group))
+    @app.on_message(filters.regex(rf"^{command_prefix_regex}{command_suffix_regex}(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def ig_handler(client: Client, message: Message):
         if message.reply_to_message and message.reply_to_message.text:
             url = message.reply_to_message.text.strip()
@@ -197,7 +202,7 @@ def setup_insta_handlers(app: Client):
                 
         except Exception as e:
             LOGGER.error(f"Error processing Instagram content: {e}")
-            await notify_admin(client, f"{COMMAND_PREFIX}in", e, message)
+            await notify_admin(client, f"{COMMAND_PREFIX}in|ig|insta", e, message)
             await downloading_message.edit_text(
                 "**Instagram Downloader API Down **", parse_mode=ParseMode.MARKDOWN
             )
