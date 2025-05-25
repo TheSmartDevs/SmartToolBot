@@ -27,7 +27,7 @@ from pyrogram.raw.types import (
     KeyboardButtonBuy
 )
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler, RawUpdateHandler
-from config import COMMAND_PREFIX, ADMIN_IDS, DEVELOPER_USER_ID
+from config import COMMAND_PREFIX, OWNER_ID, DEVELOPER_USER_ID
 
 # Logger Setup
 logging.basicConfig(level=logging.INFO)
@@ -341,7 +341,7 @@ def setup_donate_handler(app):
 
                 # Notify Admins
                 admin_text = ADMIN_NOTIFICATION_TEXT.format(full_name, user_id, username, payment.total_amount, payment.charge.id)
-                for admin_id in ADMIN_IDS:
+                for admin_id in OWNER_ID:
                     try:
                         await client.send_message(
                             chat_id=admin_id,
