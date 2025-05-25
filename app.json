@@ -20,12 +20,8 @@
       "description": "Generate from @ItsSmartToolBot. Required for secure session.",
       "required": true
     },
-    "ADMIN_IDS": {
-      "description": "Comma-separated Telegram User IDs. Get from @ItsSmartToolBot using /info.",
-      "required": true
-    },
-    "OWNER_IDS": {
-      "description": "Comma-separated Telegram User IDs. Get from @ItsSmartToolBot using /info.",
+    "OWNER_ID": {
+      "description": "Telegram User ID of the bot Owner. Get from @ItsSmartToolBot using /info",
       "required": true
     },
     "DEVELOPER_USER_ID": {
@@ -42,14 +38,6 @@
     },
     "DB_URL": {
       "description": "Database URL for group channel binding database.",
-      "required": true
-    },
-    "SPOTIFY_CLIENT_ID": {
-      "description": "Spotify Client ID from Spotify Developer Dashboard. Required for Spotify features.",
-      "required": true
-    },
-    "SPOTIFY_CLIENT_SECRET": {
-      "description": "Spotify Client Secret from Spotify Developer Dashboard. Required for Spotify features.",
       "required": true
     },
     "OPENAI_API_KEY": {
