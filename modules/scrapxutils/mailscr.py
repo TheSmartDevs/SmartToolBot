@@ -16,7 +16,7 @@ from pyrogram.errors import (
     PeerIdInvalid,
     InviteRequestSent
 )
-from config import COMMAND_PREFIX, MAIL_SCR_LIMIT, SUDO_MAILSCR_LIMIT, OWNER_IDS
+from config import COMMAND_PREFIX, MAIL_SCR_LIMIT, SUDO_MAILSCR_LIMIT, OWNER_ID
 from utils import LOGGER
 
 def filter_messages(message):
@@ -118,7 +118,7 @@ def setup_mailscr_handler(app):
 
         # Determine limit based on user ID
         user_id = message.from_user.id if message.from_user else None
-        limit = SUDO_MAILSCR_LIMIT if user_id in OWNER_IDS else MAIL_SCR_LIMIT
+        limit = SUDO_MAILSCR_LIMIT if user_id in OWNER_ID else MAIL_SCR_LIMIT
         LOGGER.info(f"User ID: {user_id}, Applying limit: {limit}")
 
         # Check if requested amount exceeds limit
