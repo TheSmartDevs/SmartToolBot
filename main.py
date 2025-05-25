@@ -1,7 +1,7 @@
 #Copyright @ISmartDevs
 #Channel t.me/TheSmartDev
 from misc import handle_callback_query
-from utils import LOGGER, setup_settings_handler
+from utils import LOGGER
 from modules import setup_modules_handlers
 from sudoers import setup_sudoers_handlers
 from core import setup_start_handler
@@ -12,7 +12,6 @@ from user import user
 setup_modules_handlers(app)
 setup_sudoers_handlers(app)
 setup_start_handler(app)  
-setup_settings_handler(app)
 
 @app.on_callback_query()
 async def handle_callback(client, callback_query):
