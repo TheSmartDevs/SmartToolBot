@@ -24,9 +24,8 @@ API_HASH = get_env_or_default("API_HASH", "Your_API_HASH_Here")
 BOT_TOKEN = get_env_or_default("BOT_TOKEN", "Your_BOT_TOKEN_Here")
 SESSION_STRING = get_env_or_default("SESSION_STRING", "Your_SESSION_STRING_Here")
 
-# ADMINS AND SUDO USERS LIST FOR BROADCAST AND OTHER SUDO WORKS
-ADMIN_IDS = get_env_or_default("ADMIN_IDS", "Your_ADMIN_IDS_Here", lambda x: list(map(int, x.split(','))))
-OWNER_IDS = get_env_or_default("OWNER_IDS", "Your_OWNER_IDS_Here", lambda x: list(map(int, x.split(','))))
+# ADMINS AND SUDO USERS FOR BROADCAST AND OTHER SUDO WORKS
+OWNER_ID = get_env_or_default("OWNER_ID", "Your_OWNER_ID_Here", int)
 DEVELOPER_USER_ID = get_env_or_default("DEVELOPER_USER_ID", "Your_DEVELOPER_USER_ID_Here", int)
 
 # MONGODB URL AND DATABASE URL FOR USER DATABASE AND GROUP SETTINGS DATABASE
@@ -52,7 +51,7 @@ MULTI_CCGEN_LIMIT = get_env_or_default("MULTI_CCGEN_LIMIT", 5000, int)
 
 # OTHER PREMIUM APIS FOR TOOLS SERVICES (OPTIONAL)
 GOOGLE_API_KEY = get_env_or_default("GOOGLE_API_KEY", "Your_GOOGLE_API_KEY_Here")
-MODEL_NAME = get_env_or_default("MODEL_NAME", "gemini-1.5-flash")
+MODEL_NAME = get_env_or_default("MODEL_NAME", "gemini-1.5 HEM")
 GROQ_API_KEY = get_env_or_default("GROQ_API_KEY", "Your_GROQ_API_KEY_Here")
 GROQ_API_URL = get_env_or_default("GROQ_API_URL", "https://api.groq.com/openai/v1/chat/completions")
 DOMAIN_API_KEY = get_env_or_default("DOMAIN_API_KEY", "Your_DOMAIN_API_KEY_Here")
@@ -97,8 +96,7 @@ required_vars = {
     "API_HASH": API_HASH,
     "BOT_TOKEN": BOT_TOKEN,
     "SESSION_STRING": SESSION_STRING,
-    "ADMIN_IDS": ADMIN_IDS,
-    "OWNER_IDS": OWNER_IDS,
+    "OWNER_ID": OWNER_ID,
     "DEVELOPER_USER_ID": DEVELOPER_USER_ID,
     "MONGO_URL": MONGO_URL,
     "DATABASE_URL": DATABASE_URL,
