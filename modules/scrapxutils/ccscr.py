@@ -17,7 +17,7 @@ from pyrogram.errors import (
 from urllib.parse import urlparse
 from config import (
     SUDO_CCSCR_LIMIT,
-    OWNER_IDS,
+    OWNER_ID,
     CC_SCRAPPER_LIMIT,
     COMMAND_PREFIX,
     MULTI_CCSCR_LIMIT
@@ -230,7 +230,7 @@ def setup_scr_handler(app):
                 LOGGER.info(f"Bank filter applied: {bank_name}")
 
         # Enforce maximum limit based on user role
-        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_IDS else CC_SCRAPPER_LIMIT
+        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_ID else CC_SCRAPPER_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
             LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
@@ -262,7 +262,7 @@ def setup_scr_handler(app):
         limit = int(args[-1])
         user_id = message.from_user.id if message.from_user else None
 
-        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_IDS else MULTI_CCSCR_LIMIT
+        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_ID else MULTI_CCSCR_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
             LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
