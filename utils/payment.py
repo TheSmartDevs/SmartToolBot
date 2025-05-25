@@ -26,7 +26,7 @@ from pyrogram.raw.types import (
     KeyboardButtonBuy
 )
 from pyrogram.enums import ParseMode
-from config import ADMIN_IDS, DEVELOPER_USER_ID
+from config import OWNER_ID, DEVELOPER_USER_ID
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -301,7 +301,7 @@ async def raw_update_handler(client: Client, update, users, chats):
             )
 
             admin_text = ADMIN_NOTIFICATION_TEXT.format(full_name, user_id, username, payment.total_amount, payment.charge.id)
-            for admin_id in ADMIN_IDS:
+            for admin_id in OWNER_ID:
                 try:
                     await client.send_message(admin_id, admin_text, parse_mode=ParseMode.MARKDOWN)
                 except Exception:
