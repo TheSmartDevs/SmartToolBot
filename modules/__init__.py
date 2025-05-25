@@ -62,6 +62,7 @@ from .timexutils.times import setup_time_handler
 from .toolxutils.calc import setup_calc_handler
 from .toolxutils.news import setup_news_handler
 from .toolxutils.qr import setup_qr_handler
+from .toolxutils.rs import setup_rs_handler
 from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
 from .webxutils.ws import setup_ws_handler
@@ -126,6 +127,7 @@ def setup_modules_handlers(app):
     setup_donate_handler(app)
     setup_privacy_handler(app)
     setup_remini_handler(app)
+    setup_rs_handler(app)
     setup_scr_handler(app)
     setup_mailscr_handler(app)
     setup_string_handler(app)
