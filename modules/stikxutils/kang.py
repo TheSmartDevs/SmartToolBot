@@ -188,7 +188,7 @@ async def process_gif_to_webm(input_file: str, output_file: str):
 
 # Setup the /kang command handler
 def setup_kang_handler(app: Client, bot_token: str):
-    logger.info(f"Setting up kang handler with bot_token: {bot_token[:10]}...")
+    
     @app.on_message(filters.command(["kang"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def kang(client: Client, message: Message):
         user = message.from_user
