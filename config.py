@@ -33,10 +33,6 @@ MONGO_URL = get_env_or_default("MONGO_URL", "Your_MONGO_URL_Here")
 DATABASE_URL = get_env_or_default("DATABASE_URL", "Your_DATABASE_URL_Here")
 DB_URL = get_env_or_default("DB_URL", "Your_DB_URL_Here")
 
-# SPOTIFY CREDENTIALS (REQUIRED)
-SPOTIFY_CLIENT_ID = get_env_or_default("SPOTIFY_CLIENT_ID", "Your_SPOTIFY_CLIENT_ID_Here")
-SPOTIFY_CLIENT_SECRET = get_env_or_default("SPOTIFY_CLIENT_SECRET", "Your_SPOTIFY_CLIENT_SECRET_Here")
-
 # OPENAI API KEY (REQUIRED)
 OPENAI_API_KEY = get_env_or_default("OPENAI_API_KEY", "Your_OPENAI_API_KEY_Here")
 
@@ -101,8 +97,6 @@ required_vars = {
     "MONGO_URL": MONGO_URL,
     "DATABASE_URL": DATABASE_URL,
     "DB_URL": DB_URL,
-    "SPOTIFY_CLIENT_ID": SPOTIFY_CLIENT_ID,
-    "SPOTIFY_CLIENT_SECRET": SPOTIFY_CLIENT_SECRET,
     "OPENAI_API_KEY": OPENAI_API_KEY
 }
 
@@ -114,8 +108,6 @@ for var_name, var_value in required_vars.items():
 print("Loaded COMMAND_PREFIX:", COMMAND_PREFIX)
 gpt_api_key_source = "environment variable" if os.getenv("OPENAI_API_KEY") else "config default"
 print(f"OPENAI_API_KEY loaded from {gpt_api_key_source}: {'*' * 10}{OPENAI_API_KEY[-10:]}")
-spotify_id_source = "environment variable" if os.getenv("SPOTIFY_CLIENT_ID") else "config default"
-print(f"SPOTIFY_CLIENT_ID loaded from {spotify_id_source}: {'*' * 10}{SPOTIFY_CLIENT_ID[-10:]}")
 
 if not COMMAND_PREFIX:
     raise ValueError("No command prefixes found. Set COMMAND_PREFIX in .env, config.py, or Heroku config vars.")
