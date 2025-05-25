@@ -1,5 +1,5 @@
-#Copyright @ISmartDevs
-#Channel t.me/TheSmartDev
+# Copyright @ISmartDevs
+# Channel t.me/TheSmartDev
 from pymongo import MongoClient
 from config import DATABASE_URL
 from utils import LOGGER
@@ -14,6 +14,8 @@ try:
     db = mongo_client["ItsSmartTool"]
     # Access the "group_settings" collection
     group_settings = db["group_settings"]
+    # Access the "auth_admins" collection for authorized admins
+    auth_admins = db["auth_admins"]
     LOGGER.info("Database Client Successfully Created!")
 except Exception as e:
     # Log the error with details and raise it to halt execution
