@@ -1,7 +1,7 @@
 import logging
 from pyrogram import Client
 from pyrogram.types import Message
-from config import ADMIN_IDS
+from config import OWNER_ID
 
 async def notify_admin(client: Client, command: str, error: Exception, message: Message):
     """
@@ -27,7 +27,7 @@ async def notify_admin(client: Client, command: str, error: Exception, message: 
         )
         
         # Send notification to all admins
-        for admin_id in ADMIN_IDS:
+        for admin_id in OWNER_ID:
             try:
                 await client.send_message(admin_id, error_message)
             except Exception as admin_error:
