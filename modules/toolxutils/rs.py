@@ -54,7 +54,7 @@ async def resize_image(input_path, width, height):
 
 def setup_rs_handler(app: Client):
 
-    @app.on_message(filters.command("rs", prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
+    @app.on_message(filters.command(["rs", "res"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def resize_menu_handler(client: Client, message: Message):
         chat_id = message.chat.id
         user_id = message.from_user.id
@@ -62,7 +62,7 @@ def setup_rs_handler(app: Client):
         # Check if the replied message contains a photo or an image file
         reply = message.reply_to_message
         if not reply or (not reply.photo and not reply.document):
-            await client.send_message(chat_id, "**❌ Reply to a photo or an image file (.jpg, .png) with this command**")
+            await client.send_message(chat_id, "**❌ Reply to a photo or an image file**")
             return
 
         # Validate document type if it's a document
@@ -71,7 +71,7 @@ def setup_rs_handler(app: Client):
             file_name = reply.document.file_name
             if not (mime_type in ["image/jpeg", "image/png"] or 
                     (file_name and file_name.lower().endswith((".jpg", ".jpeg", ".png")))):
-                await client.send_message(chat_id, "**❌ Only .jpg and .png files are supported**")
+                await client.send_message(chat_id, "**❌ Invalid Image Provided**")
                 return
 
         status_msg = await client.send_message(chat_id, "**Resizing Your Image...**")
