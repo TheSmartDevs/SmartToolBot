@@ -12,7 +12,7 @@ import asyncio
 image_store = {}
 image_store_lock = asyncio.Lock()
 
-# Format resolutions
+# Format resolutions (unchanged)
 RESOLUTIONS = {
     "dp_square": (1080, 1080),
     "widescreen": (1920, 1080),
@@ -36,7 +36,7 @@ RESOLUTIONS = {
     "bot_father": (640, 360)
 }
 
-# Async resize function
+# Async resize function (unchanged)
 async def resize_image(input_path, width, height):
     fd, output_path = mkstemp(suffix=".jpg")
     os.close(fd)
@@ -59,14 +59,26 @@ def setup_rs_handler(app: Client):
         chat_id = message.chat.id
         user_id = message.from_user.id
 
-        if not message.reply_to_message or not message.reply_to_message.photo:
-            await client.send_message(chat_id, "**❌ Reply to a photo or image with this command**")
+        # Check if the replied message contains a photo or an image file
+        reply = message.reply_to_message
+        if not reply or (not reply.photo and not reply.document):
+            await client.send_message(chat_id, "**❌ Reply to a photo or an image file (.jpg, .png) with this command**")
             return
+
+        # Validate document type if it's a document
+        if reply.document:
+            mime_type = reply.document.mime_type
+            file_name = reply.document.file_name
+            if not (mime_type in ["image/jpeg", "image/png"] or 
+                    (file_name and file_name.lower().endswith((".jpg", ".jpeg", ".png")))):
+                await client.send_message(chat_id, "**❌ Only .jpg and .png files are supported**")
+                return
 
         status_msg = await client.send_message(chat_id, "**Resizing Your Image...**")
         try:
-            # Download image asynchronously
-            original_file = await client.download_media(message.reply_to_message, file_name=f"res_{user_id}.jpg")
+            # Download image (photo or document)
+            media = reply.photo or reply.document
+            original_file = await client.download_media(media, file_name=f"res_{user_id}.jpg")
             async with image_store_lock:
                 image_store[user_id] = original_file
             LOGGER.info(f"[{user_id}] Image saved to {original_file}")
