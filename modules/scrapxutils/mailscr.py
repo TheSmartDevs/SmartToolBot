@@ -8,6 +8,7 @@ import asyncio
 from urllib.parse import urlparse
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
+from user import user
 from pyrogram.errors import (
     UserAlreadyParticipant,
     InviteHashExpired,
