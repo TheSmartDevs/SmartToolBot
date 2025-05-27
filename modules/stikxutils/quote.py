@@ -83,6 +83,8 @@ async def convert_photo_to_sticker(photo_path):
 async def get_emoji_status(client, user_id):
     try:
         async with semaphore:
+            if not user_id:  # Skip if user_id is None
+                return None
             try:
                 input_user = await client.resolve_peer(user_id)
                 full_user = await client.invoke(GetFullUser(id=input_user))
@@ -95,12 +97,17 @@ async def get_emoji_status(client, user_id):
                         return str(custom_emoji_id)
             except Exception:
                 pass
-            user = await client.get_users(user_id)
-            if user and hasattr(user, 'emoji_status') and user.emoji_status:
-                if hasattr(user.emoji_status, 'document_id'):
-                    return str(user.emoji_status.document_id)
-                if hasattr(user.emoji_status, 'custom_emoji_id'):
-                    return str(user.emoji_status.custom_emoji_id)
+            try:
+                users = await client.get_users([user_id])
+                if users and len(users) > 0:
+                    user = users[0]
+                    if hasattr(user, 'emoji_status') and user.emoji_status:
+                        if hasattr(user.emoji_status, 'document_id'):
+                            return str(user.emoji_status.document_id)
+                        if hasattr(user.emoji_status, 'custom_emoji_id'):
+                            return str(user.emoji_status.custom_emoji_id)
+            except Exception:
+                pass
             return None
     except Exception as e:
         logger.error(f"Failed to fetch emoji status for user {user_id}: {e}", exc_info=True)
