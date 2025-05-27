@@ -1,37 +1,33 @@
 import logging
 from pyrogram import Client
-from pyrogram.types import Message
-from config import OWNER_ID
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from config import OWNER_ID, DEVELOPER_USER_ID
 
 async def notify_admin(client: Client, command: str, error: Exception, message: Message):
-    """
-    Notify admins about an error with concise information.
-    
-    Args:
-        client: Pyrogram Client instance
-        command: The command that caused the error (e.g., '/ai')
-        error: The exception object
-        message: The Message object containing user and chat details
-    """
     try:
-        # Get user details
         user = message.from_user
         user_fullname = f"{user.first_name} {user.last_name or ''}".strip()
         user_id = user.id
-        
-        # Format error message
         error_message = (
-            f"**Hey Admin Sir, There Is A Issue With Command `{command}` **"
-            f"**And The Issue Is {str(error)} From `{user_fullname}` ** "
-            f"**And ChatID `{message.chat.id}` **"
+            "**✘ Hey Sir, New Bug Found ↯**\n\n"
+            f"**✘ Command: `{command}` ↯**\n"
+            f"**✘ Issue: `{str(error)}` ↯**\n"
+            f"**✘ User: `{user_fullname}` (ID: {user_id}) ↯**\n"
+            f"**✘ Chat ID: `{message.chat.id}` ↯**\n"
+            f"**✘ Time: `{message.date.strftime('%Y-%m-%d %H:%M:%S')}` ↯**"
         )
-        
-        # Send notification to all admins
-        for admin_id in OWNER_ID:
-            try:
-                await client.send_message(admin_id, error_message)
-            except Exception as admin_error:
-                logging.error(f"Failed to notify admin {admin_id}: {admin_error}")
-                
+        keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("✘ Dev ↯", user_id=DEVELOPER_USER_ID)]
+            ]
+        )
+        try:
+            await client.send_message(
+                chat_id=OWNER_ID,
+                text=error_message,
+                reply_markup=keyboard
+            )
+        except Exception as admin_error:
+            logging.error(f"Failed to notify admin {OWNER_ID}: {admin_error}")
     except Exception as e:
         logging.error(f"Error in notify_admin: {e}")
