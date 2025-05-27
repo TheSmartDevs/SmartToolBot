@@ -27,8 +27,7 @@ second_menu_keyboard = InlineKeyboardMarkup([
 third_menu_keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("Translate", callback_data="translate"), InlineKeyboardButton("Temp Mail", callback_data="tempmail")],
     [InlineKeyboardButton("Text OCR", callback_data="text_ocr"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
-    [InlineKeyboardButton("Yt Tools", callback_data="yt_tools"), InlineKeyboardButton("Qr Utils", callback_data="txtqr")],
-    [InlineKeyboardButton("ImageGen Utils", callback_data="aigen"), InlineKeyboardButton("Weather Utils", callback_data="weather")],
+    [InlineKeyboardButton("Yt Tools", callback_data="yt_tools")],
     [InlineKeyboardButton("Protectron Utils", callback_data="protectron_utils"), InlineKeyboardButton("GroupHelp", callback_data="admin")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_2"), InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
@@ -531,29 +530,6 @@ responses = {
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
-    "txtqr": (
-        "<b>Smart 🔍 QR Utils ⚙️</b>\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>USAGE:</b>\n\n"
-        "➢ <b>/qr [Text]</b> - Convert Text to QR Code.\n"
-        "   - Example: <code>/qr Hello World</code>\n\n"
-        "<b>INSTRUCTIONS:</b>\n"
-        "1️⃣ Use the <b>/qr</b> command followed by your text.\n\n"
-        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
-    ),
-    "aigen": (
-        "<b>🎨 AI Image Generator Utils ⚙️</b>\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>USAGE:</b>\n\n"
-        "➢ <b>/img [Prompt]</b> - Generate an AI-based image using a text prompt.\n"
-        "   - Example: <code>/ai Long hair silky hair black hair young beautiful look at viewer sari </code>\n\n"
-        "<b>INSTRUCTIONS:</b>\n"
-        "1️⃣ Use the <b>/img</b> command followed by a detailed text description.\n"
-        "2️⃣ The AI will generate an image based on your prompt.\n\n"
-        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
-    ),
     "text_split": (
         "<b>📂 Text Split Utils ⚙️ </b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
@@ -568,18 +544,6 @@ responses = {
         "2️⃣ Only <b>.txt</b> files are supported.\n"
         "3️⃣ The bot will return multiple split files if necessary.\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
-    ),
-    "weather": (
-        "<b>🌦️ Weather Utils ⚙️</b>\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>USAGE:</b>\n"
-        "Get the current weather information for any city using these commands:\n\n"
-        "➢ <b>/w [City Name]</b> - Get the current weather for a city.\n"
-        "   - Example: <code>/w Delhi</code> (Fetches weather for Delhi)\n\n"
-        "<b>✨NOTE:</b>\n"
-        "1️⃣ Ensure you provide a valid city name with the commands.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     )
