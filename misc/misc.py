@@ -105,7 +105,7 @@ async def handle_callback_query(client, callback_query):
             ]) if call.data == "about_me" else (
                 InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="main_menu")]]) if call.data in ["ai_tools", "calculator", "credit_cards", "crypto", "converter", "decoders", "downloaders", "domain_check", "education_utils", "rembg"] else (
                     InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="second_menu")]]) if call.data in ["github", "info", "mail_tools", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split"] else (
-                        InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="third_menu")]]) if call.data in ["translate", "tempmail", "text_ocr", "web_capture", "yt_tools", "txtqr", "aigen", "weather", "protectron_utils", "admin"] else (
+                        InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="third_menu")]]) if call.data in ["translate", "tempmail", "text_ocr", "web_capture", "yt_tools", "protectron_utils", "admin"] else (
                             InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
                         )
                     )
