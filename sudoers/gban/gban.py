@@ -14,13 +14,13 @@ def setup_gban_handler(app: Client):
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
 
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
-            await message.reply("**✘Kids Not Allowed To Do This↯**")
+            sent_message = await client.send_message(message.chat.id, "**✘Kids Not Allowed To Do This↯**")
             LOGGER.info(f"Unauthorized gban attempt by user {user_id}")
             return
 
         # Check if a user is specified
         if len(message.command) < 2 and not message.reply_to_message:
-            await message.reply("**✘Please Specify User To Ban Forever↯**")
+            sent_message = await client.send_message(message.chat.id, "**✘Please Specify User To Ban Forever↯**")
             return
 
         # Get target user
@@ -40,7 +40,7 @@ def setup_gban_handler(app: Client):
                     target_identifier = target_identifier.lstrip('@')
                     target_user = await client.get_users(target_identifier)
                 except (UsernameInvalid, PeerIdInvalid) as e:
-                    await message.reply("**✘Error: Invalid User ID/Username↯**")
+                    sent_message = await client.send_message(message.chat.id, "**✘Error: Invalid User ID/Username↯**")
                     LOGGER.error(f"Error resolving user {target_identifier}: {e}")
                     return
 
@@ -49,7 +49,7 @@ def setup_gban_handler(app: Client):
 
         # Check if user is already banned
         if banned_users.find_one({"user_id": target_id}):
-            await message.reply(f"**✘User {target_name} is already banned↯**")
+            sent_message = await client.send_message(message.chat.id, f"**✘User {target_name} is already banned↯**")
             return
 
         # Ban the user
@@ -62,7 +62,7 @@ def setup_gban_handler(app: Client):
             LOGGER.error(f"Failed to notify banned user {target_id}: {e}")
 
         # Notify owner and admins
-        await message.reply(f"**✘Successfully Banned {target_name}↯**")
+        sent_message = await client.send_message(message.chat.id, f"**✘Successfully Banned {target_name}↯**")
         for admin_id in [OWNER_ID] + AUTH_ADMIN_IDS:
             if admin_id != user_id:
                 try:
@@ -77,13 +77,13 @@ def setup_gban_handler(app: Client):
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
 
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
-            await message.reply("**✘Kids Not Allowed To Do This↯**")
+            sent_message = await client.send_message(message.chat.id, "**✘Kids Not Allowed To Do This↯**")
             LOGGER.info(f"Unauthorized gunban attempt by user {user_id}")
             return
 
         # Check if a user is specified
         if len(message.command) < 2 and not message.reply_to_message:
-            await message.reply("**✘Please Specify User To UnBan ↯**")
+            sent_message = await client.send_message(message.chat.id, "**✘Please Specify User To UnBan ↯**")
             return
 
         # Get target user
@@ -103,7 +103,7 @@ def setup_gban_handler(app: Client):
                     target_identifier = target_identifier.lstrip('@')
                     target_user = await client.get_users(target_identifier)
                 except (UsernameInvalid, PeerIdInvalid) as e:
-                    await message.reply("**✘Error: Invalid User ID/Username↯**")
+                    sent_message = await client.send_message(message.chat.id, "**✘Error: Invalid User ID/Username↯**")
                     LOGGER.error(f"Error resolving user {target_identifier}: {e}")
                     return
 
@@ -112,7 +112,7 @@ def setup_gban_handler(app: Client):
 
         # Check if user is banned
         if not banned_users.find_one({"user_id": target_id}):
-            await message.reply(f"**✘User {target_name} is not banned↯**")
+            sent_message = await client.send_message(message.chat.id, f"**✘User {target_name} is not banned↯**")
             return
 
         # Unban the user
@@ -125,7 +125,7 @@ def setup_gban_handler(app: Client):
             LOGGER.error(f"Failed to notify unbanned user {target_id}: {e}")
 
         # Notify owner and admins
-        await message.reply(f"**✘Successfully Unbanned {target_name}↯**")
+        sent_message = await client.send_message(message.chat.id, f"**✘Successfully Unbanned {target_name}↯**")
         for admin_id in [OWNER_ID] + AUTH_ADMIN_IDS:
             if admin_id != user_id:
                 try:
