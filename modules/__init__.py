@@ -59,7 +59,6 @@ from .sessxutils.string import setup_string_handler
 from .stikxutils.kang import setup_kang_handler
 from .stikxutils.quote import setup_q_handler
 from .timexutils.times import setup_time_handler
-from .toolxutils.calc import setup_calc_handler
 from .toolxutils.news import setup_news_handler
 from .toolxutils.qr import setup_qr_handler
 from .toolxutils.rs import setup_rs_handler
@@ -67,7 +66,6 @@ from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
 from .webxutils.ws import setup_ws_handler
 from .webxutils.ss import setup_ss_handler
-from .wxutils.weather import setup_weather_handler
 from .ytxutils.ytag import setup_ytag_handlers
 from .ytxutils.yth import setup_yth_handler
 
@@ -134,12 +132,10 @@ def setup_modules_handlers(app):
     setup_kang_handler(app, bot_token)
     setup_q_handler(app)
     setup_time_handler(app)
-    setup_calc_handler(app)
     setup_news_handler(app)
     setup_qr_handler(app)
     setup_txt_handler(app)
     setup_ws_handler(app)
     setup_ss_handler(app)
-    setup_weather_handler(app)
     setup_ytag_handlers(app)
     setup_yth_handler(app)
