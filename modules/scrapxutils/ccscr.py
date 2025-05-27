@@ -14,6 +14,7 @@ from pyrogram.errors import (
     InviteRequestSent
 )
 from urllib.parse import urlparse
+from user import user
 from config import (
     SUDO_CCSCR_LIMIT,
     OWNER_ID,
