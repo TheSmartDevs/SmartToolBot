@@ -16,6 +16,8 @@ try:
     group_settings = db["group_settings"]
     # Access the "auth_admins" collection for authorized admins
     auth_admins = db["auth_admins"]
+    # Access the "banned_users" collection for banned users
+    banned_users = db["banned_users"]
     LOGGER.info("Database Client Successfully Created!")
 except Exception as e:
     # Log the error with details and raise it to halt execution
