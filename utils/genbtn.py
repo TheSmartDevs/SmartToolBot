@@ -6,33 +6,32 @@ from pyrogram.enums import ParseMode
 
 # Inline Keyboard Buttons Setup By @abirxdhackz & @ISmartDevs
 main_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("AI Tools", callback_data="ai_tools"), InlineKeyboardButton("Calculator", callback_data="calculator")],
-    [InlineKeyboardButton("CC Tools", callback_data="credit_cards"), InlineKeyboardButton("Crypto", callback_data="crypto")],
-    [InlineKeyboardButton("Converter", callback_data="converter"), InlineKeyboardButton("Decoders", callback_data="decoders")],
-    [InlineKeyboardButton("Downloaders", callback_data="downloaders"), InlineKeyboardButton("Domain Check", callback_data="domain_check")],
-    [InlineKeyboardButton("Education Utils", callback_data="education_utils"), InlineKeyboardButton("Editing Utils", callback_data="rembg")],
+    [InlineKeyboardButton("AI Tools", callback_data="ai_tools"), InlineKeyboardButton("CC Tools", callback_data="credit_cards")],
+    [InlineKeyboardButton("Crypto", callback_data="crypto"), InlineKeyboardButton("Converter", callback_data="converter")],
+    [InlineKeyboardButton("Decoders", callback_data="decoders"), InlineKeyboardButton("Downloaders", callback_data="downloaders")],
+    [InlineKeyboardButton("Domain Check", callback_data="domain_check"), InlineKeyboardButton("Education Utils", callback_data="education_utils")],
+    [InlineKeyboardButton("Editing Utils", callback_data="rembg"), InlineKeyboardButton("Github Utils", callback_data="github")],
     [InlineKeyboardButton("Next ➡️", callback_data="next_1"), InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
 second_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Github Utils", callback_data="github"), InlineKeyboardButton("Info", callback_data="info")],
-    [InlineKeyboardButton("Mail Tools", callback_data="mail_tools"), InlineKeyboardButton("Network Tools", callback_data="network_tools")],
-    [InlineKeyboardButton("Random Address", callback_data="random_address"), InlineKeyboardButton("String Session", callback_data="string_session")],
-    [InlineKeyboardButton("Stripe Keys", callback_data="stripe_keys"), InlineKeyboardButton("Sticker", callback_data="sticker")],
-    [InlineKeyboardButton("Time Date", callback_data="time_date"), InlineKeyboardButton("Txt Spilt", callback_data="text_split")],
+    [InlineKeyboardButton("Info", callback_data="info"), InlineKeyboardButton("Mail Tools", callback_data="mail_tools")],
+    [InlineKeyboardButton("Network Tools", callback_data="network_tools"), InlineKeyboardButton("Random Address", callback_data="random_address")],
+    [InlineKeyboardButton("String Session", callback_data="string_session"), InlineKeyboardButton("Stripe Keys", callback_data="stripe_keys")],
+    [InlineKeyboardButton("Sticker", callback_data="sticker"), InlineKeyboardButton("TimeDate", callback_data="time_date")],
+    [InlineKeyboardButton("Txt Spilt", callback_data="text_split"), InlineKeyboardButton("Translate", callback_data="translate")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_1"), InlineKeyboardButton("Next ➡️", callback_data="next_2")],
     [InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
 third_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Translate", callback_data="translate"), InlineKeyboardButton("Temp Mail", callback_data="tempmail")],
-    [InlineKeyboardButton("Text OCR", callback_data="text_ocr"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
-    [InlineKeyboardButton("Yt Tools", callback_data="yt_tools")],
-    [InlineKeyboardButton("Protectron Utils", callback_data="protectron_utils"), InlineKeyboardButton("GroupHelp", callback_data="admin")],
+    [InlineKeyboardButton("Temp Mail", callback_data="tempmail"), InlineKeyboardButton("Text OCR", callback_data="text_ocr")],
+    [InlineKeyboardButton("User Export", callback_data="bot_users_export"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
+    [InlineKeyboardButton("YT Tools", callback_data="yt_tools")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_2"), InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
-# ALL BUTTONS CALLBACK RESPONSES WRITTENT BY @abirxdhackz & @ISmartDevs & @nkka404
+# ALL BUTTONS CALLBACK RESPONSES WRITTEN BY @abirxdhackz & @ISmartDevs & @nkka404
 responses = {
     "ai_tools": (
         "<b>🤖 AI Assistant Utils ⚙️</b>\n"
@@ -163,8 +162,8 @@ responses = {
          "➢ <b>/setting [Full Settings Of Your Group]</b> - Show All Settings Of Your Group.\n\n"
          "<b>✨NOTE:</b>\n"
          "1️⃣ These Tools Database Is MONGODB So Your Data Will Be Available All Time Bro\n\n"
-        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
     "credit_cards": (
         "<b>💳 Credit Card Utils ⚙️</b>\n"
@@ -214,7 +213,7 @@ responses = {
         "➢ <b>/vnote</b> - Reply to a video message to convert it into a circular Telegram video note.\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ Ensure you reply directly to a video message with the <code>/aud</code> command to extract audio.\n"
-        "2️⃣ Ensure you reply directly to a audio message with the <code>/voice</code> command to  convert it to a voice message.\n\n"
+        "2️⃣ Ensure you reply directly to a audio message with the <code>/voice</code> command to convert it to a voice message.\n\n"
         "3️⃣ Reply to a short video (≤ 1 minute) with /vnote to turn it into a round video note.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
@@ -314,7 +313,7 @@ responses = {
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
-   "rembg": (
+    "rembg": (
          "<b>🖼 Photo Editing Utilities ⚙️</b>\n"
          "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
          "<b>✨ Features:</b>\n"
@@ -325,8 +324,8 @@ responses = {
          "1️⃣ Enhance May Take 1 Minute To Skip Rate Limit\n"
          "2️⃣ Ensure the image is clear for the best results.\n\n"
          "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
     "calculator": (
         "<b>🧮 Smart Calculator Utils ⚙️</b>\n"
@@ -434,25 +433,25 @@ responses = {
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
-"translate": (
-    "<b>🌐 Translation Commands</b>\n"
-    "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-    "<b>USAGE:</b>\n"
-    "Translate text into various languages using these commands:\n\n"
-    "➢ <b>/tr[Language Code] [Text]</b> - Translate the given text into the specified language.\n"
-    "   - Example: <code>/tres Hello!</code> (Translates 'Hello!' to Spanish)\n"
-    "   - Reply Example: Reply to any message with <code>/tres</code> to translate it into Spanish.\n\n"
-    "➢ <b>/tr [Language]</b> - Translate the text in an image to the specified language.\n"
-    "   - Example: Reply to a photo with <code>/tr ja</code> to translate its text to Japanese.\n"
-    "   - Supported: Use language names or codes (e.g., <code>/tr en</code>, <code>/tr bangla</code>, <code>/tr fr</code>)\n\n"
-    "<b>NOTE:</b>\n"
-    "1️⃣ Use the <code>/tr[Language Code]</code> format for text translation.\n"
-    "2️⃣ Use <code>/tr</code> as a reply to a photo for image translation.\n"
-    "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-    "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
-    {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+    "translate": (
+        "<b>🌐 Translation Commands</b>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>USAGE:</b>\n"
+        "Translate text into various languages using these commands:\n\n"
+        "➢ <b>/tr[Language Code] [Text]</b> - Translate the given text into the specified language.\n"
+        "   - Example: <code>/tres Hello!</code> (Translates 'Hello!' to Spanish)\n"
+        "   - Reply Example: Reply to any message with <code>/tres</code> to translate it into Spanish.\n\n"
+        "➢ <b>/tr [Language]</b> - Translate the text in an image to the specified language.\n"
+        "   - Example: Reply to a photo with <code>/tr ja</code> to translate its text to Japanese.\n"
+        "   - Supported: Use language names or codes (e.g., <code>/tr en</code>, <code>/tr bangla</code>, <code>/tr fr</code>)\n\n"
+        "<b>NOTE:</b>\n"
+        "1️⃣ Use the <code>/tr[Language Code]</code> format for text translation.\n"
+        "2️⃣ Use <code>/tr</code> as a reply to a photo for image translation.\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
-"text_ocr": (
+    "text_ocr": (
         "<b>🔍 OCR Utils ⚙️</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>USAGE:</b>\n"
@@ -461,6 +460,26 @@ responses = {
         "<b>✨NOTE:</b>\n"
         "1️⃣ This command only works with clear images containing English text.\n"
         "2️⃣ Ensure the image is not blurry or distorted for accurate text extraction.\n\n"
+        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+    ),
+    "bot_users_export": (
+        "<b>🤖 Bot Users Export</b>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>USAGE:</b>\n"
+        "📌 This allows you to export the users/chats list of your bot.\n\n"
+        "<b>How to use:</b>\n"
+        "1️⃣ Send the command: <code>/getusers <your_bot_token></code>\n"
+        "2️⃣ You will receive a JSON file containing the exported data.\n\n"
+        "<b>Example:</b>\n"
+        "<code>/getusers 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ</code>\n\n"
+        "<b>BENEFITS:</b>\n"
+        "✅ Broadcast messages to all bot users\n"
+        "✅ Backup user and group data for future use.\n"
+        "✅ Migrate users to a new bot if needed.\n\n"
+        "<b>NOTE:</b>\n"
+        "🔹 Ensure that the bot token is valid.\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
