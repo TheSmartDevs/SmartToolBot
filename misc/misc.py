@@ -103,9 +103,9 @@ async def handle_callback_query(client, callback_query):
                  InlineKeyboardButton("⭐️ Donate", callback_data="donate")],
                 [InlineKeyboardButton("⬅️ Back", callback_data="start_message")]
             ]) if call.data == "about_me" else (
-                InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="main_menu")]]) if call.data in ["ai_tools", "calculator", "credit_cards", "crypto", "converter", "decoders", "downloaders", "domain_check", "education_utils", "rembg"] else (
-                    InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="second_menu")]]) if call.data in ["github", "info", "mail_tools", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split"] else (
-                        InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="third_menu")]]) if call.data in ["translate", "tempmail", "text_ocr", "web_capture", "yt_tools", "protectron_utils", "admin"] else (
+                InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="main_menu")]]) if call.data in ["ai_tools", "credit_cards", "crypto", "converter", "decoders", "downloaders", "domain_check", "education_utils", "rembg", "github"] else (
+                    InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="second_menu")]]) if call.data in ["info", "mail_tools", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split", "translate"] else (
+                        InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="third_menu")]]) if call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "yt_tools"] else (
                             InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
                         )
                     )
