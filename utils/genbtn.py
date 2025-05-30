@@ -27,8 +27,8 @@ second_menu_keyboard = InlineKeyboardMarkup([
 third_menu_keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("Temp Mail", callback_data="tempmail"), InlineKeyboardButton("Text OCR", callback_data="text_ocr")],
     [InlineKeyboardButton("User Export", callback_data="bot_users_export"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
-    [InlineKeyboardButton("YT Tools", callback_data="yt_tools")],
-    [InlineKeyboardButton("Previous ⬅️", callback_data="previous_2"), InlineKeyboardButton("Close ❌", callback_data="close")]
+    [InlineKeyboardButton("YT Tools", callback_data="yt_tools"), InlineKeyboardButton("Previous ⬅️", callback_data="previous_2")],
+    [InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
 # ALL BUTTONS CALLBACK RESPONSES WRITTEN BY @abirxdhackz & @ISmartDevs & @nkka404
