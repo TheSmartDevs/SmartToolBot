@@ -106,7 +106,13 @@ def setup_info_handler(app):
                         [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
                         [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                     ]
-                    await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+                    await client.edit_message_text(
+                        chat_id=message.chat.id,
+                        message_id=progress_message.id,
+                        text=response,
+                        parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=InlineKeyboardMarkup(buttons)
+                    )
                     logger.info("User info fetched successfully with buttons")
                 elif message.reply_to_message:
                     # Show info of the replied user or bot
@@ -166,7 +172,13 @@ def setup_info_handler(app):
                         [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
                         [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                     ]
-                    await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+                    await client.edit_message_text(
+                        chat_id=message.chat.id,
+                        message_id=progress_message.id,
+                        text=response,
+                        parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=InlineKeyboardMarkup(buttons)
+                    )
                     logger.info("Replied user info fetched successfully")
                 elif len(message.command) > 1:
                     # Extract username from the command
@@ -230,7 +242,13 @@ def setup_info_handler(app):
                             [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
                             [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                         ]
-                        await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+                        await client.edit_message_text(
+                            chat_id=message.chat.id,
+                            message_id=progress_message.id,
+                            text=response,
+                            parse_mode=ParseMode.MARKDOWN,
+                            reply_markup=InlineKeyboardMarkup(buttons)
+                        )
                         logger.info("User/bot info fetched successfully with buttons")
                     except (PeerIdInvalid, UsernameNotOccupied, IndexError):
                         logger.info(f"Username '{username}' not found as a user/bot. Checking for chat...")
@@ -247,7 +265,13 @@ def setup_info_handler(app):
                             buttons = [
                                 [InlineKeyboardButton("✘ Joining Link ↯", url=f"t.me/c/{str(chat.id).replace('-100', '')}/100"), InlineKeyboardButton("✘ Permanent Link ↯", url=f"t.me/c/{str(chat.id).replace('-100', '')}/100")],
                             ]
-                            await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
+                            await client.edit_message_text(
+                                chat_id=message.chat.id,
+                                message_id=progress_message.id,
+                                text=response,
+                                parse_mode=ParseMode.MARKDOWN,
+                                reply_markup=InlineKeyboardMarkup(buttons)
+                            )
                             logger.info("Chat info fetched successfully with buttons")
                         except (ChannelInvalid, PeerIdInvalid):
                             error_message = (
@@ -286,10 +310,6 @@ def setup_info_handler(app):
                     text="**Looks Like I Don't Have Control Over The User**",
                     parse_mode=ParseMode.MARKDOWN
                 )
-            finally:
-                if not (message.reply_to_message or len(message.command) > 1):  # Only delete progress message if it wasn't edited
-                    await client.delete_messages(chat_id=message.chat.id, message_ids=progress_message.id)
-                    logger.info("Progress message deleted")
         except Exception as e:
             logger.error(f"Unhandled exception: {str(e)}")
             await client.send_message(
