@@ -52,7 +52,7 @@ def setup_info_handler(app):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
         if user_id and banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
             return
 
         logger.info("Received /info or /id command")
@@ -104,7 +104,7 @@ def setup_info_handler(app):
                     )
                     buttons = [
                         [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
-                        [InlineKeyboardButton("✘ Permanent Link ↯", url=f"tg://user?id={user.id}")],
+                        [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                     ]
                     await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
                     logger.info("User info fetched successfully with buttons")
@@ -164,7 +164,7 @@ def setup_info_handler(app):
                         )
                     buttons = [
                         [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
-                        [InlineKeyboardButton("✘ Permanent Link ↯", url=f"tg://user?id={user.id}")],
+                        [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                     ]
                     await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
                     logger.info("Replied user info fetched successfully")
@@ -228,7 +228,7 @@ def setup_info_handler(app):
                             )
                         buttons = [
                             [InlineKeyboardButton("✘ Android Link ↯", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("✘ iOS Link ↯", url=f"tg://user?id={user.id}")],
-                            [InlineKeyboardButton("✘ Permanent Link ↯", url=f"tg://user?id={user.id}")],
+                            [InlineKeyboardButton("✘ Permanent Link ↯", user_id=user.id)],
                         ]
                         await client.send_message(chat_id=message.chat.id, text=response, parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(buttons))
                         logger.info("User/bot info fetched successfully with buttons")
@@ -255,20 +255,45 @@ def setup_info_handler(app):
                                 if chat.type == ChatType.CHANNEL
                                 else "**Looks Like I Don't Have Control Over The Group**"
                             )
-                            await client.send_message(chat_id=message.chat.id, text=error_message, parse_mode=ParseMode.MARKDOWN)
+                            await client.edit_message_text(
+                                chat_id=message.chat.id,
+                                message_id=progress_message.id,
+                                text=error_message,
+                                parse_mode=ParseMode.MARKDOWN
+                            )
                             logger.error(f"Permission error: {error_message}")
                         except Exception as e:
                             logger.error(f"Error fetching chat info: {str(e)}")
-                            await client.send_message(chat_id=message.chat.id, text="**Looks Like I Don't Have Control Over The Group**", parse_mode=ParseMode.MARKDOWN)
+                            await client.edit_message_text(
+                                chat_id=message.chat.id,
+                                message_id=progress_message.id,
+                                text="**Looks Like I Don't Have Control Over The Group**",
+                                parse_mode=ParseMode.MARKDOWN
+                            )
                     except Exception as e:
                         logger.error(f"Error fetching user or bot info: {str(e)}")
-                        await client.send_message(chat_id=message.chat.id, text="**Looks Like I Don't Have Control Over The User**", parse_mode=ParseMode.MARKDOWN)
+                        await client.edit_message_text(
+                            chat_id=message.chat.id,
+                            message_id=progress_message.id,
+                            text="**Looks Like I Don't Have Control Over The User**",
+                            parse_mode=ParseMode.MARKDOWN
+                        )
             except Exception as e:
                 logger.error(f"Unhandled exception: {str(e)}")
-                await client.send_message(chat_id=message.chat.id, text="**Sorry User Info Database API Error❌**", parse_mode=ParseMode.MARKDOWN)
+                await client.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=progress_message.id,
+                    text="**Looks Like I Don't Have Control Over The User**",
+                    parse_mode=ParseMode.MARKDOWN
+                )
             finally:
-                await client.delete_messages(chat_id=message.chat.id, message_ids=progress_message.id)
-                logger.info("Progress message deleted")
+                if not (message.reply_to_message or len(message.command) > 1):  # Only delete progress message if it wasn't edited
+                    await client.delete_messages(chat_id=message.chat.id, message_ids=progress_message.id)
+                    logger.info("Progress message deleted")
         except Exception as e:
             logger.error(f"Unhandled exception: {str(e)}")
-            await client.send_message(chat_id=message.chat.id, text="**Sorry User Info Database API Error❌**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(
+                chat_id=message.chat.id,
+                text="**Looks Like I Don't Have Control Over The User**",
+                parse_mode=ParseMode.MARKDOWN
+            )
