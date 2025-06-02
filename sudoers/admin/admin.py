@@ -1,327 +1,334 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
 import asyncio
 from datetime import datetime, timedelta
-import logging
 from pyrogram import Client, filters
-from pyrogram.handlers import MessageHandler
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from pyrogram.enums import ParseMode
-from config import OWNER_ID, UPDATE_CHANNEL_URL, COMMAND_PREFIX, DEVELOPER_USER_ID
-from core import user_activity_collection, auth_admins
+from pyrogram.handlers import (
+    MessageHandler,
+    ChatMemberUpdatedHandler
+)
+from pyrogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    Message,
+    ChatMemberUpdated
+)
+from pyrogram.enums import ParseMode, ChatType
+from pyrogram.errors import (
+    ChatWriteForbidden,
+    UserIsBlocked,
+    InputUserDeactivated,
+    FloodWait,
+    PeerIdInvalid
+)
+from config import (
+    OWNER_ID,
+    UPDATE_CHANNEL_URL,
+    COMMAND_PREFIX,
+    DEVELOPER_USER_ID
+)
+from core import auth_admins, user_activity_collection
 from utils import LOGGER
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = LOGGER
-
-async def get_auth_admins():
-    """Retrieve all authorized admins from MongoDB."""
-    try:
-        admins = auth_admins.find({}, {"user_id": 1, "_id": 0})
-        return {admin["user_id"] for admin in admins}
-    except Exception as e:
-        logger.error(f"Error fetching auth admins: {e}")
-        return set()
-
-async def is_admin(user_id):
-    """Check if the user is an admin (OWNER_ID or auth_admins)."""
-    if user_id == OWNER_ID:  # Use direct comparison for single integer OWNER_ID
-        return True
-    auth_admin_ids = await get_auth_admins()
-    return user_id in auth_admin_ids
-
 def update_user_activity(user_id, is_group=False):
-    """Update user or group activity in the MongoDB database."""
-    now = datetime.utcnow()
-    user = user_activity_collection.find_one({"user_id": user_id})
-    if not user:
-        user_activity_collection.insert_one({
-            "user_id": user_id,
-            "is_group": is_group,
-            "last_activity": now,
-            "daily": 0,
-            "weekly": 0,
-            "monthly": 0,
-            "yearly": 0
-        })
-    else:
-        user_activity_collection.update_one(
-            {"user_id": user_id},
-            {"$set": {"last_activity": now}},
-            upsert=True
+    try:
+        now = datetime.utcnow()
+        update_data = {
+            "$set": {
+                "last_activity": now,
+                "is_group": bool(is_group)  # Ensure is_group is a boolean
+            },
+            "$inc": {"activity_count": 1}
+        }
+        result = user_activity_collection.update_one(
+            {"user_id": user_id}, update_data, upsert=True
         )
-        user_activity_collection.update_one(
-            {"user_id": user_id},
-            {"$inc": {"daily": 1, "weekly": 1, "monthly": 1, "yearly": 1}}
-        )
+        LOGGER.debug(f"Updated activity for user_id {user_id}, is_group={is_group}, result: {result.modified_count} modified, {result.upserted_id} upserted")
+    except Exception as e:
+        LOGGER.error(f"Error updating user activity for user_id {user_id}: {str(e)}")
+
+def is_admin(user_id):
+    try:
+        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        return user_id == OWNER_ID or user_id in [admin["user_id"] for admin in auth_admins_data]
+    except Exception as e:
+        LOGGER.error(f"Error checking admin status for user_id {user_id}: {str(e)}")
+        return False
 
 async def broadcast_handler(client: Client, message: Message):
-    """Handle broadcast or send commands for admins."""
-    if not await is_admin(message.from_user.id):
-        return await client.send_message(
-            chat_id=message.chat.id,
-            text="**✘Kids Not Allowed To Do This↯**"
-        )
+    if not message.from_user or not message.chat:
+        LOGGER.error("Invalid user or chat information for broadcast command")
+        return
+
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        LOGGER.info(f"Unauthorized broadcast attempt by user_id {user_id}")
+        await client.send_message(message.chat.id, "**✘ Sorry You're Not Authorized Bro!**", parse_mode=ParseMode.MARKDOWN)
+        return
 
     is_broadcast = message.command[0].lower() in ["broadcast", "b"]
+    LOGGER.info(f"{'Broadcast' if is_broadcast else 'Send'} initiated by user_id {user_id}")
 
-    if message.reply_to_message:
-        # Admin replied to a message
-        return await process_broadcast(client, message.reply_to_message, is_broadcast, message.chat.id)
+    if message.reply_to_message and (
+        message.reply_to_message.text or message.reply_to_message.photo or
+        message.reply_to_message.video or message.reply_to_message.audio or
+        message.reply_to_message.document
+    ):
+        await process_broadcast(client, message.reply_to_message, is_broadcast, message.chat.id)
     elif is_broadcast and len(message.command) > 1:
-        # Admin provided text directly
-        broadcast_text = " ".join(message.command[1:])
-        return await process_broadcast(client, broadcast_text, is_broadcast, message.chat.id)
+        await process_broadcast(client, " ".join(message.command[1:]), is_broadcast, message.chat.id)
     else:
-        # Wait for the next message
-        action_type = "broadcast" if is_broadcast else "send"
-        response = await client.send_message(
-            chat_id=message.chat.id,
-            text=f"**Please send the message you want to {action_type}.**"
+        action = "broadcast" if is_broadcast else "send"
+        await client.send_message(
+            message.chat.id, f"**Please send a message to {action}.**", parse_mode=ParseMode.MARKDOWN
         )
-
-        async def broadcast_message_callback(client: Client, broadcast_msg: Message):
-            if broadcast_msg.from_user.id == message.from_user.id and broadcast_msg.chat.id == message.chat.id:
-                await process_broadcast(client, broadcast_msg, is_broadcast, message.chat.id)
-                client.remove_handler(broadcast_message_handler, group=1)
-
-        broadcast_message_handler = MessageHandler(
-            broadcast_message_callback,
-            filters.user(message.from_user.id) & filters.chat(message.chat.id)
-        )
-        client.add_handler(broadcast_message_handler, group=1)
-        return response
+        async def callback(client: Client, msg: Message):
+            if msg.from_user and msg.from_user.id == user_id and msg.chat.id == message.chat.id:
+                if not (msg.text or msg.photo or msg.video or msg.audio or msg.document):
+                    await client.send_message(
+                        msg.chat.id, "**✘ Send a valid text, photo, video, audio, or document!**",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    return
+                await process_broadcast(client, msg, is_broadcast, msg.chat.id)
+                # Remove handler without awaiting, as it returns None
+                client.remove_handler(handler, group=2)
+        handler = MessageHandler(callback, filters.user(user_id) & filters.chat(message.chat.id))
+        client.add_handler(handler, group=2)
 
 async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=None):
-    """Process and send broadcast or forwarded messages."""
-    if isinstance(content, str):
-        broadcast_text = content
-        broadcast_msg = None
-    elif isinstance(content, Message):
-        broadcast_msg = content
-        broadcast_text = None
-    else:
-        logger.error("Invalid content type for broadcast")
-        return await client.send_message(
-            chat_id=chat_id,
-            text="**Sorry This Content Not Allowed!**"
+    try:
+        if isinstance(content, str):
+            broadcast_text = content
+            broadcast_msg = None
+        elif isinstance(content, Message):
+            broadcast_text = None
+            broadcast_msg = content
+        else:
+            raise ValueError("Invalid content type")
+
+        LOGGER.info(f"Processing {'broadcast' if is_broadcast else 'forward'}")
+        processing_msg = await client.send_message(
+            chat_id, f"**💫 {'Broadcasting' if is_broadcast else 'Sending'} In Progress...**",
+            parse_mode=ParseMode.MARKDOWN
         )
 
-    processing_message = await client.send_message(
-        chat_id=chat_id,
-        text=f'**💫 {"Broadcasting" if is_broadcast else "Sending"} Message In Progress 💫**'
-    )
+        # Get the bot's own ID to exclude it from the broadcast list
+        bot_info = await client.get_me()
+        bot_id = bot_info.id
 
-    user_ids = [user["user_id"] for user in user_activity_collection.find({"is_group": False})]
-    group_ids = [group["user_id"] for group in user_activity_collection.find({"is_group": True})]
+        # Clean up old entries (older than 90 days)
+        cutoff_date = datetime.utcnow() - timedelta(days=90)
+        user_activity_collection.delete_many({"last_activity": {"$lt": cutoff_date}})
+        LOGGER.info("Cleaned up old entries from user_activity_collection")
 
-    successful_users = 0
-    failed_users = 0
-    successful_groups = 0
-    failed_groups = 0
-    broadcast_start_time = datetime.now()
+        # Fetch chats from the database and exclude the bot's own ID
+        chats = list(user_activity_collection.find({}, {"user_id": 1, "is_group": 1}))
+        user_ids = [chat["user_id"] for chat in chats if not chat.get("is_group", False) and chat["user_id"] != bot_id]
+        group_ids = [chat["user_id"] for chat in chats if chat.get("is_group", False) and chat["user_id"] != bot_id]
+        LOGGER.info(f"Found {len(user_ids)} users and {len(group_ids)} groups to broadcast to")
 
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
+        successful_users, blocked_users, successful_groups, failed_groups = 0, 0, 0, 0
+        start_time = datetime.now()
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
 
-    for target_chat_id in user_ids + group_ids:
-        try:
-            if broadcast_text:
-                await client.send_message(
-                    chat_id=target_chat_id,
-                    text=broadcast_text,
-                    reply_markup=keyboard
-                )
-            elif broadcast_msg:
-                if is_broadcast:
-                    if broadcast_msg.text:
-                        await client.send_message(
-                            chat_id=target_chat_id,
-                            text=broadcast_msg.text,
-                            reply_markup=keyboard
+        # Process all chats in parallel using asyncio.gather
+        all_chat_ids = user_ids + group_ids
+        LOGGER.debug(f"Starting broadcast to {len(all_chat_ids)} chats")
+
+        async def send_to_chat(target_chat_id):
+            try:
+                if broadcast_text:
+                    sent_msg = await client.send_message(target_chat_id, broadcast_text, reply_markup=keyboard)
+                    if target_chat_id in group_ids:
+                        chat = await client.get_chat(target_chat_id)
+                        if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+                            await client.pin_chat_message(target_chat_id, sent_msg.id)
+                elif broadcast_msg:
+                    if is_broadcast:
+                        if not (broadcast_msg.text or broadcast_msg.photo or broadcast_msg.video or
+                                broadcast_msg.audio or broadcast_msg.document):
+                            raise ValueError("Unsupported message type")
+                        sent_msg = await client.copy_message(
+                            target_chat_id, broadcast_msg.chat.id, broadcast_msg.id, reply_markup=keyboard
                         )
-                    elif broadcast_msg.photo:
-                        await client.send_photo(
-                            chat_id=target_chat_id,
-                            photo=broadcast_msg.photo.file_id,
-                            caption=broadcast_msg.caption or "",
-                            reply_markup=keyboard
-                        )
-                    elif broadcast_msg.video:
-                        await client.send_video(
-                            chat_id=target_chat_id,
-                            video=broadcast_msg.video.file_id,
-                            caption=broadcast_msg.caption or "",
-                            reply_markup=keyboard
-                        )
-                    elif broadcast_msg.audio:
-                        await client.send_audio(
-                            chat_id=target_chat_id,
-                            audio=broadcast_msg.audio.file_id,
-                            caption=broadcast_msg.caption or "",
-                            reply_markup=keyboard
-                        )
-                    elif broadcast_msg.document:
-                        await client.send_document(
-                            chat_id=target_chat_id,
-                            document=broadcast_msg.document.file_id,
-                            caption=broadcast_msg.caption or "",
-                            reply_markup=keyboard
-                        )
+                        if target_chat_id in group_ids:
+                            chat = await client.get_chat(target_chat_id)
+                            if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+                                await client.pin_chat_message(target_chat_id, sent_msg.id)
                     else:
-                        await client.copy_message(
-                            chat_id=target_chat_id,
-                            from_chat_id=broadcast_msg.chat.id,
-                            message_id=broadcast_msg.id
-                        )
+                        await client.forward_messages(target_chat_id, broadcast_msg.chat.id, broadcast_msg.id)
+                if target_chat_id in user_ids:
+                    return ("user", "success")
                 else:
-                    await client.forward_messages(
-                        chat_id=target_chat_id,
-                        from_chat_id=broadcast_msg.chat.id,
-                        message_ids=broadcast_msg.id
-                    )
-            if target_chat_id in user_ids:
-                successful_users += 1
-            else:
-                successful_groups += 1
-        except Exception as e:
-            logger.error(f"Failed to send to {target_chat_id}: {e}")
-            if target_chat_id in user_ids:
-                failed_users += 1
-            else:
-                failed_groups += 1
+                    return ("group", "success")
+            except FloodWait as e:
+                LOGGER.warning(f"FloodWait for chat_id {target_chat_id}: Waiting {e.value}s")
+                await asyncio.sleep(e.value)
+                return await send_to_chat(target_chat_id)  # Retry after waiting
+            except UserIsBlocked:
+                LOGGER.error(f"User blocked the bot: chat_id {target_chat_id}")
+                if target_chat_id in user_ids:
+                    return ("user", "blocked")
+                else:
+                    return ("group", "failed")
+            except (InputUserDeactivated, ChatWriteForbidden, PeerIdInvalid) as e:
+                LOGGER.error(f"Failed to send to chat_id {target_chat_id}: {str(e)}")
+                if target_chat_id in user_ids:
+                    return ("user", "blocked")
+                else:
+                    return ("group", "failed")
+            except Exception as e:
+                LOGGER.error(f"Error sending to chat_id {target_chat_id}: {str(e)}")
+                if target_chat_id in user_ids:
+                    return ("user", "blocked")
+                else:
+                    return ("group", "failed")
 
-    await processing_message.delete()
+        # Run all send operations in parallel
+        results = await asyncio.gather(*[send_to_chat(chat_id) for chat_id in all_chat_ids], return_exceptions=True)
 
-    broadcast_end_time = datetime.now()
-    time_diff = broadcast_end_time - broadcast_start_time
-    hours, remainder = divmod(time_diff.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    time_taken = f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+        # Process results
+        for result in results:
+            if isinstance(result, tuple):
+                chat_type, status = result
+                if chat_type == "user":
+                    if status == "success":
+                        successful_users += 1
+                    elif status == "blocked":
+                        blocked_users += 1
+                elif chat_type == "group":
+                    if status == "success":
+                        successful_groups += 1
+                    elif status == "failed":
+                        failed_groups += 1
 
-    action_success = "Broadcast" if is_broadcast else "Forward"
-    response_text = (
-        f"**💥 {action_success} Successful! 💥**\n"
-        "**✘━━━━━━━━━━━✘**\n"
-        f"**👀 To Users:** `{successful_users}` ✨\n"
-        f"**✘ Blocked Users:** `{failed_users}` ❄️\n"
-        "**✘━━━━━━━━━━━✘**\n"
-        f"**🌐 To Groups:** `{successful_groups}` 🌟\n"
-        f"**✘ Blocked Groups:** `{failed_groups}` 💫\n"
-        "**✘━━━━━━━━━━━✘**\n"
-        f"**↯ Time Taken:** `{time_taken}` 🇧🇩"
-    )
+        time_diff = (datetime.now() - start_time).seconds
+        await processing_msg.delete()
 
-    return await client.send_message(
-        chat_id=chat_id,
-        text=response_text,
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]]
+        summary_msg = await client.send_message(
+            chat_id,
+            f"**Successfully {'Broadcast' if is_broadcast else 'Forward'} Complete in {time_diff} seconds ✅**\n\n"
+            f"**To Users:** `{successful_users}`\n"
+            f"**Blocked:** `{blocked_users}`\n"
+            f"**To Groups:** `{successful_groups}`\n"
+            f"**Failed Groups:** `{failed_groups}`",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=keyboard
         )
-    )
+        chat = await client.get_chat(chat_id)
+        if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+            await client.pin_chat_message(chat_id, summary_msg.id)
+
+        LOGGER.info(f"{'Broadcast' if is_broadcast else 'Forward'} completed: {successful_users} users, {successful_groups} groups, "
+                    f"{blocked_users} blocked users, {failed_groups} failed groups")
+    except Exception as e:
+        LOGGER.error(f"Error in {'broadcast' if is_broadcast else 'forward'}: {str(e)}")
+        await client.send_message(chat_id, "**✘ Error Processing Request!**", parse_mode=ParseMode.MARKDOWN)
 
 async def stats_handler(client: Client, message: Message):
-    """Handle stats command to display bot usage statistics."""
-    if not await is_admin(message.from_user.id):
-        return await client.send_message(
-            chat_id=message.chat.id,
-            text="**✘Kids Not Allowed To Do This↯**"
+    if not message.from_user or not message.chat:
+        LOGGER.error("Invalid user or chat for stats command")
+        return
+
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        LOGGER.info(f"Unauthorized stats attempt by user_id {user_id}")
+        await client.send_message(message.chat.id, "**✘ Unauthorized Access!**", parse_mode=ParseMode.MARKDOWN)
+        return
+
+    LOGGER.info(f"Stats command by user_id {user_id}")
+    try:
+        now = datetime.utcnow()
+        daily_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
+        weekly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
+        monthly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
+        yearly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
+        total_users = user_activity_collection.count_documents({"is_group": False})
+        total_groups = user_activity_collection.count_documents({"is_group": True})
+
+        stats_text = (
+            f"**💥 Bot Stats 💥**\n"
+            f"**✨ Active Users:**\n"
+            f"- Daily: `{daily_users}`\n"
+            f"- Weekly: `{weekly_users}`\n"
+            f"- Monthly: `{monthly_users}`\n"
+            f"- Yearly: `{yearly_users}`\n"
+            f"**📊 Totals:**\n"
+            f"- Users: `{total_users}`\n"
+            f"- Groups: `{total_groups}`\n"
+            f"- Database Size: `{total_users + total_groups}`"
         )
-
-    now = datetime.utcnow()
-    daily_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
-    weekly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
-    monthly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
-    yearly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
-    
-    total_users = user_activity_collection.count_documents({"is_group": False})
-    total_groups = user_activity_collection.count_documents({"is_group": True})
-
-    stats_text = (
-        "**💥 Bot's Full Database Info 💥**\n"
-        "**✘━━━━━━━━━━━✘**\n"
-        "**✨ Registered Users Activity: ✨**\n"
-        f"- 💫 Daily Active: {daily_users} 🔥\n"
-        f"- 🌟 Weekly Active: {weekly_users} ⚡\n"
-        f"- ❄️ Monthly Active: {monthly_users} 🌈\n"
-        f"- 👀 Annual Active: {yearly_users} 🎯\n"
-        "**✘━━━━━━━━━━━✘**\n"
-        "**✘ Total Metrics: ✘**\n"
-        f"- 👥 Total Users: {total_users} 💫\n"
-        f"- 🌐 Total Groups: {total_groups} 🌟\n"
-        f"- ↯ Database Size: {total_users + total_groups} ✨\n"
-    )
-
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
-    return await client.send_message(
-        chat_id=message.chat.id,
-        text=stats_text,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=keyboard,
-        disable_web_page_preview=True
-    )
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
+        await client.send_message(
+            message.chat.id, stats_text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard
+        )
+        LOGGER.info("Stats command completed")
+    except Exception as e:
+        LOGGER.error(f"Error in stats: {str(e)}")
+        await client.send_message(message.chat.id, "**✘ Error Fetching Stats!**", parse_mode=ParseMode.MARKDOWN)
 
 async def group_added_handler(client: Client, message: Message):
-    """Handle event when bot is added to a group."""
-    for new_member in message.new_chat_members:
-        if new_member.is_self:
-            chat_id = message.chat.id
-            update_user_activity(chat_id, is_group=True)
-            return await client.send_message(
-                chat_id=chat_id,
-                text=(
-                    "**💥 Thank You For Adding Me To This Group! 💫**\n"
-                    "**✘ ━━━━━━━━━━━━━━━━━━ ✘**\n"
-                    "**✨ I'm here to assist with various tasks and enhance your group experience.\n"
-                    "↯ Feel free to explore my features and let me know if you need help! 🌟**\n"
-                    "**✘ ━━━━━━━━━━━━━━━━━━ ✘**"
-                ),
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("➕ Add Me 💥", url="https://t.me/ItsSmartToolBot?startgroup=new&admin=post_messages+delete_messages+edit_messages+pin_messages+change_info+invite_users+promote_members"),
-                        InlineKeyboardButton("My Dev 💫", user_id=DEVELOPER_USER_ID)
-                    ]
-                ])
-            )
-    return None
+    try:
+        if not message.new_chat_members or not message.chat:
+            return
+        for member in message.new_chat_members:
+            if member.is_self:  # Bot was added to the group
+                chat_id = message.chat.id
+                update_user_activity(chat_id, is_group=True)
+                await client.send_message(
+                    chat_id,
+                    "**Thank you for adding me to this group!**",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_to_message_id=message.id
+                )
+                LOGGER.info(f"Bot added to group {chat_id}")
+    except Exception as e:
+        LOGGER.error(f"Error in group_added_handler for chat_id {message.chat.id}: {str(e)}")
 
-async def activity_handler(client: Client, message: Message):
-    """Track user activity for all messages."""
+async def group_removed_handler(client: Client, member_update: ChatMemberUpdated):
+    try:
+        if (member_update.old_chat_member and member_update.old_chat_member.status in ["member", "administrator"] and
+            member_update.new_chat_member and member_update.new_chat_member.status in ["banned", "left"] and
+            member_update.new_chat_member.user.is_self):
+            chat_id = member_update.chat.id
+            user_activity_collection.delete_one({"user_id": chat_id, "is_group": True})
+            LOGGER.info(f"Bot removed/banned from group {chat_id}, removed from database")
+    except Exception as e:
+        LOGGER.error(f"Error in group_removed_handler for chat_id {member_update.chat.id}: {str(e)}")
+
+async def update_user_activity_handler(client: Client, message: Message):
     if message.from_user:
-        update_user_activity(message.from_user.id)
+        update_user_activity(message.from_user.id, is_group=False)
+    # Always return None explicitly to ensure no unintended return value
     return None
 
 def setup_admin_handler(app: Client):
-    """Set up command and event handlers for the bot."""
+    prefixes = COMMAND_PREFIX + [""]
     app.add_handler(
         MessageHandler(
             broadcast_handler,
-            (filters.command(["broadcast", "b", "send", "s"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
-        ),
-        group=1
-    )
-    
-    app.add_handler(
-        MessageHandler(
-            stats_handler,
-            (filters.command(["stats", "report", "status"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
-        ),
-        group=1
-    )
-    
-    app.add_handler(
-        MessageHandler(
-            activity_handler,
-            filters.all
+            (filters.command(["broadcast", "b", "send", "s"], prefixes=prefixes) & (filters.private | filters.group))
         ),
         group=2
     )
-
     app.add_handler(
         MessageHandler(
-            group_added_handler,
-            filters.group & filters.new_chat_members
+            stats_handler,
+            (filters.command(["stats", "report", "status"], prefixes=prefixes) & (filters.private | filters.group))
         ),
-        group=1
+        group=2
+    )
+    app.add_handler(
+        MessageHandler(
+            update_user_activity_handler,
+            filters.all
+        ),
+        group=3
+    )
+    app.add_handler(
+        MessageHandler(group_added_handler, filters.group & filters.new_chat_members),
+        group=2
+    )
+    app.add_handler(
+        ChatMemberUpdatedHandler(group_removed_handler, filters.group),
+        group=2
     )
