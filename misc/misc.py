@@ -122,15 +122,15 @@ async def handle_callback_query(client, callback_query):
     elif call.data.startswith("donate_") or call.data.startswith("increment_donate_") or call.data.startswith("decrement_donate_") or call.data == "donate":
         await handle_donate_callback(client, call)
     elif call.data == "main_menu":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
     elif call.data == "next_1":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "next_2":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
     elif call.data == "previous_1":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
     elif call.data == "previous_2":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "close":
         await call.message.delete()
     elif call.data == "start_message":
@@ -138,7 +138,7 @@ async def handle_callback_query(client, callback_query):
         start_message = (
             f"<b>Hi {full_name}! Welcome To This Bot</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-            "<b>Smart Tools💥 </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
+            "<b>Smart Tool ⚙️ </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
             "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
             f"<b>Don't Forget To <a href='{UPDATE_CHANNEL_URL}'>Join Here</a> For Updates!</b>"
         )
@@ -155,7 +155,7 @@ async def handle_callback_query(client, callback_query):
     elif call.data == "policy_terms":
         policy_terms_text = (
             "<b>📜 Policy & Terms Menu</b>\n\n"
-            "At <b>Smart Tool 💥</b>, we prioritize your privacy and security. To ensure a seamless and safe experience, we encourage you to review our <b>Privacy Policy</b> and <b>Terms & Conditions</b>.\n\n"
+            "At <b>Smart Tool ⚙️</b>, we prioritize your privacy and security. To ensure a seamless and safe experience, we encourage you to review our <b>Privacy Policy</b> and <b>Terms & Conditions</b>.\n\n"
             "🔹 <b>Privacy Policy</b>: Learn how we collect, use, and protect your personal data.\n"
             "🔹 <b>Terms & Conditions</b>: Understand the rules and guidelines for using our services.\n\n"
             "<b>💡 Choose an option below to proceed:</b>"
@@ -168,27 +168,27 @@ async def handle_callback_query(client, callback_query):
         await call.message.edit_text(policy_terms_text, parse_mode=ParseMode.HTML, reply_markup=policy_terms_button)
     elif call.data == "privacy_policy":
         privacy_policy_text = (
-            "<b>📜 Privacy Policy for Smart Tool 💥</b>\n\n"
-            "Welcome to <b>Smart Tool 💥</b> Bot. By using our services, you agree to this privacy policy.\n\n"
+            "<b>📜 Privacy Policy for Smart Tool ⚙️</b>\n\n"
+            "Welcome to <b>Smart Tool ⚙️</b> Bot. By using our services, you agree to this privacy policy.\n\n"
             "1. <b>Personal Information</b>:\n"
             "   - Personal Information: User ID and username for personalization.\n"
             "   - <b>Usage Data</b>: Information on how you use the app to improve our services.\n\n"
             "2. Usage of Information:\n"
-            "   - <b>Service Enhancement</b>: To provide and improve <b>Smart Tool 💥</b>\n"
+            "   - <b>Service Enhancement</b>: To provide and improve <b>Smart Tool ⚙️</b>\n"
             "   - <b>Communication</b>: Updates and new features.\n"
             "   - <b>Security</b>: To prevent unauthorized access.\n"
             "   - <b>Advertisements</b>: Display of promotions.\n\n"
             "3. Data Security:\n"
             "   - These tools do not store any data, ensuring your privacy.\n"
             "   - We use strong security measures, although no system is 100% secure.\n\n"
-            "Thank you for using <b>Smart Tool 💥</b>. We prioritize your privacy and security."
+            "Thank you for using <b>Smart Tool ⚙️</b>. We prioritize your privacy and security."
         )
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="policy_terms")]])
         await call.message.edit_text(privacy_policy_text, parse_mode=ParseMode.HTML, reply_markup=back_button)
     elif call.data == "terms_conditions":
         terms_conditions_text = (
-            "<b>📜 Terms & Conditions for Smart Tool 💥</b>\n\n"
-            "Welcome to <b>Smart Tool 💥</b>. By using our services, you accept these <b>Terms & Conditions</b>.\n\n"
+            "<b>📜 Terms & Conditions for Smart Tool ⚙️</b>\n\n"
+            "Welcome to <b>Smart Tool ⚙️</b>. By using our services, you accept these <b>Terms & Conditions</b>.\n\n"
             "<b>1. Usage Guidelines</b>\n"
             "   - Eligibility: Must be 13 years of age or older.\n\n"
             "<b>2. Prohibited</b>\n"
@@ -209,11 +209,11 @@ async def handle_callback_query(client, callback_query):
             "   - Access may be terminated for any violations without prior notice.\n\n"
             "<b>7. Contact Information</b>\n"
             "   - Contact My Dev for any inquiries or concerns. <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury👨‍💻</a> \n\n"
-            "Thank you for using <b>Smart Tools 💥</b>. We prioritize your safety, security, and best user experience. 🚀"
+            "Thank you for using <b>Smart Tool ⚙️</b>. We prioritize your safety, security, and best user experience. 🚀"
         )
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="policy_terms")]])
         await call.message.edit_text(terms_conditions_text, parse_mode=ParseMode.HTML, reply_markup=back_button)
     elif call.data == "second_menu":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "third_menu":
-        await call.message.edit_text("<b>Here are the Smart Tools💥Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
