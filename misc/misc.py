@@ -122,15 +122,15 @@ async def handle_callback_query(client, callback_query):
     elif call.data.startswith("donate_") or call.data.startswith("increment_donate_") or call.data.startswith("decrement_donate_") or call.data == "donate":
         await handle_donate_callback(client, call)
     elif call.data == "main_menu":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
     elif call.data == "next_1":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "next_2":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
     elif call.data == "previous_1":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard)
     elif call.data == "previous_2":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "close":
         await call.message.delete()
     elif call.data == "start_message":
@@ -214,6 +214,6 @@ async def handle_callback_query(client, callback_query):
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="policy_terms")]])
         await call.message.edit_text(terms_conditions_text, parse_mode=ParseMode.HTML, reply_markup=back_button)
     elif call.data == "second_menu":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "third_menu":
-        await call.message.edit_text("<b>Here are the Smart Tool ⚙️Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+        await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
