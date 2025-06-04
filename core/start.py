@@ -31,7 +31,7 @@ def setup_start_handler(app: Client):
             response_text = (
                 f"<b>Hi {full_name}! Welcome To This Bot</b>\n"
                 "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-                f"<b>Smart Tools💥 </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
+                f"<b>Smart Tool ⚙️</b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
                 "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
                 "<b>Don't Forget To <a href='{UPDATE_CHANNEL_URL}'>Join Here</a> For Updates!</b>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL)
             )
@@ -49,7 +49,7 @@ def setup_start_handler(app: Client):
                 response_text = (
                     f"<b>Hi {full_name}! Welcome To This Bot</b>\n"
                     "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-                    f"<b>Smart Tools💥 </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
+                    f"<b>Smart Tool ⚙️</b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
                     "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
                     "<b>Don't Forget To <a href='{UPDATE_CHANNEL_URL}'>Join Here</a> For Updates!</b>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL)
                 )
@@ -58,7 +58,7 @@ def setup_start_handler(app: Client):
                 response_text = (
                     f"<b>Hi! Welcome  {group_name} To This Bot</b>\n"
                     "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-                    f"<b>Smart Tools💥 </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
+                    f"<b>Smart Tool ⚙️</b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
                     "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
                     "<b>Don't Forget To <a href='{UPDATE_CHANNEL_URL}'>Join Here</a> For Updates!</b>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL)
                 )
