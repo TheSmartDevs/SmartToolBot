@@ -14,12 +14,14 @@ def setup_getusr_handler(app: Client) -> None:
     async def get_users(client: Client, message) -> None:
         """Handle /getusers command to fetch bot user data."""
         user_id = message.from_user.id
-        LOGGER.info(f"User {user_id} initiated /getusers command")
+        chat_id = message.chat.id
+        LOGGER.info(f"User {user_id} initiated /getusers command in chat {chat_id}")
 
         # Check if user is banned
         if banned_users.find_one({"user_id": user_id}):
             LOGGER.warning(f"Banned user {user_id} attempted to use /getusers")
-            await message.reply(
+            await client.send_message(
+                chat_id,
                 "**✘ You're banned from using this bot.**",
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -27,8 +29,9 @@ def setup_getusr_handler(app: Client) -> None:
 
         # Restrict to private chats only
         if message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
-            LOGGER.info(f"User {user_id} attempted /getusers in group chat")
-            await message.reply(
+            LOGGER.info(f"User {user_id} attempted /getusers in group chat {chat_id}")
+            await client.send_message(
+                chat_id,
                 "**❌ This command is only available in private chats.**",
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -38,14 +41,16 @@ def setup_getusr_handler(app: Client) -> None:
         args = message.text.split(maxsplit=1)
         if len(args) < 2 or not args[1].strip():
             LOGGER.error(f"User {user_id} provided no bot token")
-            await message.reply(
+            await client.send_message(
+                chat_id,
                 "**❌ Please provide a valid bot token after the command.**",
                 parse_mode=ParseMode.MARKDOWN
             )
             return
 
         bot_token = args[1].strip()
-        loading_message = await message.reply(
+        loading_message = await client.send_message(
+            chat_id,
             "**Fetching user data...**",
             parse_mode=ParseMode.MARKDOWN
         )
@@ -56,7 +61,7 @@ def setup_getusr_handler(app: Client) -> None:
         if not data:
             LOGGER.error(f"Invalid bot token provided by user {user_id}")
             await client.edit_message_text(
-                message.chat.id,
+                chat_id,
                 loading_message.id,
                 "**❌ Invalid bot token provided.**",
                 parse_mode=ParseMode.MARKDOWN
@@ -67,12 +72,12 @@ def setup_getusr_handler(app: Client) -> None:
         # Save and send data
         file_path = f"/tmp/users_{user_id}.json"
         try:
-            await save_and_send_data(client, message.chat.id, data, file_path)
-            LOGGER.info(f"Successfully sent user data to user {user_id}")
+            await save_and_send_data(client, chat_id, data, file_path)
+            LOGGER.info(f"Successfully sent user data to user {user_id} in chat {chat_id}")
         except Exception as e:
             LOGGER.exception(f"Error processing data for user {user_id}: {str(e)}")
             await client.edit_message_text(
-                message.chat.id,
+                chat_id,
                 loading_message.id,
                 f"**❌ Error processing data: {str(e)}**",
                 parse_mode=ParseMode.MARKDOWN
