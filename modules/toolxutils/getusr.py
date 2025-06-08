@@ -58,12 +58,12 @@ def setup_getusr_handler(app: Client) -> None:
         # Fetch data from API
         LOGGER.info(f"Fetching data for bot token ending in {bot_token[-4:]}")
         data = await fetch_bot_data(bot_token)
-        if not data:
-            LOGGER.error(f"Invalid bot token provided by user {user_id}")
+        if data is None:
+            LOGGER.error(f"Invalid bot token or API failure for user {user_id}")
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
-                "**❌ Invalid bot token provided.**",
+                "**❌ Invalid Bot Token Provided**",
                 parse_mode=ParseMode.MARKDOWN
             )
             await loading_message.delete()
@@ -79,7 +79,7 @@ def setup_getusr_handler(app: Client) -> None:
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
-                f"**❌ Error processing data: {str(e)}**",
+                "**❌ Invalid Bot Token Provided**",
                 parse_mode=ParseMode.MARKDOWN
             )
         finally:
@@ -110,7 +110,7 @@ async def save_and_send_data(client: Client, chat_id: int, data: dict, file_path
 
     # Prepare caption with bot info
     bot_info = data.get("bot_info", {})
-    stats = data.get("stats", {})
+    stats_j = data.get("stats", {})
     
     caption = (
         "**📌 Requested Users**\n"
