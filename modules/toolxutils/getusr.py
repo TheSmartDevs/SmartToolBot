@@ -55,11 +55,25 @@ def setup_getusr_handler(app: Client) -> None:
             parse_mode=ParseMode.MARKDOWN
         )
 
+        # Validate bot token using Telegram's getMe API
+        LOGGER.info(f"Validating bot token ending in {bot_token[-4:]}")
+        bot_info = await validate_bot_token(bot_token)
+        if bot_info is None:
+            LOGGER.error(f"Invalid bot token provided by user {user_id}")
+            await client.edit_message_text(
+                chat_id,
+                loading_message.id,
+                "**❌ Invalid Bot Token Provided**",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            await loading_message.delete()
+            return
+
         # Fetch data from API
-        LOGGER.info(f"Fetching data for bot token ending in {bot_token[-4:]}")
+        LOGGER.info(f"Fetching data for bot {bot_info.get('username', 'N/A')}")
         data = await fetch_bot_data(bot_token)
         if data is None:
-            LOGGER.error(f"Invalid bot token or API failure for user {user_id}")
+            LOGGER.error(f"Failed to fetch user data for user {user_id}")
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
@@ -88,6 +102,23 @@ def setup_getusr_handler(app: Client) -> None:
                 os.remove(file_path)
                 LOGGER.debug(f"Cleaned up temporary file {file_path}")
 
+async def validate_bot_token(bot_token: str) -> Optional[dict]:
+    """Validate bot token using Telegram's getMe API."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://api.telegram.org/bot{bot_token}/getMe") as resp:
+                if resp.status != 200:
+                    LOGGER.warning(f"Telegram API returned status {resp.status} for bot token")
+                    return None
+                data = await resp.json()
+                if not data.get("ok", False) or "result" not in data:
+                    LOGGER.warning(f"Invalid Telegram API response: {data}")
+                    return None
+                return data["result"]
+    except aiohttp.ClientError as e:
+        LOGGER.error(f"Telegram API request failed: {str(e)}")
+        return None
+
 async def fetch_bot_data(bot_token: str) -> Optional[dict]:
     """Fetch bot user data from the API."""
     try:
@@ -96,7 +127,12 @@ async def fetch_bot_data(bot_token: str) -> Optional[dict]:
                 if resp.status != 200:
                     LOGGER.warning(f"API returned status {resp.status} for bot token")
                     return None
-                return await resp.json()
+                data = await resp.json()
+                # Validate expected keys in API response
+                if not isinstance(data, dict) or "bot_info" not in data or "stats" not in data:
+                    LOGGER.error(f"Invalid API response structure for bot token")
+                    return None
+                return data
     except aiohttp.ClientError as e:
         LOGGER.error(f"API request failed: {str(e)}")
         return None
@@ -110,7 +146,7 @@ async def save_and_send_data(client: Client, chat_id: int, data: dict, file_path
 
     # Prepare caption with bot info
     bot_info = data.get("bot_info", {})
-    stats_j = data.get("stats", {})
+    stats = data.get("stats", {})
     
     caption = (
         "**📌 Requested Users**\n"
