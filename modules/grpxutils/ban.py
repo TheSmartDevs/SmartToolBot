@@ -10,9 +10,9 @@ from config import COMMAND_PREFIX
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def is_admin(app, user_id, chat_id):
+async def is_admin(app, user_id, chat_id):
     try:
-        member = app.get_chat_member(chat_id, user_id)
+        member = await app.get_chat_member(chat_id, user_id)
         logger.info(f"User ID: {user_id}, Status: {member.status}")
         return member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]
     except Exception as e:
@@ -28,13 +28,13 @@ def handle_error(client, message):
 def setup_ban_handlers(app):
     
     @app.on_message(filters.command(["kick"], prefixes=COMMAND_PREFIX) & filters.group)
-    def handle_kick(client, message: Message):
+    async def handle_kick(client, message: Message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
         # Check if the user is an admin
-        if user_id and not is_admin(app, user_id, chat_id):
-            message.reply_text("**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            message.reply_text("**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         # Check if the user is replying to a message or specifying a username
@@ -51,9 +51,9 @@ def setup_ban_handlers(app):
         try:
             if message.reply_to_message:
                 # Kick the user by replying to their message
-                app.ban_chat_member(chat_id, target_user)  # Ban to kick
-                app.unban_chat_member(chat_id, target_user)  # Unban to allow rejoining
-                user_info = app.get_users(target_user)
+                await app.ban_chat_member(chat_id, target_user)  # Ban to kick
+                await app.unban_chat_member(chat_id, target_user)  # Unban to allow rejoining
+                user_info = await app.get_users(target_user)
                 username = user_info.username or user_info.first_name
                 message.reply_text(
                     f"**{username} has been kicked for [{reason}].** ✅",
@@ -62,10 +62,10 @@ def setup_ban_handlers(app):
             else:
                 # Kick the user by username
                 for target_user in target_users:
-                    user_info = app.get_users(target_user)
+                    user_info = await app.get_users(target_user)
                     target_user_id = user_info.id
-                    app.ban_chat_member(chat_id, target_user_id)  # Ban to kick
-                    app.unban_chat_member(chat_id, target_user_id)  # Unban to allow rejoining
+                    await app.ban_chat_member(chat_id, target_user_id)  # Ban to kick
+                    await app.unban_chat_member(chat_id, target_user_id)  # Unban to allow rejoining
                     username = user_info.username or user_info.first_name
                     message.reply_text(
                         f"**{username} has been kicked for [{reason}].** ✅",
@@ -76,7 +76,7 @@ def setup_ban_handlers(app):
             handle_error(client, message)
     
     @app.on_message(filters.command(["del"], prefixes=COMMAND_PREFIX) & filters.group)
-    def handle_delete(client, message: Message):
+    async def handle_delete(client, message: Message):
         # Check if the user is replying to a message
         if not message.reply_to_message:
             message.reply_text("**❌ Please reply to a message to delete it.**", parse_mode=ParseMode.MARKDOWN)
@@ -86,13 +86,13 @@ def setup_ban_handlers(app):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            message.reply_text("**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            message.reply_text("**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         try:
             # Delete the replied-to message
-            client.delete_messages(chat_id, message.reply_to_message.id)
+            await client.delete_messages(chat_id, message.reply_to_message.id)
             # Notify the user
             message.reply_text("**✅ Message deleted successfully.**", parse_mode=ParseMode.MARKDOWN)
         except Exception as e:
@@ -100,12 +100,12 @@ def setup_ban_handlers(app):
             handle_error(client, message)
     
     @app.on_message(filters.command(["ban", "fuck"], prefixes=COMMAND_PREFIX) & filters.group)
-    def handle_ban(client, message):
+    async def handle_ban(client, message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            client.send_message(message.chat.id, "**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            client.send_message(message.chat.id, "**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         if message.reply_to_message:
@@ -120,8 +120,8 @@ def setup_ban_handlers(app):
 
         try:
             if message.reply_to_message:
-                app.ban_chat_member(chat_id, target_user)
-                user_info = app.get_users(target_user)
+                await app.ban_chat_member(chat_id, target_user)
+                user_info = await app.get_users(target_user)
                 username = user_info.username if user_info.username else user_info.first_name
                 client.send_message(
                     message.chat.id,
@@ -133,14 +133,15 @@ def setup_ban_handlers(app):
                 )
             else:
                 for target_user in target_users:
-                    app.ban_chat_member(chat_id, target_user)
-                    user_info = app.get_users(target_user)
+                    user_info = await app.get_users(target_user)
+                    target_user_id = user_info.id
+                    await app.ban_chat_member(chat_id, target_user_id)
                     username = user_info.username if user_info.username else user_info.first_name
                     client.send_message(
                         message.chat.id,
                         f"**{username} has been banned for [{reason}].** ✅",
                         reply_markup=InlineKeyboardMarkup(
-                            [[InlineKeyboardButton("Unban", callback_data=f"unban:{target_user}")]]
+                            [[InlineKeyboardButton("Unban", callback_data=f"unban:{target_user_id}")]]
                         ),
                         parse_mode=ParseMode.MARKDOWN
                     )
@@ -148,12 +149,12 @@ def setup_ban_handlers(app):
             handle_error(client, message)
 
     @app.on_message(filters.command(["unban", "unfuck"], prefixes=COMMAND_PREFIX) & filters.group)
-    def handle_unban(client, message):
+    async def handle_unban(client, message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            client.send_message(message.chat.id, "**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            client.send_message(message.chat.id, "**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         if message.reply_to_message:
@@ -166,39 +167,41 @@ def setup_ban_handlers(app):
 
         try:
             if message.reply_to_message:
-                app.unban_chat_member(chat_id, target_user)
+                await app.unban_chat_member(chat_id, target_user)
                 client.send_message(message.chat.id, f"**User {target_user} has been unbanned.** ✅", parse_mode=ParseMode.MARKDOWN)
             else:
                 for target_user in target_users:
-                    app.unban_chat_member(chat_id, target_user)
+                    user_info = await app.get_users(target_user)
+                    target_user_id = user_info.id
+                    await app.unban_chat_member(chat_id, target_user_id)
                     client.send_message(message.chat.id, f"**User {target_user} has been unbanned.** ✅", parse_mode=ParseMode.MARKDOWN)
         except Exception:
             handle_error(client, message)
 
     @app.on_callback_query(filters.regex(r"^unban:(.*)"))
-    def callback_unban(client, callback_query):
+    async def callback_unban(client, callback_query):
         chat_id = callback_query.message.chat.id
         user_id = callback_query.from_user.id if callback_query.from_user else None
         target_user = callback_query.data.split(":")[1]
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            callback_query.answer("**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", show_alert=True)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            callback_query.answer("**✘ Kids Are Not Allowed To Do This  ↯**", show_alert=True)
             return
 
         try:
-            app.unban_chat_member(chat_id, target_user)
+            await app.unban_chat_member(chat_id, target_user)
             callback_query.answer("User has been unbanned.")
             callback_query.message.edit_text(f"**User {target_user} has been unbanned.** ✅", parse_mode=ParseMode.MARKDOWN)
         except Exception:
-            callback_query.answer("🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️", show_alert=True)
+            callback_query.answer("✘ Kids Are Not Allowed To Do This  ↯", show_alert=True)
 
     @app.on_message(filters.command(["mute"], prefixes=["/", "."]) & filters.group)
-    def handle_mute(client, message):
+    async def handle_mute(client, message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            client.send_message(message.chat.id, "**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            client.send_message(message.chat.id, "**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         if message.reply_to_message:
@@ -213,8 +216,8 @@ def setup_ban_handlers(app):
 
         try:
             if message.reply_to_message:
-                app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=False))
-                user_info = app.get_users(target_user)
+                await app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=False))
+                user_info = await app.get_users(target_user)
                 username = user_info.username if user_info.username else user_info.first_name
                 client.send_message(
                     message.chat.id,
@@ -226,14 +229,15 @@ def setup_ban_handlers(app):
                 )
             else:
                 for target_user in target_users:
-                    app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=False))
-                    user_info = app.get_users(target_user)
+                    user_info = await app.get_users(target_user)
+                    target_user_id = user_info.id
+                    await app.restrict_chat_member(chat_id, target_user_id, permissions=ChatPermissions(can_send_messages=False))
                     username = user_info.username if user_info.username else user_info.first_name
                     client.send_message(
                         message.chat.id,
                         f"**{username} has been muted for [{reason}].** ✅",
                         reply_markup=InlineKeyboardMarkup(
-                            [[InlineKeyboardButton("Unmute", callback_data=f"unmute:{target_user}")]]
+                            [[InlineKeyboardButton("Unmute", callback_data=f"unmute:{target_user_id}")]]
                         ),
                         parse_mode=ParseMode.MARKDOWN
                     )
@@ -241,12 +245,12 @@ def setup_ban_handlers(app):
             handle_error(client, message)
 
     @app.on_message(filters.command(["unmute"], prefixes=["/", ".", ",", "!"]) & filters.group)
-    def handle_unmute(client, message):
+    async def handle_unmute(client, message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            client.send_message(message.chat.id, "**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            client.send_message(message.chat.id, "**✘ Kids Are Not Allowed To Do This  ↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         if message.reply_to_message:
@@ -259,7 +263,7 @@ def setup_ban_handlers(app):
 
         try:
             if message.reply_to_message:
-                app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=True,
+                await app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=True,
                                                                                             can_send_media_messages=True,
                                                                                             can_send_polls=True,
                                                                                             can_send_other_messages=True,
@@ -267,7 +271,9 @@ def setup_ban_handlers(app):
                 client.send_message(message.chat.id, f"**User {target_user} has been unmuted.** ✅", parse_mode=ParseMode.MARKDOWN)
             else:
                 for target_user in target_users:
-                    app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=True,
+                    user_info = await app.get_users(target_user)
+                    target_user_id = user_info.id
+                    await app.restrict_chat_member(chat_id, target_user_id, permissions=ChatPermissions(can_send_messages=True,
                                                                                                 can_send_media_messages=True,
                                                                                                 can_send_polls=True,
                                                                                                 can_send_other_messages=True,
@@ -277,17 +283,17 @@ def setup_ban_handlers(app):
             handle_error(client, message)
 
     @app.on_callback_query(filters.regex(r"^unmute:(.*)"))
-    def callback_unmute(client, callback_query):
+    async def callback_unmute(client, callback_query):
         chat_id = callback_query.message.chat.id
         user_id = callback_query.from_user.id if callback_query.from_user else None
         target_user = callback_query.data.split(":")[1]
 
-        if user_id and not is_admin(app, user_id, chat_id):
-            callback_query.answer("**🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️**", show_alert=True)
+        if user_id and not await is_admin(app, user_id, chat_id):
+            callback_query.answer("**✘ Kids Are Not Allowed To Do This  ↯**", show_alert=True)
             return
 
         try:
-            app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=True,
+            await app.restrict_chat_member(chat_id, target_user, permissions=ChatPermissions(can_send_messages=True,
                                                                                         can_send_media_messages=True,
                                                                                         can_send_polls=True,
                                                                                         can_send_other_messages=True,
@@ -295,4 +301,4 @@ def setup_ban_handlers(app):
             callback_query.answer("User has been unmuted.")
             callback_query.message.edit_text(f"**User {target_user} has been unmuted.** ✅", parse_mode=ParseMode.MARKDOWN)
         except Exception:
-            callback_query.answer("🚫 Hey Gay 🏳️‍🌈 This Is Not For You This Only For Males👱‍♂️", show_alert=True)
+            callback_query.answer("✘ Kids Are Not Allowed To Do This  ↯", show_alert=True)
