@@ -17,19 +17,15 @@ def setup_wlc_handler(app):
 
         # Iterate over new chat members to handle each one correctly
         for new_member in msg.new_chat_members:
-            # Skip if the new member is a bot
-            if new_member.is_bot:
-                LOGGER.info(f"Bot {new_member.username or new_member.first_name} (ID: {new_member.id}) added to {group_name} by @{added_by}, skipping welcome.")
-                continue
-
-            # Extract user details
+            # Extract member details (user or bot)
             first = new_member.first_name or 'N/A'
             last = new_member.last_name or ''
             full_name = f"{first} {last}".strip()
             username = new_member.username or 'N/A'
             user_id = new_member.id
+            member_type = "Bot" if new_member.is_bot else "User"
 
-            # Define the new welcome message
+            # Define the welcome message
             caption = f'''
 Wow, there's a new member! Yo <b>{full_name}</b> 👋 welcome to <b>{group_name}</b>! Don't forget to put your username so it's easy to tag. Don't forget to read the <b>rules</b> below.
 
@@ -40,7 +36,7 @@ Wow, there's a new member! Yo <b>{full_name}</b> 👋 welcome to <b>{group_name}
 '''
 
             # Log the welcome message details
-            LOGGER.info(f"New user @{username} (ID: {user_id}) joined {group_name}, added by @{added_by}.")
+            LOGGER.info(f"New {member_type} @{username} (ID: {user_id}) joined {group_name}, added by @{added_by}.")
 
             # Send the welcome message with a photo and inline button
             await client.send_photo(
@@ -55,14 +51,15 @@ Wow, there's a new member! Yo <b>{full_name}</b> 👋 welcome to <b>{group_name}
 
     @app.on_message(filters.left_chat_member)
     async def farewell_message(client, msg: Message):
-        username = msg.left_chat_member.username or msg.left_chat_member.first_name or 'A user'
+        username = msg.left_chat_member.username or msg.left_chat_member.first_name or 'A member'
         user_id = msg.left_chat_member.id
+        member_type = "Bot" if msg.left_chat_member.is_bot else "User"
 
         # Define the farewell message
         farewell_text = f"<b>Nice Knowing You, @{username}!</b>"
 
         # Log the farewell message details
-        LOGGER.info(f"User @{username} (ID: {user_id}) left {msg.chat.title}.")
+        LOGGER.info(f"{member_type} @{username} (ID: {user_id}) left {msg.chat.title}.")
 
         # Send the farewell message
         await client.send_message(
