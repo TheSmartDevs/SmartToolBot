@@ -60,7 +60,7 @@ from .stikxutils.quote import setup_q_handler
 from .timexutils.times import setup_time_handler
 from .toolxutils.news import setup_news_handler
 from .toolxutils.rs import setup_rs_handler
-from .getusr import setup_getusr_handler
+from .toolxutils.getusr import setup_getusr_handler
 from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
 from .webxutils.ws import setup_ws_handler
