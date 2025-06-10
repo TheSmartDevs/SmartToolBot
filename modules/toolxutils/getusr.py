@@ -66,7 +66,6 @@ def setup_getusr_handler(app: Client) -> None:
                 "**❌ Invalid Bot Token Provided**",
                 parse_mode=ParseMode.MARKDOWN
             )
-            await loading_message.delete()
             return
 
         # Fetch data from API
@@ -77,10 +76,9 @@ def setup_getusr_handler(app: Client) -> None:
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
-                "**❌ Invalid Bot Token Provided**",
+                "**❌ Failed to fetch user data**",
                 parse_mode=ParseMode.MARKDOWN
             )
-            await loading_message.delete()
             return
 
         # Save and send data
@@ -88,16 +86,16 @@ def setup_getusr_handler(app: Client) -> None:
         try:
             await save_and_send_data(client, chat_id, data, file_path)
             LOGGER.info(f"Successfully sent user data to user {user_id} in chat {chat_id}")
+            await loading_message.delete()
         except Exception as e:
             LOGGER.exception(f"Error processing data for user {user_id}: {str(e)}")
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
-                "**❌ Invalid Bot Token Provided**",
+                "**❌ Error processing data**",
                 parse_mode=ParseMode.MARKDOWN
             )
         finally:
-            await loading_message.delete()
             if os.path.exists(file_path):
                 os.remove(file_path)
                 LOGGER.debug(f"Cleaned up temporary file {file_path}")
