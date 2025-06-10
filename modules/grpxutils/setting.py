@@ -128,20 +128,20 @@ def get_categorized_buttons(settings, chat_id):
     
     return InlineKeyboardMarkup(keyboard)
 
-def is_admin(client, user_id, chat_id):
+async def is_admin(client, user_id, chat_id):
     """Check if a user is an admin in the group."""
     try:
-        member = client.get_chat_member(chat_id, user_id)
+        member = await client.get_chat_member(chat_id, user_id)
         return member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]
     except Exception as e:
         logger.error(f"Error checking admin status: {e}")
         return False
 
-def delete_message_with_delay(client, chat_id, message_id, delay=10):
+async def delete_message_with_delay(client, chat_id, message_id, delay=10):
     """Delete a message after a specified delay."""
     time.sleep(delay)
     try:
-        client.delete_messages(chat_id, message_id)
+        await client.delete_messages(chat_id, message_id)
     except Exception as e:
         logger.error(f"Error deleting message: {e}")
 
@@ -167,13 +167,13 @@ def setup_setting_handlers(app):
     """Set up all handlers for both settings and channel features."""
 
     @app.on_message(filters.command(["setting"], prefixes=COMMAND_PREFIX) & filters.group)
-    def handle_setting_group(client, message: Message):
+    async def handle_setting_group(client, message: Message):
         try:
             user_id = message.from_user.id if message.from_user else None
             chat_id = message.chat.id
 
-            if not user_id or not is_admin(client, user_id, chat_id):
-                client.send_message(
+            if not user_id or not await is_admin(client, user_id, chat_id):
+                await client.send_message(
                     chat_id,
                     "This command is only for group admins.",
                     parse_mode=ParseMode.MARKDOWN
@@ -182,18 +182,18 @@ def setup_setting_handlers(app):
 
             settings = get_group_settings(chat_id)
             if not settings:
-                client.send_message(
+                await client.send_message(
                     chat_id,
                     "Could not load group settings.",
                     parse_mode=ParseMode.MARKDOWN
                 )
                 return
 
-            bot_username = client.get_me().username
-            group_name = client.get_chat(chat_id).title
+            bot_username = (await client.get_me()).username
+            group_name = (await client.get_chat(chat_id)).title
             
             try:
-                client.send_message(
+                await client.send_message(
                     user_id,
                     f"{group_name} Group Settings\n\n"
                     "Manage what content is allowed in your group\n\n"
@@ -201,14 +201,14 @@ def setup_setting_handlers(app):
                     reply_markup=get_categorized_buttons(settings, chat_id),
                     parse_mode=ParseMode.MARKDOWN
                 )
-                client.send_message(
+                await client.send_message(
                     chat_id,
                     f"Settings menu sent to your PM. Check @{bot_username}",
                     parse_mode=ParseMode.MARKDOWN
                 )
             except Exception as e:
                 logger.error(f"Error sending settings PM: {e}")
-                client.send_message(
+                await client.send_message(
                     chat_id,
                     "Please start a chat with me first to receive settings.",
                     parse_mode=ParseMode.MARKDOWN
@@ -216,65 +216,65 @@ def setup_setting_handlers(app):
 
         except Exception as e:
             logger.error(f"Error in handle_setting_group: {e}")
-            client.send_message(
+            await client.send_message(
                 chat_id,
                 "I cannot message you.",
                 parse_mode=ParseMode.MARKDOWN
             )
 
     @app.on_callback_query(filters.regex(r"^toggle_"))
-    def handle_toggle(client, callback_query):
+    async def handle_toggle(client, callback_query):
         try:
             data = callback_query.data.split("_")
             if len(data) < 3:
-                callback_query.answer("Invalid request", show_alert=True)
+                await callback_query.answer("Invalid request", show_alert=True)
                 return
 
             key, chat_id = data[1], int(data[2])
             user_id = callback_query.from_user.id
 
-            if not is_admin(client, user_id, chat_id):
-                callback_query.answer("This is only for group admins.", show_alert=True)
+            if not await is_admin(client, user_id, chat_id):
+                await callback_query.answer("This is only for group admins.", show_alert=True)
                 return
 
             settings = get_group_settings(chat_id)
             if not settings:
-                callback_query.answer("Settings not found", show_alert=True)
+                await callback_query.answer("Settings not found", show_alert=True)
                 return
 
             new_value = not settings.get(key, True)
             if update_group_setting(chat_id, key, new_value):
                 updated_settings = get_group_settings(chat_id)
-                callback_query.edit_message_reply_markup(
+                await callback_query.edit_message_reply_markup(
                     get_categorized_buttons(updated_settings, chat_id)
                 )
-                callback_query.answer(
+                await callback_query.answer(
                     f"{key.capitalize()} is now {'Allowed' if new_value else 'Blocked'}"
                 )
             else:
-                callback_query.answer("Failed to update", show_alert=True)
+                await callback_query.answer("Failed to update", show_alert=True)
 
         except Exception as e:
             logger.error(f"Error in handle_toggle: {e}")
-            callback_query.answer("Database error", show_alert=True)
+            await callback_query.answer("Database error", show_alert=True)
 
     @app.on_callback_query(filters.regex(r"^close_settings$"))
-    def handle_close_settings(client, callback_query):
+    async def handle_close_settings(client, callback_query):
         try:
-            callback_query.message.delete()
-            callback_query.answer("Settings menu closed")
+            await callback_query.message.delete()
+            await callback_query.answer("Settings menu closed")
         except Exception as e:
             logger.error(f"Error closing settings menu: {e}")
-            callback_query.answer("Failed to close settings", show_alert=True)
+            await callback_query.answer("Failed to close settings", show_alert=True)
 
     @app.on_callback_query(filters.regex(r"^reset_"))
-    def handle_reset_settings(client, callback_query):
+    async def handle_reset_settings(client, callback_query):
         try:
             chat_id = int(callback_query.data.split("_")[1])
             user_id = callback_query.from_user.id
 
-            if not is_admin(client, user_id, chat_id):
-                callback_query.answer("This is only for group admins.", show_alert=True)
+            if not await is_admin(client, user_id, chat_id):
+                await callback_query.answer("This is only for group admins.", show_alert=True)
                 return
 
             default_settings = {
@@ -286,37 +286,37 @@ def setup_setting_handlers(app):
             }
 
             if update_group_setting(chat_id, None, None, reset=True, default_settings=default_settings):
-                callback_query.edit_message_reply_markup(
+                await callback_query.edit_message_reply_markup(
                     get_categorized_buttons(default_settings, chat_id)
                 )
-                callback_query.answer("All settings have been reset to default")
+                await callback_query.answer("All settings have been reset to default")
             else:
-                callback_query.answer("Failed to reset settings", show_alert=True)
+                await callback_query.answer("Failed to reset settings", show_alert=True)
 
         except Exception as e:
             logger.error(f"Error resetting settings: {e}")
-            callback_query.answer("Error resetting settings", show_alert=True)
+            await callback_query.answer("Error resetting settings", show_alert=True)
 
     @app.on_message(filters.command(["setchannel"], prefixes=["/", ".", ",", "!"]) & filters.group)
-    def handle_setchannel(client, message: Message):
+    async def handle_setchannel(client, message: Message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(client, user_id, chat_id):
-            client.send_message(chat_id, "This command is only for group admins.", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(client, user_id, chat_id):
+            await client.send_message(chat_id, "This command is only for group admins.", parse_mode=ParseMode.MARKDOWN)
             return
 
         if len(message.command) < 2:
-            client.send_message(chat_id, "Please provide a channel username.", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(chat_id, "Please provide a channel username.", parse_mode=ParseMode.MARKDOWN)
             return
 
         channel_input = " ".join(message.command[1:])
         channel_username = extract_channel_username(channel_input)
 
         try:
-            channel = client.get_chat(channel_username)
+            channel = await client.get_chat(channel_username)
             if channel.type != ChatType.CHANNEL:
-                client.send_message(chat_id, "The provided username is not a channel.", parse_mode=ParseMode.MARKDOWN)
+                await client.send_message(chat_id, "The provided username is not a channel.", parse_mode=ParseMode.MARKDOWN)
                 return
 
             group_channel_bindings.update_one(
@@ -324,7 +324,7 @@ def setup_setting_handlers(app):
                 {"$set": {"channel_id": channel.id, "channel_username": channel_username}},
                 upsert=True
             )
-            client.send_message(
+            await client.send_message(
                 chat_id,
                 f"Channel @{channel_username} has been connected to this chat.\n"
                 "Group members must join the channel to send messages.",
@@ -332,53 +332,53 @@ def setup_setting_handlers(app):
             )
         except Exception as e:
             logger.error(f"Error fetching channel details: {e}")
-            client.send_message(
+            await client.send_message(
                 chat_id,
                 "Failed to set channel. Ensure bot is admin in both group and channel.",
                 parse_mode=ParseMode.MARKDOWN
             )
 
     @app.on_message(filters.command(["delchannel"], prefixes=["/", ".", ",", "!"]) & filters.group)
-    def handle_delchannel(client, message: Message):
+    async def handle_delchannel(client, message: Message):
         chat_id = message.chat.id
         user_id = message.from_user.id if message.from_user else None
 
-        if user_id and not is_admin(client, user_id, chat_id):
-            client.send_message(chat_id, "This command is only for group admins.", parse_mode=ParseMode.MARKDOWN)
+        if user_id and not await is_admin(client, user_id, chat_id):
+            await client.send_message(chat_id, "This command is only for group admins.", parse_mode=ParseMode.MARKDOWN)
             return
 
         binding = group_channel_bindings.find_one({"chat_id": chat_id})
         if not binding:
-            client.send_message(chat_id, "No channel is currently connected to this chat.", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(chat_id, "No channel is currently connected to this chat.", parse_mode=ParseMode.MARKDOWN)
             return
 
         group_channel_bindings.delete_one({"chat_id": chat_id})
-        client.send_message(chat_id, "The channel connection has been removed.", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(chat_id, "The channel connection has been removed.", parse_mode=ParseMode.MARKDOWN)
 
     @app.on_message(
         filters.group & 
         ~filters.service & 
         ~filters.create(safe_starts_with_prefix)
     )
-    def handle_group_message(client, message: Message):
+    async def handle_group_message(client, message: Message):
         try:
             chat_id = message.chat.id
             user_id = message.from_user.id if message.from_user else None
 
-            if user_id and is_admin(client, user_id, chat_id):
+            if user_id and await is_admin(client, user_id, chat_id):
                 return
 
             binding = group_channel_bindings.find_one({"chat_id": chat_id})
             if binding:
                 channel_id = binding["channel_id"]
                 try:
-                    member = client.get_chat_member(channel_id, user_id)
+                    member = await client.get_chat_member(channel_id, user_id)
                     if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-                        message.delete()
+                        await message.delete()
                         channel_username = binding["channel_username"]
                         user_full_name = message.from_user.first_name
-                        group_name = message.chat.title
-                        client.send_message(
+                        group_name = (await client.get_chat(chat_id)).title
+                        await client.send_message(
                             chat_id,
                             f"Sorry, {user_full_name}, to write in {group_name}\n"
                             f"You must join @{channel_username}",
@@ -389,11 +389,11 @@ def setup_setting_handlers(app):
                         )
                         return
                 except UserNotParticipant:
-                    message.delete()
+                    await message.delete()
                     channel_username = binding["channel_username"]
                     user_full_name = message.from_user.first_name
-                    group_name = message.chat.title
-                    client.send_message(
+                    group_name = (await client.get_chat(chat_id)).title
+                    await client.send_message(
                         chat_id,
                         f"Sorry, {user_full_name}, to write in {group_name}\n"
                         f"You must join @{channel_username}",
@@ -405,8 +405,8 @@ def setup_setting_handlers(app):
                     return
                 except Exception as e:
                     logger.error(f"Error checking channel membership: {e}")
-                    message.delete()
-                    client.send_message(chat_id, "You must join the channel.", parse_mode=ParseMode.MARKDOWN)
+                    await message.delete()
+                    await client.send_message(chat_id, "You must join the channel.", parse_mode=ParseMode.MARKDOWN)
                     return
 
             settings = get_group_settings(chat_id)
@@ -417,54 +417,54 @@ def setup_setting_handlers(app):
                 text_content = message.text or message.caption
                 
                 if not settings["link"] and contains_links(text_content):
-                    message.delete()
-                    warning_msg = client.send_message(
+                    await message.delete()
+                    warning_msg = await client.send_message(
                         chat_id,
                         f"Links are not allowed in this group.\n"
                         f"Message from: {message.from_user.mention if message.from_user else 'Unknown user'}",
                         parse_mode=ParseMode.MARKDOWN
                     )
-                    delete_message_with_delay(client, chat_id, warning_msg.id)
+                    await delete_message_with_delay(client, chat_id, warning_msg.id)
                     return
 
                 if not settings["users"] and "@" in text_content:
-                    message.delete()
-                    warning_msg = client.send_message(
+                    await message.delete()
+                    warning_msg = await client.send_message(
                         chat_id,
                         "Mentioning users is not allowed in this group.",
                         parse_mode=ParseMode.MARKDOWN
                     )
-                    delete_message_with_delay(client, chat_id, warning_msg.id)
+                    await delete_message_with_delay(client, chat_id, warning_msg.id)
                     return
 
                 if not settings["hashtag"] and "#" in text_content:
-                    message.delete()
-                    warning_msg = client.send_message(
+                    await message.delete()
+                    warning_msg = await client.send_message(
                         chat_id,
                         "Hashtags are not allowed in this group.",
                         parse_mode=ParseMode.MARKDOWN
                     )
-                    delete_message_with_delay(client, chat_id, warning_msg.id)
+                    await delete_message_with_delay(client, chat_id, warning_msg.id)
                     return
 
             if message.reply_to_message and not settings["reply"]:
-                message.delete()
-                warning_msg = client.send_message(
+                await message.delete()
+                warning_msg = await client.send_message(
                     chat_id,
                     "Replies are not allowed in this group.",
                     parse_mode=ParseMode.MARKDOWN
                 )
-                delete_message_with_delay(client, chat_id, warning_msg.id)
+                await delete_message_with_delay(client, chat_id, warning_msg.id)
                 return
 
             if (message.forward_from or message.forward_from_chat) and not settings["forward"]:
-                message.delete()
-                warning_msg = client.send_message(
+                await message.delete()
+                warning_msg = await client.send_message(
                     chat_id,
                     "Forwarded messages are not allowed in this group.",
                     parse_mode=ParseMode.MARKDOWN
                 )
-                delete_message_with_delay(client, chat_id, warning_msg.id)
+                await delete_message_with_delay(client, chat_id, warning_msg.id)
                 return
 
             content_checks = [
@@ -482,13 +482,13 @@ def setup_setting_handlers(app):
 
             for content, setting_key, error_msg in content_checks:
                 if content and not settings.get(setting_key, True):
-                    message.delete()
-                    warning_msg = client.send_message(
+                    await message.delete()
+                    warning_msg = await client.send_message(
                         chat_id,
                         f"{error_msg} are not allowed in this group.",
                         parse_mode=ParseMode.MARKDOWN
                     )
-                    delete_message_with_delay(client, chat_id, warning_msg.id)
+                    await delete_message_with_delay(client, chat_id, warning_msg.id)
                     break
 
         except Exception as e:
