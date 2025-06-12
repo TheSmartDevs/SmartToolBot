@@ -17,11 +17,16 @@ logger = LOGGER
 
 # Initialize Telegraph client
 telegraph = Telegraph()
-telegraph.create_account(
-    short_name="SmartUtilBot",
-    author_name="SmartUtilBot",
-    author_url="https://t.me/TheSmartDevs"
-)
+try:
+    telegraph.create_account(
+        short_name="SmartUtilBot",
+        author_name="SmartUtilBot",
+        author_url="https://t.me/TheSmartDevs"
+    )
+except Exception as e:
+    logger.error(f"Failed to create or access Telegraph account: {e}")
+    # Optionally, use an existing access token if available
+    # telegraph.access_token = "your_existing_access_token"
 
 async def get_auth_admins():
     """Retrieve all authorized admins from MongoDB."""
@@ -34,7 +39,7 @@ async def get_auth_admins():
 
 async def is_admin(user_id):
     """Check if the user is an admin (OWNER_ID or auth_admins)."""
-    if user_id == OWNER_ID:  # Use direct comparison for single integer OWNER_ID
+    if user_id == OWNER_ID:
         return True
     auth_admin_ids = await get_auth_admins()
     return user_id in auth_admin_ids
@@ -45,37 +50,44 @@ def setup_logs_handler(app: Client):
     async def create_telegraph_page(content: str) -> list:
         """Create Telegraph pages with the given content, each under 20 KB, and return list of URLs."""
         try:
+            # Truncate content to avoid exceeding Telegraph limits (40,000 characters)
             truncated_content = content[:40000]
-            content_bytes = truncated_content.encode('utf-8')
-            max_size_bytes = 20 * 1024
+            content_bytes = truncated_content.encode('utf-8', errors='ignore')
+            max_size_bytes = 20 * 1024  # 20 KB limit per page
             pages = []
             page_content = ""
             current_size = 0
             lines = truncated_content.splitlines(keepends=True)
 
             for line in lines:
-                line_bytes = line.encode('utf-8')
+                line_bytes = line.encode('utf-8', errors='ignore')
                 if current_size + len(line_bytes) > max_size_bytes and page_content:
+                    # Sanitize content to avoid disallowed tags
+                    safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
                     response = telegraph.create_page(
                         title="SmartLogs",
-                        html_content=f"<pre>{page_content}</pre>",
+                        html_content=safe_content,
                         author_name="SmartUtilBot",
                         author_url="https://t.me/TheSmartDevs"
                     )
                     pages.append(f"https://telegra.ph/{response['path']}")
                     page_content = ""
                     current_size = 0
+                    await asyncio.sleep(0.5)  # Avoid rate limiting
                 page_content += line
                 current_size += len(line_bytes)
 
             if page_content:
+                # Sanitize final page content
+                safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
                 response = telegraph.create_page(
                     title="SmartLogs",
-                    html_content=f"<pre>{page_content}</pre>",
+                    html_content=safe_content,
                     author_name="SmartUtilBot",
                     author_url="https://t.me/TheSmartDevs"
                 )
                 pages.append(f"https://telegra.ph/{response['path']}")
+                await asyncio.sleep(0.5)  # Avoid rate limiting
 
             return pages
         except Exception as e:
@@ -111,32 +123,39 @@ def setup_logs_handler(app: Client):
             return await loading_message.delete()
 
         logger.info("User is admin, sending log document")
-        response = await client.send_document(
-            chat_id=message.chat.id,
-            document="botlog.txt",
-            caption=(
-                "**✘ Hey Sir! Here Are Your Logs ↯**\n"
-                "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                "**✘ All Logs Successfully Exported! ↯**\n"
-                "**↯ Access Granted Only to Authorized Admins ↯**\n"
-                "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                "**✘ Select an Option Below to View Logs:**\n"
-                "**✘ Logs Here Offer the Fastest and Clearest Access! ↯**\n"
-                "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                "**✘Huge Respect For You, Master↯**"
-            ),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("✘ Display Logs↯", callback_data="display_logs"),
-                    InlineKeyboardButton("✘ Web Paste↯", callback_data="web_paste$")
-                ],
-                [InlineKeyboardButton("✘ Close↯", callback_data="close_doc$")]
-            ])
-        )
-
-        await loading_message.delete()
-        return response
+        try:
+            response = await client.send_document(
+                chat_id=message.chat.id,
+                document="botlog.txt",
+                caption=(
+                    "**✘ Hey Sir! Here Are Your Logs ↯**\n"
+                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
+                    "**✘ All Logs Successfully Exported! ↯**\n"
+                    "**↯ Access Granted Only to Authorized Admins ↯**\n"
+                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
+                    "**✘ Select an Option Below to View Logs:**\n"
+                    "**✘ Logs Here Offer the Fastest and Clearest Access! ↯**\n"
+                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
+                    "**✘Huge Respect For You, Master↯**"
+                ),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("✘ Display Logs↯", callback_data="display_logs"),
+                        InlineKeyboardButton("✘ Web Paste↯", callback_data="web_paste$")
+                    ],
+                    [InlineKeyboardButton("✘ Close↯", callback_data="close_doc$")]
+                ])
+            )
+            await loading_message.delete()
+            return response
+        except Exception as e:
+            logger.error(f"Error sending log document: {e}")
+            await loading_message.edit_text(
+                text="**✘ Sorry, Unable to Send Log Document ↯**",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return await loading_message.delete()
 
     @app.on_callback_query(filters.regex(r"^(close_doc\$|close_logs\$|web_paste\$|display_logs)$"))
     async def handle_callback(client: Client, query: CallbackQuery):
@@ -171,7 +190,7 @@ def setup_logs_handler(app: Client):
                 )
                 return await query.answer()
             try:
-                with open("botlog.txt", "r", encoding="utf-8") as f:
+                with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
                     logs_content = f.read()
                 telegraph_urls = await create_telegraph_page(logs_content)
                 if telegraph_urls:
@@ -223,7 +242,7 @@ def setup_logs_handler(app: Client):
                 parse_mode=ParseMode.MARKDOWN
             )
         try:
-            with open("botlog.txt", "r", encoding="utf-8") as f:
+            with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
                 logs = f.readlines()
             latest_logs = logs[-20:] if len(logs) > 20 else logs
             text = "".join(latest_logs)
