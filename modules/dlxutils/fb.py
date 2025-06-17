@@ -35,7 +35,7 @@ class FacebookDownloader:
 
     async def download_video(self, url: str, downloading_message: Message) -> Optional[dict]:
         self.temp_dir.mkdir(exist_ok=True)
-        api_url = f"https://tooly.chative.io/facebook/video?url={url}"
+        api_url = f"https://smartfbdl.vercel.app/dl?url={url}"
         
         try:
             async with aiohttp.ClientSession(
@@ -47,24 +47,25 @@ class FacebookDownloader:
                     if response.status == 200:
                         data = await response.json()
                         logger.info(f"API response: {data}")
-                        if data.get("success"):
-                            video_url = data["videos"].get("hd", {}).get("url")
-                            if not video_url:
-                                logger.error("No HD video URL found in API response")
-                                await downloading_message.edit_text("**Unable To Extract Video URL**", parse_mode=ParseMode.MARKDOWN)
-                                return None
-                            await downloading_message.edit_text("**Found ☑️ Downloading...**", parse_mode=ParseMode.MARKDOWN)
-                            title = data.get("title", "Facebook Video")
-                            safe_title = await self.sanitize_filename(title)
-                            filename = self.temp_dir / f"{safe_title}.mp4"
-                            await self._download_file(session, video_url, filename)
-                            return {
-                                'title': title,
-                                'filename': str(filename),
-                                'webpage_url': url
-                            }
-                        logger.error("API response indicates failure")
-                        return None
+                        # Find HD quality video URL
+                        video_url = next(
+                            (link["url"] for link in data.get("links", []) if link.get("quality") == "HD"),
+                            None
+                        )
+                        if not video_url:
+                            logger.error("No HD video URL found in API response")
+                            await downloading_message.edit_text("**Unable To Extract Video URL**", parse_mode=ParseMode.MARKDOWN)
+                            return None
+                        await downloading_message.edit_text("**Found ☑️ Downloading...**", parse_mode=ParseMode.MARKDOWN)
+                        title = data.get("title", "Facebook Video")
+                        safe_title = await self.sanitize_filename(title)
+                        filename = self.temp_dir / f"{safe_title}.mp4"
+                        await self._download_file(session, video_url, filename)
+                        return {
+                            'title': title,
+                            'filename': str(filename),
+                            'webpage_url': url
+                        }
                     logger.error(f"API request failed: HTTP status {response.status}")
                     return None
         except aiohttp.ClientError as e:
