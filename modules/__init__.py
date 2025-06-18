@@ -5,6 +5,7 @@ from .aixutils.ai import setup_ai_handler
 from .aixutils.dep import setup_dep_handler
 from .aixutils.gemi import setup_gem_handler
 from .aixutils.gpt import setup_gpt_handlers
+from .aixutils.cla import setup_cla_handler
 from .ccxutils.bin import setup_bin_handler
 from .ccxutils.db import setup_db_handlers
 from .ccxutils.extp import setup_extp_handler
@@ -29,6 +30,7 @@ from .dlxutils.pin import setup_pinterest_handler
 from .dlxutils.spfy import setup_spotify_handler
 from .dlxutils.tik import setup_tt_handler
 from .dlxutils.yt import setup_yt_handler
+from .dlxutils.tx import setup_tx_handler
 from .eduxutils.gmr import setup_gmr_handler
 from .eduxutils.pron import setup_pron_handler
 from .eduxutils.spl import setup_spl_handler
