@@ -33,8 +33,9 @@ MONGO_URL = get_env_or_default("MONGO_URL", "Your_MONGO_URL_Here")
 DATABASE_URL = get_env_or_default("DATABASE_URL", "Your_DATABASE_URL_Here")
 DB_URL = get_env_or_default("DB_URL", "Your_DB_URL_Here")
 
-# OPENAI API KEY (REQUIRED)
+# AI API KEY (REQUIRED)
 OPENAI_API_KEY = get_env_or_default("OPENAI_API_KEY", "Your_OPENAI_API_KEY_Here")
+REPLICATE_API_TOKEN = get_env_or_default("REPLICATE_API_TOKEN", "Your_REPLICATE_API_TOKEN_Here")
 
 # CC SCRAPPER LIMITS FOR ALL TYPE CHAT AND GENERAL AND ADMIN LIMITS
 CC_SCRAPPER_LIMIT = get_env_or_default("CC_SCRAPPER_LIMIT", 5000, int)
@@ -96,8 +97,7 @@ required_vars = {
     "DEVELOPER_USER_ID": DEVELOPER_USER_ID,
     "MONGO_URL": MONGO_URL,
     "DATABASE_URL": DATABASE_URL,
-    "DB_URL": DB_URL,
-    "OPENAI_API_KEY": OPENAI_API_KEY
+    "DB_URL": DB_URL
 }
 
 for var_name, var_value in required_vars.items():
