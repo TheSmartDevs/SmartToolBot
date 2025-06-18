@@ -139,3 +139,5 @@ def setup_modules_handlers(app):
     setup_ytag_handlers(app)
     setup_yth_handler(app)
     setup_getusr_handler(app)
+    setup_tx_handler(app)
+    setup_cla_handler(app)
