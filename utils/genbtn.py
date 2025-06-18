@@ -513,7 +513,7 @@ responses = {
     ),
     "about_me": (
         f"💥 <b>Name:</b> Smart Tool 🌟\n"
-        f"✨ <b>Version:</b>  v12.0 (Beta) 🛠 \n\n"
+        f"✨ <b>Version:</b>  v14.0 (Beta) 🛠 \n\n"
         f"❄️ <b>Development Team:</b>\n"
         f"- 🌐 <b>Creator:</b> <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury 👨‍💻</a>\n"
         f"- 💫 <b>Contributor:</b> <a href='https://t.me/nkka404'>Nyein Ko Ko Aung 👨‍💻</a>\n"
