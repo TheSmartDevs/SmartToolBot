@@ -128,7 +128,7 @@ async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=
 
         successful_users, blocked_users, successful_groups, failed_groups = 0, 0, 0, 0
         start_time = datetime.now()
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Updates Channel", url=UPDATE_CHANNEL_URL)]])
 
         # Process all chats in parallel using asyncio.gather
         all_chat_ids = user_ids + group_ids
@@ -246,18 +246,18 @@ async def stats_handler(client: Client, message: Message):
         total_groups = user_activity_collection.count_documents({"is_group": True})
 
         stats_text = (
-            f"**💥 Bot Stats 💥**\n"
-            f"**✨ Active Users:**\n"
-            f"- Daily: `{daily_users}`\n"
-            f"- Weekly: `{weekly_users}`\n"
-            f"- Monthly: `{monthly_users}`\n"
-            f"- Yearly: `{yearly_users}`\n"
-            f"**📊 Totals:**\n"
-            f"- Users: `{total_users}`\n"
-            f"- Groups: `{total_groups}`\n"
-            f"- Database Size: `{total_users + total_groups}`"
+            f"**Smart Bot Status ⇾ Report ✅**\n"
+            f"**━━━━━━━━━━━━━━━━**\n"
+            f"**Users & Groups Engagements:**\n"
+            f"**1 Day:** {daily_users} users were active\n"
+            f"**1 Week:** {weekly_users} users were active\n"
+            f"**1 Month:** {monthly_users} users were active\n"
+            f"**1 Year:** {yearly_users} users were active\n"
+            f"**Total Connected Groups:** {total_groups}\n"
+            f"**━━━━━━━━━━━━━━━━**\n"
+            f"**Total Smart Tools Users :** {total_users} ✅"
         )
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("💥 Bot Updates 💥", url=UPDATE_CHANNEL_URL)]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Updates Channel", url=UPDATE_CHANNEL_URL)]])
         await client.send_message(
             message.chat.id, stats_text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard
         )
