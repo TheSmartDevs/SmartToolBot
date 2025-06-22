@@ -512,18 +512,18 @@ responses = {
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
     "about_me": (
-        f"💥 <b>Name:</b> Smart Tool 🌟\n"
-        f"✨ <b>Version:</b>  v14.0 (Beta) 🛠 \n\n"
-        f"❄️ <b>Development Team:</b>\n"
-        f"- 🌐 <b>Creator:</b> <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury 👨‍💻</a>\n"
-        f"- 💫 <b>Contributor:</b> <a href='https://t.me/nkka404'>Nyein Ko Ko Aung 👨‍💻</a>\n"
-        f"👀 <b>Technical Stacks:</b>\n"
-        f"- 💥 <b>Language:</b> Python 🐍\n"
-        f"- 🌟 <b>Framework:</b> Fully Written In Pyrogram And Telethon 📚\n"
-        f"- ✨ <b>Database:</b> MongoDB Database 🗄\n"
-        f"- 🇧🇩 <b>Hosting:</b> Digital Ocean VPS 🌐\n\n"
-        f"❄️ <b>About:</b> Smart Tool 💥 The ultimate Telegram toolkit! Education, AI, downloaders, temp mail, finance tools & more—simplify life! 🔥\n\n"
-        f"🔔 <b>For Bot Update News</b>: <a href='{{UPDATE_CHANNEL_URL}}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+        f"<b>Name:</b> Smart Tool\n"
+        f"<b>Version:</b> v14.0 (Beta) 🛠\n\n"
+        f"<b>Development Team:</b>\n"
+        f"- <b>Creator:</b> <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury</a>\n"
+        f"- <b>Contributor:</b> <a href='https://t.me/nkka404'>Nyein Ko Ko Aung</a>\n"
+        f"<b>Technical Stacks:</b>\n"
+        f"- <b>Language:</b> Python 🐍\n"
+        f"- <b>Framework:</b> Fully Written In Pyrogram And Telethon 📚\n"
+        f"- <b>Database:</b> MongoDB Database 🗄\n"
+        f"- <b>Hosting:</b> Digital Ocean VPS\n\n"
+        f"<b>About:</b> Smart Tool ⚙️ The ultimate Telegram toolkit! Education, AI, downloaders, temp mail, finance tools & more—simplify life!\n\n"
+        f"<b>For Bot Update News:</b> <a href='{{UPDATE_CHANNEL_URL}}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
     "admin": (
