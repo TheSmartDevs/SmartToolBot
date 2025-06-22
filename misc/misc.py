@@ -38,18 +38,16 @@ async def handle_callback_query(client, callback_query):
         total_groups = user_activity_collection.count_documents({"is_group": True})
 
         stats_text = (
-            "**💥 Bot's Full Database Info 💥**\n"
-            "**✘━━━━━━━━━━━✘**\n"
-            "**✨ Registered Users Activity: ✨**\n"
-            f"- 💫 Daily Active: {daily_users} 🔥\n"
-            f"- 🌟 Weekly Active: {weekly_users} ⚡\n"
-            f"- ❄️ Monthly Active: {monthly_users} 🌈\n"
-            f"- 👀 Annual Active: {yearly_users} 🎯\n"
-            "**✘━━━━━━━━━━━✘**\n"
-            "**✘ Total Metrics: ✘**\n"
-            f"- 👥 Total Users: {total_users} 💫\n"
-            f"- 🌐 Total Groups: {total_groups} 🌟\n"
-            f"- ↯ Database Size: {total_users + total_groups} ✨\n"
+            f"**Smart Bot Status ⇾ Report ✅**\n"
+            f"**━━━━━━━━━━━━━━━━**\n"
+            f"**Users & Groups Engagements:**\n"
+            f"**1 Day:** {daily_users} users were active\n"
+            f"**1 Week:** {weekly_users} users were active\n"
+            f"**1 Month:** {monthly_users} users were active\n"
+            f"**1 Year:** {yearly_users} users were active\n"
+            f"**Total Connected Groups:** {total_groups}\n"
+            f"**━━━━━━━━━━━━━━━━**\n"
+            f"**Total Smart Tools Users :** {total_users} ✅"
         )
 
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
@@ -73,26 +71,28 @@ async def handle_callback_query(client, callback_query):
         available_mem = mem.available / (2**30)
 
         server_status_text = (
-            f"💥 <b>Smart Tools Server Stats</b> 💥\n"
-            f"<b>✘━━━━━━━━━━━━━✘</b>\n"
-            f"🌐 <b>Server Connection:</b>\n"
-            f"- 💫 <b>Ping:</b> {ping} ms ✨\n"
-            f"- 🌟 <b>Bot Status:</b> Online 🔥\n"
-            f"- 👀 <b>Server Uptime:</b> {uptime} 🇧🇩\n"
-            f"<b>✘━━━━━━━━━━━━━✘</b>\n"
-            f"💾 <b>Server Storage:</b>\n"
-            f"- ❄️ <b>Total:</b> {total_disk:.2f} GB ✨\n"
-            f"- 💥 <b>Used:</b> {used_disk:.2f} GB 🌟\n"
-            f"- 🌐 <b>Available:</b> {free_disk:.2f} GB 🔥\n"
-            f"<b>✘━━━━━━━━━━━━━✘</b>\n"
-            f"🧠 <b>Memory Usage:</b>\n"
-            f"- 💫 <b>Total:</b> {total_mem:.2f} GB 🇧🇩\n"
-            f"- ❄️ <b>Used:</b> {used_mem:.2f} GB ✨\n"
-            f"- 👀 <b>Available:</b> {available_mem:.2f} GB 🌟\n"
+            f"**Smart Bot Status ⇾ Report ✅**\n"
+            f"**━━━━━━━━━━━━━**\n"
+            f"**Server Connection:**\n"
+            f"**- Ping:** {ping} ms\n"
+            f"**- Bot Status:** Online\n"
+            f"**- Server Uptime:** {uptime}\n"
+            f"**━━━━━━━━━━━━━**\n"
+            f"**Server Storage:**\n"
+            f"**- Total:** {total_disk:.2f} GB\n"
+            f"**- Used:** {used_disk:.2f} GB\n"
+            f"**- Available:** {free_disk:.2f} GB\n"
+            f"**━━━━━━━━━━━━━**\n"
+            f"**Memory Usage:**\n"
+            f"**- Total:** {total_mem:.2f} GB\n"
+            f"**- Used:** {used_mem:.2f} GB\n"
+            f"**- Available:** {available_mem:.2f} GB\n"
+            f"**━━━━━━━━━━━━━**\n"
+            f"**Server Stats Check Successful ✅**"
         )
 
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
-        await call.message.edit_text(server_status_text, parse_mode=ParseMode.HTML, reply_markup=back_button)
+        await call.message.edit_text(server_status_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
 
     if call.data in responses:
