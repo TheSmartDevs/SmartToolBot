@@ -64,8 +64,8 @@ raw_prefixes = get_env_or_default("COMMAND_PREFIX", "!|.|#|,|/")
 COMMAND_PREFIX = [prefix.strip() for prefix in raw_prefixes.split("|") if prefix.strip()]
 
 # BOT DEVS CHANNEL URL AND PROFILE ERROR URL
-UPDATE_CHANNEL_URL = get_env_or_default("UPDATE_CHANNEL_URL", "t.me/TheSmartDev")
-PROFILE_ERROR_URL = get_env_or_default("PROFILE_ERROR_URL", "https://t.me/Bot_Bug_test/9305")
+UPDATE_CHANNEL_URL = get_env_or_default("UPDATE_CHANNEL_URL", "https://t.me/TheSmartDev")
+LOG_CHANNEL_ID = get_env_or_default("LOG_CHANNEL_ID", "-100432424242")
 
 # MAX FILE SIZE LIMITS FOR OCR TOOLS AND IMGAI
 IMGAI_SIZE_LIMIT = get_env_or_default("IMGAI_SIZE_LIMIT", 5242880, int)
