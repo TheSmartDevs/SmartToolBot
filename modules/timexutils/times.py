@@ -118,7 +118,8 @@ def setup_time_handler(app: Client):
     @app.on_message(filters.command(["time", "calendar"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def handle_time_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 message.chat.id,
                 "**✘Sorry You're Banned From Using Me↯**",
