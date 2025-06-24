@@ -3,6 +3,7 @@
 import os
 import asyncio
 import logging
+from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ParseMode
@@ -25,8 +26,6 @@ try:
     )
 except Exception as e:
     logger.error(f"Failed to create or access Telegraph account: {e}")
-    # Optionally, use an existing access token if available
-    # telegraph.access_token = "your_existing_access_token"
 
 async def get_auth_admins():
     """Retrieve all authorized admins from MongoDB."""
@@ -50,10 +49,9 @@ def setup_logs_handler(app: Client):
     async def create_telegraph_page(content: str) -> list:
         """Create Telegraph pages with the given content, each under 20 KB, and return list of URLs."""
         try:
-            # Truncate content to avoid exceeding Telegraph limits (40,000 characters)
             truncated_content = content[:40000]
             content_bytes = truncated_content.encode('utf-8', errors='ignore')
-            max_size_bytes = 20 * 1024  # 20 KB limit per page
+            max_size_bytes = 20 * 1024
             pages = []
             page_content = ""
             current_size = 0
@@ -62,7 +60,6 @@ def setup_logs_handler(app: Client):
             for line in lines:
                 line_bytes = line.encode('utf-8', errors='ignore')
                 if current_size + len(line_bytes) > max_size_bytes and page_content:
-                    # Sanitize content to avoid disallowed tags
                     safe_content = page_content.replace('<', '<').replace('>', '>')
                     response = telegraph.create_page(
                         title="SmartLogs",
@@ -73,12 +70,11 @@ def setup_logs_handler(app: Client):
                     pages.append(f"https://telegra.ph/{response['path']}")
                     page_content = ""
                     current_size = 0
-                    await asyncio.sleep(0.5)  # Avoid rate limiting
+                    await asyncio.sleep(0.5)
                 page_content += line
                 current_size += len(line_bytes)
 
             if page_content:
-                # Sanitize final page content
                 safe_content = page_content.replace('<', '<').replace('>', '>')
                 response = telegraph.create_page(
                     title="SmartLogs",
@@ -87,7 +83,7 @@ def setup_logs_handler(app: Client):
                     author_url="https://t.me/TheSmartDevs"
                 )
                 pages.append(f"https://telegra.ph/{response['path']}")
-                await asyncio.sleep(0.5)  # Avoid rate limiting
+                await asyncio.sleep(0.5)
 
             return pages
         except Exception as e:
@@ -103,7 +99,7 @@ def setup_logs_handler(app: Client):
             logger.info("User not admin, sending restricted message")
             return await client.send_message(
                 chat_id=message.chat.id,
-                text="**✘Kids Not Allowed To Do This↯**",
+                text="**✘ Kids Not Allowed To Do This ↯**",
                 parse_mode=ParseMode.MARKDOWN
             )
 
@@ -124,27 +120,36 @@ def setup_logs_handler(app: Client):
 
         logger.info("User is admin, sending log document")
         try:
+            # Get file size and line count
+            file_size_bytes = os.path.getsize("botlog.txt")
+            file_size_kb = file_size_bytes / 1024
+            with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
+                line_count = sum(1 for _ in f)
+            # Get current time and date
+            now = datetime.now()
+            time_str = now.strftime("%H-%M-%S")
+            date_str = now.strftime("%Y-%m-%d")
+
             response = await client.send_document(
                 chat_id=message.chat.id,
                 document="botlog.txt",
                 caption=(
-                    "**✘ Hey Sir! Here Are Your Logs ↯**\n"
-                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                    "**✘ All Logs Successfully Exported! ↯**\n"
-                    "**↯ Access Granted Only to Authorized Admins ↯**\n"
-                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                    "**✘ Select an Option Below to View Logs:**\n"
-                    "**✘ Logs Here Offer the Fastest and Clearest Access! ↯**\n"
-                    "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                    "**✘Huge Respect For You, Master↯**"
+                    "**Smart Logs Check → Successful ✅**\n"
+                    "**━━━━━━━━━━━━━━━━━**\n"
+                    f"**⊗ File Size: ** {file_size_kb:.2f} KB\n"
+                    f"**⊗ Logs Lines: ** {line_count} Lines\n"
+                    f"**⊗ Time: ** {time_str}\n"
+                    f"**⊗ Date: ** {date_str}\n"
+                    "**━━━━━━━━━━━━━━━━━**\n"
+                    "**Smart LogsChecker → Activated ✅**"
                 ),
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("✘ Display Logs↯", callback_data="display_logs"),
-                        InlineKeyboardButton("✘ Web Paste↯", callback_data="web_paste$")
+                        InlineKeyboardButton("[Display Logs]", callback_data="display_logs"),
+                        InlineKeyboardButton("[Web Paste]", callback_data="web_paste$")
                     ],
-                    [InlineKeyboardButton("✘ Close↯", callback_data="close_doc$")]
+                    [InlineKeyboardButton("[❌ Close]", callback_data="close_doc$")]
                 ])
             )
             await loading_message.delete()
@@ -166,7 +171,7 @@ def setup_logs_handler(app: Client):
         if not await is_admin(user_id):
             logger.info("User not admin, sending callback answer")
             return await query.answer(
-                text="✘Kids Not Allowed To Do This↯",
+                text="✘ Kids Not Allowed To Do This ↯",
                 show_alert=True
             )
 
@@ -197,23 +202,31 @@ def setup_logs_handler(app: Client):
                     buttons = []
                     for i in range(0, len(telegraph_urls), 2):
                         row = [
-                            InlineKeyboardButton(f"✘ View Web Part {i+1}↯", url=telegraph_urls[i])
+                            InlineKeyboardButton(f"[View Web Part {i+1}]", url=telegraph_urls[i])
                         ]
                         if i + 1 < len(telegraph_urls):
-                            row.append(InlineKeyboardButton(f"✘ View Web Part {i+2}↯", url=telegraph_urls[i+1]))
+                            row.append(InlineKeyboardButton(f"[View Web Part {i+2}]", url=telegraph_urls[i+1]))
                         buttons.append(row)
-                    buttons.append([InlineKeyboardButton("✘ Close↯", callback_data="close_doc$")])
+                    buttons.append([InlineKeyboardButton("[❌ Close]", callback_data="close_doc$")])
+                    # Get file size and line count for web paste caption
+                    file_size_bytes = os.path.getsize("botlog.txt")
+                    file_size_kb = file_size_bytes / 1024
+                    with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
+                        line_count = sum(1 for _ in f)
+                    # Get current time and date
+                    now = datetime.now()
+                    time_str = now.strftime("%H-%M-%S")
+                    date_str = now.strftime("%Y-%m-%d")
                     return await query.message.edit_caption(
                         caption=(
-                            "**✘ Hey Sir! Here Are Your Logs ↯**\n"
-                            "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                            "**✘ All Logs Successfully Exported! ↯**\n"
-                            "**↯ Access Granted Only to Authorized Admins ↯**\n"
-                            "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                            "**✘ Select a Page Below to View Logs:**\n"
-                            "**✘ Logs Here Offer the Fastest and Clearest Access! ↯**\n"
-                            "**✘━━━━━━━━━━━━━━━━━━━━━━━━━↯**\n"
-                            "**✘Huge Respect For You, Master↯**"
+                            "**Smart Logs Check → Successful ✅**\n"
+                            "**━━━━━━━━━━━━━━━━━**\n"
+                            f"**⊗ File Size: ** {file_size_kb:.2f} KB\n"
+                            f"**⊗ Logs Lines: ** {line_count} Lines\n"
+                            f"**⊗ Time: ** {time_str}\n"
+                            f"**⊗ Date: ** {date_str}\n"
+                            "**━━━━━━━━━━━━━━━━━**\n"
+                            "**Smart LogsChecker → Activated ✅**"
                         ),
                         parse_mode=ParseMode.MARKDOWN,
                         reply_markup=InlineKeyboardMarkup(buttons)
@@ -253,7 +266,7 @@ def setup_logs_handler(app: Client):
                 text=text if text else "No logs available.",
                 parse_mode=ParseMode.DISABLED,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("✘ Back↯", callback_data="close_logs$")]
+                    [InlineKeyboardButton("[❌ Back]", callback_data="close_logs$")]
                 ])
             )
         except Exception as e:
