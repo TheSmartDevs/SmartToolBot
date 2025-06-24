@@ -116,7 +116,8 @@ def setup_tmail_handler(app: Client):
     @app.on_message(filters.command(["tmail"], prefixes=COMMAND_PREFIX))
     async def generate_mail(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
                 text="**✘Sorry You're Banned From Using Me↯**"
@@ -199,7 +200,7 @@ def setup_tmail_handler(app: Client):
     @app.on_callback_query(filters.regex(r'^check_'))
     async def check_mail(client, callback_query):
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await callback_query.answer("✘Sorry You're Banned From Using Me↯", show_alert=True)
             return
 
@@ -251,7 +252,7 @@ def setup_tmail_handler(app: Client):
     @app.on_callback_query(filters.regex(r"^read_"))
     async def read_message(client, callback_query):
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await callback_query.answer("✘Sorry You're Banned From Using Me↯", show_alert=True)
             return
 
@@ -312,7 +313,8 @@ def setup_tmail_handler(app: Client):
     @app.on_message(filters.command(["cmail"], prefixes=COMMAND_PREFIX))
     async def manual_check_mail(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
                 text="**✘Sorry You're Banned From Using Me↯**"
