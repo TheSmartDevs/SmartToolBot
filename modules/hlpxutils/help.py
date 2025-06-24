@@ -12,7 +12,8 @@ def setup_help_handler(app: Client):
     @app.on_message(filters.command(["help", "tutorial"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def help_message(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # FIX: Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
