@@ -42,7 +42,8 @@ def setup_string_handler(app: Client):
     async def session_setup(client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -61,7 +62,7 @@ def setup_string_handler(app: Client):
     async def callback_query_start_handler(client, callback_query):
         # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -71,7 +72,7 @@ def setup_string_handler(app: Client):
     async def callback_query_restart_handler(client, callback_query):
         # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -81,7 +82,7 @@ def setup_string_handler(app: Client):
     async def callback_query_close_handler(client, callback_query):
         # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -91,7 +92,7 @@ def setup_string_handler(app: Client):
     async def text_handler(client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
