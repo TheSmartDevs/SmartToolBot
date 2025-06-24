@@ -33,7 +33,8 @@ def setup_txt_handler(app: Client):
     @app.on_message(filters.command(["sptxt"], prefixes=COMMAND_PREFIX) & filters.private)
     async def split_text(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await message.reply_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
