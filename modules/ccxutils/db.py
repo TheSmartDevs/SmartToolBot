@@ -5,6 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from config import COMMAND_PREFIX
+from core import banned_users
 
 # Define the BIN databases for each country
 bin_databases = {
@@ -106,6 +107,12 @@ accepted_countries = ["Bangladesh", "India", "Algeria", "China", "Brazil", "Bras
 def setup_db_handlers(app: Client):
     @app.on_message(filters.command(["bindb"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def bindb_handler(client: Client, message: Message):
+        # Check if user is banned
+        user_id = message.from_user.id if message.from_user else None
+        if user_id and await banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
+            return
+
         user_input = message.text.split(maxsplit=1)
         if len(user_input) == 1:
             await client.send_message(message.chat.id, "**Please provide a full country name for bin database ❌**")
