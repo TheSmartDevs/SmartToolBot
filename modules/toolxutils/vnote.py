@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import COMMAND_PREFIX
-from utils import LOGGER
+from utils import LOGGER, progress_bar
 from core import banned_users  # Add banned user check
 
 # Thread pool for non-blocking FFmpeg execution
@@ -21,7 +21,8 @@ def setup_vnote_handler(app: Client):
     @app.on_message(filters.command("vnote", prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def vnote_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -56,8 +57,16 @@ def setup_vnote_handler(app: Client):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(executor, run_ffmpeg, ffmpeg_cmd)
 
-            await status_msg.edit("`📤 Uploading...`")
-            await client.send_video_note(message.chat.id, video_note=output_path, length=640)
+            # Use progress_bar from utils to upload
+            await progress_bar(
+                client,
+                message,
+                output_path,
+                status_msg,
+                send_method="send_video_note",
+                send_method_kwargs={"video_note": output_path, "length": 640},
+            )
+
             await status_msg.delete()
 
         except Exception as e:
