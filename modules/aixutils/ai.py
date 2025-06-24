@@ -15,9 +15,9 @@ API_URL = "https://abirthetech.serv00.net/ai.php"
 def setup_ai_handler(app: Client):
     @app.on_message(filters.command(["ai"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def gemi_handler(client: Client, message: Message):
-        # Check if user is banned
+        # Check if user is banned (await needed for Motor async)
         user_id = message.from_user.id
-        if banned_users.find_one({"user_id": user_id}):
+        if await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
