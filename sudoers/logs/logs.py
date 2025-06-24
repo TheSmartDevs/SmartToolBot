@@ -31,7 +31,7 @@ except Exception as e:
 async def get_auth_admins():
     """Retrieve all authorized admins from MongoDB."""
     try:
-        admins = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        admins = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         return {admin["user_id"] for admin in admins}
     except Exception as e:
         logger.error(f"Error fetching auth admins: {e}")
@@ -63,7 +63,7 @@ def setup_logs_handler(app: Client):
                 line_bytes = line.encode('utf-8', errors='ignore')
                 if current_size + len(line_bytes) > max_size_bytes and page_content:
                     # Sanitize content to avoid disallowed tags
-                    safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
+                    safe_content = page_content.replace('<', '<').replace('>', '>')
                     response = telegraph.create_page(
                         title="SmartLogs",
                         html_content=safe_content,
@@ -79,7 +79,7 @@ def setup_logs_handler(app: Client):
 
             if page_content:
                 # Sanitize final page content
-                safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
+                safe_content = page_content.replace('<', '<').replace('>', '>')
                 response = telegraph.create_page(
                     title="SmartLogs",
                     html_content=safe_content,
