@@ -19,7 +19,7 @@ try:
     auth_admins = db["auth_admins"]
     banned_users = db["banned_users"]
 
-    LOGGER.info(f"Database Client Successfully Created using database '{db_name}'!")
+    LOGGER.info(f"Database Client Created Successfully!")
 except Exception as e:
     LOGGER.error(f"Database Client Create Error: {e}")
     raise
