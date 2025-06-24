@@ -4,6 +4,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from config import DATABASE_URL
 from utils import LOGGER
 
+LOGGER.info("Creating Database Client From DATABASE_URL")
+
 try:
     mongo_client = AsyncIOMotorClient(DATABASE_URL)
     db = mongo_client.get_database()
