@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery  # Added CallbackQuery
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ParseMode
 from config import OWNER_ID, COMMAND_PREFIX
 from core import auth_admins
@@ -15,7 +15,7 @@ def setup_sudo_handler(app: Client):
     async def get_auth_admins():
         """Retrieve all authorized admins from MongoDB."""
         try:
-            admins = auth_admins.find({}, {"user_id": 1, "title": 1, "auth_date": 1, "_id": 0})
+            admins = await auth_admins.find({}, {"user_id": 1, "title": 1, "auth_date": 1, "_id": 0}).to_list(None)
             return {admin["user_id"]: {"title": admin["title"], "auth_date": admin["auth_date"]} for admin in admins}
         except Exception as e:
             LOGGER.error(f"Error fetching auth admins: {e}")
@@ -24,7 +24,7 @@ def setup_sudo_handler(app: Client):
     async def add_auth_admin(user_id: int, title: str):
         """Add or update an authorized admin in MongoDB with timestamp."""
         try:
-            auth_admins.update_one(
+            await auth_admins.update_one(
                 {"user_id": user_id},
                 {"$set": {"user_id": user_id, "title": title, "auth_date": datetime.utcnow()}},
                 upsert=True
@@ -38,7 +38,7 @@ def setup_sudo_handler(app: Client):
     async def remove_auth_admin(user_id: int):
         """Remove an authorized admin from MongoDB."""
         try:
-            result = auth_admins.delete_one({"user_id": user_id})
+            result = await auth_admins.delete_one({"user_id": user_id})
             if result.deleted_count > 0:
                 LOGGER.info(f"Removed admin {user_id}")
                 return True
@@ -225,7 +225,7 @@ def setup_sudo_handler(app: Client):
 
         loading_message = await client.send_message(
             chat_id=message.chat.id,
-            text="**✘Removing User From Bot Admins List↯**",  # Fixed typo
+            text="**✘Removing User From Bot Admins List↯**",
             parse_mode=ParseMode.MARKDOWN
         )
         await asyncio.sleep(1)
