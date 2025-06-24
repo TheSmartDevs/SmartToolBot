@@ -5,7 +5,6 @@ import os
 import shutil
 import asyncio
 import logging
-import subprocess
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -20,7 +19,7 @@ logger = LOGGER
 async def get_auth_admins():
     """Retrieve all authorized admins from MongoDB."""
     try:
-        admins = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        admins = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         return {admin["user_id"] for admin in admins}
     except Exception as e:
         logger.error(f"Error fetching auth admins: {e}")
