@@ -28,26 +28,26 @@ from config import (
 from core import auth_admins, user_activity_collection
 from utils import LOGGER
 
-def update_user_activity(user_id, is_group=False):
+async def update_user_activity(user_id, is_group=False):
     try:
         now = datetime.utcnow()
         update_data = {
             "$set": {
                 "last_activity": now,
-                "is_group": bool(is_group)  # Ensure is_group is a boolean
+                "is_group": bool(is_group)
             },
             "$inc": {"activity_count": 1}
         }
-        result = user_activity_collection.update_one(
+        result = await user_activity_collection.update_one(
             {"user_id": user_id}, update_data, upsert=True
         )
         LOGGER.debug(f"Updated activity for user_id {user_id}, is_group={is_group}, result: {result.modified_count} modified, {result.upserted_id} upserted")
     except Exception as e:
         LOGGER.error(f"Error updating user activity for user_id {user_id}: {str(e)}")
 
-def is_admin(user_id):
+async def is_admin(user_id):
     try:
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         return user_id == OWNER_ID or user_id in [admin["user_id"] for admin in auth_admins_data]
     except Exception as e:
         LOGGER.error(f"Error checking admin status for user_id {user_id}: {str(e)}")
@@ -59,7 +59,7 @@ async def broadcast_handler(client: Client, message: Message):
         return
 
     user_id = message.from_user.id
-    if not is_admin(user_id):
+    if not await is_admin(user_id):
         LOGGER.info(f"Unauthorized broadcast attempt by user_id {user_id}")
         await client.send_message(message.chat.id, "**✘ Sorry You're Not Authorized Bro!**", parse_mode=ParseMode.MARKDOWN)
         return
@@ -89,7 +89,6 @@ async def broadcast_handler(client: Client, message: Message):
                     )
                     return
                 await process_broadcast(client, msg, is_broadcast, msg.chat.id)
-                # Remove handler without awaiting, as it returns None
                 client.remove_handler(handler, group=2)
         handler = MessageHandler(callback, filters.user(user_id) & filters.chat(message.chat.id))
         client.add_handler(handler, group=2)
@@ -111,17 +110,14 @@ async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=
             parse_mode=ParseMode.MARKDOWN
         )
 
-        # Get the bot's own ID to exclude it from the broadcast list
         bot_info = await client.get_me()
         bot_id = bot_info.id
 
-        # Clean up old entries (older than 90 days)
         cutoff_date = datetime.utcnow() - timedelta(days=90)
-        user_activity_collection.delete_many({"last_activity": {"$lt": cutoff_date}})
+        await user_activity_collection.delete_many({"last_activity": {"$lt": cutoff_date}})
         LOGGER.info("Cleaned up old entries from user_activity_collection")
 
-        # Fetch chats from the database and exclude the bot's own ID
-        chats = list(user_activity_collection.find({}, {"user_id": 1, "is_group": 1}))
+        chats = await user_activity_collection.find({}, {"user_id": 1, "is_group": 1}).to_list(None)
         user_ids = [chat["user_id"] for chat in chats if not chat.get("is_group", False) and chat["user_id"] != bot_id]
         group_ids = [chat["user_id"] for chat in chats if chat.get("is_group", False) and chat["user_id"] != bot_id]
         LOGGER.info(f"Found {len(user_ids)} users and {len(group_ids)} groups to broadcast to")
@@ -130,7 +126,6 @@ async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=
         start_time = datetime.now()
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Updates Channel", url=UPDATE_CHANNEL_URL)]])
 
-        # Process all chats in parallel using asyncio.gather
         all_chat_ids = user_ids + group_ids
         LOGGER.debug(f"Starting broadcast to {len(all_chat_ids)} chats")
 
@@ -163,7 +158,7 @@ async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=
             except FloodWait as e:
                 LOGGER.warning(f"FloodWait for chat_id {target_chat_id}: Waiting {e.value}s")
                 await asyncio.sleep(e.value)
-                return await send_to_chat(target_chat_id)  # Retry after waiting
+                return await send_to_chat(target_chat_id)
             except UserIsBlocked:
                 LOGGER.error(f"User blocked the bot: chat_id {target_chat_id}")
                 if target_chat_id in user_ids:
@@ -183,10 +178,8 @@ async def process_broadcast(client: Client, content, is_broadcast=True, chat_id=
                 else:
                     return ("group", "failed")
 
-        # Run all send operations in parallel
         results = await asyncio.gather(*[send_to_chat(chat_id) for chat_id in all_chat_ids], return_exceptions=True)
 
-        # Process results
         for result in results:
             if isinstance(result, tuple):
                 chat_type, status = result
@@ -230,7 +223,7 @@ async def stats_handler(client: Client, message: Message):
         return
 
     user_id = message.from_user.id
-    if not is_admin(user_id):
+    if not await is_admin(user_id):
         LOGGER.info(f"Unauthorized stats attempt by user_id {user_id}")
         await client.send_message(message.chat.id, "**✘ Unauthorized Access!**", parse_mode=ParseMode.MARKDOWN)
         return
@@ -238,12 +231,12 @@ async def stats_handler(client: Client, message: Message):
     LOGGER.info(f"Stats command by user_id {user_id}")
     try:
         now = datetime.utcnow()
-        daily_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
-        weekly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
-        monthly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
-        yearly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
-        total_users = user_activity_collection.count_documents({"is_group": False})
-        total_groups = user_activity_collection.count_documents({"is_group": True})
+        daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
+        weekly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
+        monthly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
+        yearly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
+        total_users = await user_activity_collection.count_documents({"is_group": False})
+        total_groups = await user_activity_collection.count_documents({"is_group": True})
 
         stats_text = (
             f"**Smart Bot Status ⇾ Report ✅**\n"
@@ -271,9 +264,9 @@ async def group_added_handler(client: Client, message: Message):
         if not message.new_chat_members or not message.chat:
             return
         for member in message.new_chat_members:
-            if member.is_self:  # Bot was added to the group
+            if member.is_self:
                 chat_id = message.chat.id
-                update_user_activity(chat_id, is_group=True)
+                await update_user_activity(chat_id, is_group=True)
                 await client.send_message(
                     chat_id,
                     "**Thank you for adding me to this group!**",
@@ -290,15 +283,14 @@ async def group_removed_handler(client: Client, member_update: ChatMemberUpdated
             member_update.new_chat_member and member_update.new_chat_member.status in ["banned", "left"] and
             member_update.new_chat_member.user.is_self):
             chat_id = member_update.chat.id
-            user_activity_collection.delete_one({"user_id": chat_id, "is_group": True})
+            await user_activity_collection.delete_one({"user_id": chat_id, "is_group": True})
             LOGGER.info(f"Bot removed/banned from group {chat_id}, removed from database")
     except Exception as e:
         LOGGER.error(f"Error in group_removed_handler for chat_id {member_update.chat.id}: {str(e)}")
 
 async def update_user_activity_handler(client: Client, message: Message):
     if message.from_user:
-        update_user_activity(message.from_user.id, is_group=False)
-    # Always return None explicitly to ensure no unintended return value
+        await update_user_activity(message.from_user.id, is_group=False)
     return None
 
 def setup_admin_handler(app: Client):
