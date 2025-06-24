@@ -30,7 +30,8 @@ def setup_coin_handler(app: Client):
     async def coin_handler(client, message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # FIX: Await the banned_users.find_one as it's an async call
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use /cx")
             return
@@ -109,7 +110,8 @@ def setup_coin_handler(app: Client):
     async def refresh_callback(client: Client, callback_query: CallbackQuery):
         # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # FIX: Await the banned_users.find_one as it's an async call
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use refresh for {callback_query.data}")
             return
