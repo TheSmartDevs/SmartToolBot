@@ -91,7 +91,8 @@ async def ocr_extract_text(client: Client, message: Message) -> str:
 async def translate_handler(client: Client, message: Message):
     # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    if user_id and banned_users.find_one({"user_id": user_id}):
+    # FIX: Await the banned_users.find_one as it's an async call
+    if user_id and await banned_users.find_one({"user_id": user_id}):
         await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /tr")
         return
