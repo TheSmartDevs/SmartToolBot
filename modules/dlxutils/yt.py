@@ -157,7 +157,7 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
             return None, "Media duration exceeds 2 hours"
         
         await status.edit_text("**Found ☑️ Downloading...**", parse_mode=ParseMode.MARKDOWN)
-        logger.info(f"Media found: {info.get('title', 'Unknown')} ({'audio' if is_audio else 'video'})")
+        logger.info(f"Download started: {info.get('title', 'Unknown')} ({'audio' if is_audio else 'video'})")
         
         title = info.get('title', 'Unknown')
         safe_title = sanitize_filename(title)
@@ -361,7 +361,7 @@ def setup_yt_handler(app: Client):
     @app.on_message(filters.regex(rf"^{prefix}(yt|video)(\s+.+)?$") & (filters.private | filters.group))
     async def video_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
@@ -390,7 +390,7 @@ def setup_yt_handler(app: Client):
     @app.on_message(filters.regex(rf"^{prefix}song(\s+.+)?$") & (filters.private | filters.group))
     async def song_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
