@@ -199,7 +199,7 @@ def setup_donate_handler(app):
     async def donate_command(client: Client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
@@ -233,7 +233,7 @@ def setup_donate_handler(app):
         user_id = callback_query.from_user.id
 
         # Check if user is banned
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(chat_id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             await callback_query.answer("You are banned!", show_alert=True)
             return
@@ -326,6 +326,18 @@ def setup_donate_handler(app):
                     possible_user_ids = [uid for uid in users if uid > 0]
                     user_id = possible_user_ids[0] if possible_user_ids else None
 
+                if not user_id:
+                    raise ValueError(f"Invalid user_id ({user_id})")
+
+                # Check if user is banned
+                if await banned_users.find_one({"user_id": user_id}):
+                    await client.send_message(
+                        user_id,
+                        "**✘Sorry You're Banned From Using Me↯**",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    return
+
                 if isinstance(update.message.peer_id, PeerUser):
                     chat_id = update.message.peer_id.user_id
                 elif isinstance(update.message.peer_id, PeerChat):
@@ -338,8 +350,8 @@ def setup_donate_handler(app):
                 if not chat_id and user_id:
                     chat_id = user_id  # Assume private chat
 
-                if not user_id or not chat_id:
-                    raise ValueError(f"Invalid chat_id ({chat_id}) or user_id ({user_id})")
+                if not chat_id:
+                    raise ValueError(f"Invalid chat_id ({chat_id})")
 
                 # Get user details
                 user = users.get(user_id)
