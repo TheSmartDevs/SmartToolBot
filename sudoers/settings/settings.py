@@ -27,7 +27,7 @@ def validate_message(func):
 def admin_only(func):
     async def wrapper(client: Client, message: Message):
         user_id = message.from_user.id
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized settings access attempt by user_id {user_id}")
@@ -175,7 +175,7 @@ def setup_settings_handler(app: Client):
     async def paginate_menu(client: Client, callback_query: CallbackQuery):
         """Handle pagination in the settings menu."""
         user_id = callback_query.from_user.id
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized pagination attempt by user_id {user_id}")
@@ -190,7 +190,7 @@ def setup_settings_handler(app: Client):
     async def edit_var(client: Client, callback_query: CallbackQuery):
         """Handle the selection of a variable to edit."""
         user_id = callback_query.from_user.id
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized edit attempt by user_id {user_id}")
@@ -218,7 +218,7 @@ def setup_settings_handler(app: Client):
     async def cancel_edit(client: Client, callback_query: CallbackQuery):
         """Cancel the editing process."""
         user_id = callback_query.from_user.id
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized cancel edit attempt by user_id {user_id}")
@@ -264,7 +264,7 @@ def setup_settings_handler(app: Client):
     async def close_menu(client: Client, callback_query: CallbackQuery):
         """Close the settings menu."""
         user_id = callback_query.from_user.id
-        auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+        auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized close menu attempt by user_id {user_id}")
