@@ -47,7 +47,8 @@ def setup_cla_handler(app: Client):
     @app.on_message(filters.command(["cla"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def claude_handler(client: Client, message: Message):
         user_id = message.from_user.id
-        if banned_users.find_one({"user_id": user_id}):
+        # FIX: Await the banned_users.find_one as it's an async call
+        if await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘ Sorry, you're banned from using me ↯**")
             return
 
