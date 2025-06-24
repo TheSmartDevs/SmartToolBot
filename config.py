@@ -54,8 +54,6 @@ GROQ_API_URL = get_env_or_default("GROQ_API_URL", "https://api.groq.com/openai/v
 DOMAIN_API_KEY = get_env_or_default("DOMAIN_API_KEY", "Your_DOMAIN_API_KEY_Here")
 DOMAIN_API_URL = get_env_or_default("DOMAIN_API_URL", "https://www.whoisxmlapi.com/whoisserver/WhoisService")
 TEXT_MODEL = get_env_or_default("TEXT_MODEL", "deepseek-r1-distill-llama-70b")
-LOCATIONIQ_API_KEY = get_env_or_default("LOCATIONIQ_API_KEY", "Your_LOCATIONIQ_API_KEY_Here")
-IPINFO_API_TOKEN = get_env_or_default("IPINFO_API_TOKEN", "Your_IPINFO_API_TOKEN_Here")
 NEWS_API_KEY = get_env_or_default("NEWS_API_KEY", "Your_NEWS_API_KEY_Here")
 BIN_KEY = get_env_or_default("BIN_KEY", "Your_BIN_KEY_Here")
 
