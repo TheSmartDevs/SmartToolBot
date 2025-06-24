@@ -179,7 +179,7 @@ def setup_gen_handler(app: Client):
     async def generate_handler(client: Client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
             return
 
@@ -268,7 +268,7 @@ def setup_gen_handler(app: Client):
         """Handle regenerate callback for credit card generation."""
         # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
             return
 
