@@ -18,7 +18,7 @@ def setup_gban_handler(app: Client):
     async def gban_command(client, message):
         user_id = message.from_user.id
         try:
-            auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+            auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
             AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         except Exception as e:
             await safe_send_message(client, message.chat.id, "**✘Error: Failed to fetch admin data↯**")
@@ -66,7 +66,7 @@ def setup_gban_handler(app: Client):
 
         # Check if user is already banned
         try:
-            if banned_users.find_one({"user_id": target_id}):
+            if await banned_users.find_one({"user_id": target_id}):
                 await safe_send_message(client, message.chat.id, f"**✘User {target_name} is already banned↯**")
                 return
         except Exception as e:
@@ -76,7 +76,7 @@ def setup_gban_handler(app: Client):
 
         # Ban the user
         try:
-            banned_users.insert_one({"user_id": target_id, "username": target_name})
+            await banned_users.insert_one({"user_id": target_id, "username": target_name})
         except Exception as e:
             await safe_send_message(client, message.chat.id, "**✘Error: Failed to ban user↯**")
             LOGGER.error(f"Error banning user {target_id}: {e}")
@@ -95,7 +95,7 @@ def setup_gban_handler(app: Client):
     async def gunban_command(client, message):
         user_id = message.from_user.id
         try:
-            auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+            auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
             AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         except Exception as e:
             await safe_send_message(client, message.chat.id, "**✘Error: Failed to fetch admin data↯**")
@@ -143,7 +143,7 @@ def setup_gban_handler(app: Client):
 
         # Check if user is banned
         try:
-            if not banned_users.find_one({"user_id": target_id}):
+            if not await banned_users.find_one({"user_id": target_id}):
                 await safe_send_message(client, message.chat.id, f"**✘User {target_name} is not banned↯**")
                 return
         except Exception as e:
@@ -153,7 +153,7 @@ def setup_gban_handler(app: Client):
 
         # Unban the user
         try:
-            banned_users.delete_one({"user_id": target_id})
+            await banned_users.delete_one({"user_id": target_id})
         except Exception as e:
             await safe_send_message(client, message.chat.id, "**✘Error: Failed to unban user↯**")
             LOGGER.error(f"Error unbanning user {target_id}: {e}")
