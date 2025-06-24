@@ -12,7 +12,7 @@ pillow
 yt-dlp
 spotipy
 python-dateutil
-pymongo
+motor
 gTTS
 aiofiles
 python-dotenv
