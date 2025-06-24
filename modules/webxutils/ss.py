@@ -58,7 +58,8 @@ def setup_ss_handler(app: Client):
     async def capture_screenshot(client, message: Message):
         """Handle screenshot capture command"""
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        # Await the banned_users check (Motor async)
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
                 text="**✘Sorry You're Banned From Using Me↯**",
