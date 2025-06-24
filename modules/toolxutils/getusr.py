@@ -17,8 +17,8 @@ def setup_getusr_handler(app: Client) -> None:
         chat_id = message.chat.id
         LOGGER.info(f"User {user_id} initiated /getusers command in chat {chat_id}")
 
-        # Check if user is banned
-        if banned_users.find_one({"user_id": user_id}):
+        # Check if user is banned (await for Motor async)
+        if await banned_users.find_one({"user_id": user_id}):
             LOGGER.warning(f"Banned user {user_id} attempted to use /getusers")
             await client.send_message(
                 chat_id,
