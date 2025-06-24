@@ -17,7 +17,7 @@ try:
     db = MONGO_CLIENT.get_database(db_name)
     user_activity_collection = db["user_activity"]
 
-    LOGGER.info(f"MONGO_CLIENT Successfully Created using database '{db_name}'!")
+    LOGGER.info(f"MONGO_CLIENT Created Successfully!")
 except Exception as e:
     LOGGER.error(f"Failed to create MONGO_CLIENT: {e}")
     raise
