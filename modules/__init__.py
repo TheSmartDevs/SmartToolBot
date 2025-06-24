@@ -47,13 +47,11 @@ from .mailxutils.fmail import setup_fmail_handlers
 from .mailxutils.tmail import setup_tmail_handler
 from .netxutils.dmn import setup_dmn_handlers
 from .netxutils.ip import setup_ip_handlers
-from .netxutils.loc import setup_loc_handler
 from .netxutils.ocr import setup_ocr_handler
 from .netxutils.px import setup_px_handler
 from .netxutils.sk import setup_sk_handlers
 from .payxutils.pay import setup_donate_handler
 from .privxutils.privacy import setup_privacy_handler
-from .remxutils.remini import setup_remini_handler
 from .scrapxutils.ccscr import setup_scr_handler
 from .scrapxutils.mailscr import setup_mailscr_handler
 from .sessxutils.string import setup_string_handler
@@ -118,13 +116,11 @@ def setup_modules_handlers(app):
     setup_tmail_handler(app)
     setup_dmn_handlers(app)
     setup_ip_handlers(app)
-    setup_loc_handler(app)
     setup_ocr_handler(app)
     setup_px_handler(app)
     setup_sk_handlers(app)
     setup_donate_handler(app)
     setup_privacy_handler(app)
-    setup_remini_handler(app)
     setup_scr_handler(app)
     setup_mailscr_handler(app)
     setup_string_handler(app)
