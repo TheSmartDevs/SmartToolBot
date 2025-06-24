@@ -1,5 +1,3 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
 import aiohttp
 import asyncio
 import base64
@@ -9,15 +7,13 @@ from pyrogram.types import Message
 from pyrogram.enums import ParseMode, ChatType, ChatAction
 from pyrogram.raw.functions.users import GetFullUser
 from PIL import Image
-from config import COMMAND_PREFIX, PROFILE_ERROR_URL
-from utils import LOGGER  # Import LOGGER from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX
+from utils import LOGGER
+from core import banned_users
 import json
 
-# Use the imported LOGGER
 logger = LOGGER
 
-# Semaphore to limit concurrent tasks
 MAX_CONCURRENT_TASKS = 5
 semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
 
@@ -55,7 +51,7 @@ async def upload_to_imgbb(image_path, session):
         async with semaphore:
             with open(image_path, "rb") as file:
                 image_data = base64.b64encode(await asyncio.to_thread(file.read)).decode('utf-8')
-            api_key = "134919706cb1f04cb24f6069213fc1d9"  # Replace with your ImgBB API key
+            api_key = "134919706cb1f04cb24f6069213fc1d9"
             upload_url = "https://api.imgbb.com/1/upload"
             payload = {"key": api_key, "image": image_data}
             async with session.post(upload_url, data=payload) as response:
@@ -178,17 +174,12 @@ async def generate_quote(client: Client, message: Message, session):
         photo_path = None
         message_entities = []
 
-        # Determine user and download avatar
         async with semaphore:
-            # Case 1: Reply to a photo message with /q
             if replied_message and len(command_parts) == 1 and replied_message.photo:
-                # If replying to own message
                 if replied_message.from_user and replied_message.from_user.id == message.from_user.id:
                     user = message.from_user
-                # If replying to someone else's message
                 else:
                     user = replied_message.from_user
-            # Case 2: Other cases (text-based or no reply)
             elif replied_message and len(command_parts) == 1:
                 user = replied_message.from_user
             elif len(command_parts) > 1:
@@ -215,38 +206,31 @@ async def generate_quote(client: Client, message: Message, session):
                         logger.error(f"Failed to download chat photo: {e}")
                         avatar_file_path = None
 
-            if avatar_file_path is None:
-                avatar_file_path = await download_default_avatar(client, PROFILE_ERROR_URL, session)
-                if avatar_file_path is None:
-                    logger.error("Failed to download default avatar")
-                    await client.send_message(message.chat.id, "**❌Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
-                    return
+            if avatar_file_path:
+                async with semaphore:
+                    with open(avatar_file_path, "rb") as file:
+                        avatar_data = await asyncio.to_thread(file.read)
+                    avatar_base64 = base64.b64encode(avatar_data).decode()
 
-            async with semaphore:
-                with open(avatar_file_path, "rb") as file:
-                    avatar_data = await asyncio.to_thread(file.read)
-                avatar_base64 = base64.b64encode(avatar_data).decode()
-
-            # Use user's font size preference only for group chats, default to "small" for private chats
             font_size = "small"
             if message.chat.type in [ChatType.SUPERGROUP, ChatType.GROUP] and user:
                 try:
                     user_settings = await client.get_chat_member(message.chat.id, user_id)
                     font_size = getattr(user_settings, 'font_size', "small") if user_settings else "small"
                 except ValueError:
-                    font_size = "small"  # Fallback if get_chat_member fails
+                    font_size = "small"
 
             emoji_status_id = await get_emoji_status(client, user_id)
             from_payload = {
                 "id": str(user_id),
                 "name": full_name,
-                "photo": {"url": f"data:image/jpeg;base64,{avatar_base64}"},
                 "fontSize": font_size
             }
+            if avatar_file_path:
+                from_payload["photo"] = {"url": f"data:image/jpeg;base64,{avatar_base64}"}
             if emoji_status_id:
                 from_payload["emoji_status"] = emoji_status_id
 
-            # Handle photo-based sticker with caption
             if replied_message and len(command_parts) == 1 and replied_message.photo:
                 try:
                     async with semaphore:
@@ -264,7 +248,6 @@ async def generate_quote(client: Client, message: Message, session):
                             photo_base64 = base64.b64encode(photo_data).decode()
                             hosted_url = f"data:image/jpeg;base64,{photo_base64}"
 
-                    # Include caption in text if available
                     text = replied_message.caption if replied_message.caption else ""
 
                     json_data = {
@@ -277,9 +260,9 @@ async def generate_quote(client: Client, message: Message, session):
                         "messages": [
                             {
                                 "entities": [],
-                                "avatar": True,
+                                "avatar": bool(avatar_file_path),
                                 "from": from_payload,
-                                "media": {"type": "photo", "url": hosted_url},
+                                "media": {"type": "photo", "url": hosted_url],
                                 "text": text,
                                 "textFontSize": font_size
                             }
@@ -300,12 +283,11 @@ async def generate_quote(client: Client, message: Message, session):
                         file_path = 'Quotly.webp'
                         with open(file_path, 'wb') as f:
                             f.write(buffer)
-                        # Ensure sticker attributes are properly set
                         try:
                             await client.send_sticker(
                                 message.chat.id,
                                 file_path,
-                                emoji="😀"  # Default emoji if none is provided
+                                emoji="😀"
                             )
                             logger.info("Sticker sent successfully")
                         except Exception as e:
@@ -324,7 +306,6 @@ async def generate_quote(client: Client, message: Message, session):
                             os.remove('Quotly.webp')
                 return
 
-            # Handle text-based sticker
             if replied_message and len(command_parts) == 1:
                 if replied_message.text or replied_message.caption:
                     text = replied_message.text or replied_message.caption
@@ -366,7 +347,7 @@ async def generate_quote(client: Client, message: Message, session):
                 "messages": [
                     {
                         "entities": message_entities,
-                        "avatar": True,
+                        "avatar": bool(avatar_file_path),
                         "from": from_payload,
                         "text": text or "",
                         "textFontSize": font_size,
@@ -389,12 +370,11 @@ async def generate_quote(client: Client, message: Message, session):
                 file_path = 'Quotly.webp'
                 with open(file_path, 'wb') as f:
                     f.write(buffer)
-                # Ensure sticker attributes are properly set
                 try:
                     await client.send_sticker(
                         message.chat.id,
                         file_path,
-                        emoji="😀"  # Default emoji if none is provided
+                        emoji="😀"
                     )
                     logger.info("Sticker sent successfully")
                 except Exception as e:
@@ -413,10 +393,8 @@ async def generate_quote(client: Client, message: Message, session):
                 os.remove('Quotly.webp')
 
 def setup_q_handler(app: Client):
-    """Set up the quote command handler with an asynchronous session."""
     @app.on_message(filters.command(["q", "qoute", "csticker"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def q_command(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
         if user_id and banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
