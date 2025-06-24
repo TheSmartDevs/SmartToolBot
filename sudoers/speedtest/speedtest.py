@@ -82,7 +82,7 @@ async def run_speedtest_task(client: Client, chat_id: int, status_message: Messa
 
 async def speedtest_handler(client: Client, message: Message):
     user_id = message.from_user.id
-    auth_admins_data = auth_admins.find({}, {"user_id": 1, "_id": 0})
+    auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
     AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
     if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
         LOGGER.info("User not admin or owner, sending restricted message")
