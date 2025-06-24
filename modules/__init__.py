@@ -58,7 +58,6 @@ from .sessxutils.string import setup_string_handler
 from .stikxutils.kang import setup_kang_handler
 from .stikxutils.quote import setup_q_handler
 from .timexutils.times import setup_time_handler
-from .toolxutils.news import setup_news_handler
 from .toolxutils.rs import setup_rs_handler
 from .toolxutils.getusr import setup_getusr_handler
 from .toolxutils.vnote import setup_vnote_handler
@@ -127,7 +126,6 @@ def setup_modules_handlers(app):
     setup_kang_handler(app, bot_token)
     setup_q_handler(app)
     setup_time_handler(app)
-    setup_news_handler(app)
     setup_rs_handler(app)
     setup_txt_handler(app)
     setup_ws_handler(app)
