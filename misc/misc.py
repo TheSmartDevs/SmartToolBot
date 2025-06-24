@@ -5,7 +5,6 @@ import time
 import subprocess
 from datetime import datetime, timedelta
 import psutil
-import pymongo
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import UPDATE_CHANNEL_URL
