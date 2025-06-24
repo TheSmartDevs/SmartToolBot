@@ -262,7 +262,7 @@ async def generate_quote(client: Client, message: Message, session):
                                 "entities": [],
                                 "avatar": bool(avatar_file_path),
                                 "from": from_payload,
-                                "media": {"type": "photo", "url": hosted_url],
+                                "media": {"type": "photo", "url": hosted_url},
                                 "text": text,
                                 "textFontSize": font_size
                             }
