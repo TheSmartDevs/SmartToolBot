@@ -3,14 +3,13 @@
 import os
 import time
 import asyncio
-import logging
 from concurrent.futures import ThreadPoolExecutor
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 import aiohttp
 from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
+from utils import LOGGER, notify_admin, progress_bar  # Import LOGGER, notify_admin, progress_bar from utils
 from core import banned_users  # Check if user is banned
 
 # Directory to save the downloaded files temporarily
@@ -20,43 +19,14 @@ DOWNLOAD_DIRECTORY = "./downloads/"
 if not os.path.exists(DOWNLOAD_DIRECTORY):
     os.makedirs(DOWNLOAD_DIRECTORY)
 
-# Configure the logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # ThreadPoolExecutor instance
 executor = ThreadPoolExecutor(max_workers=5)  # You can adjust the number of workers
-
-async def progress_bar(current, total, status_message, start_time, last_update_time):
-    """Display a progress bar for uploads."""
-    elapsed_time = time.time() - start_time
-    percentage = (current / total) * 100
-    progress = "▓" * int(percentage // 5) + "░" * (20 - int(percentage // 5))
-    speed = current / elapsed_time / 1024 / 1024  # Speed in MB/s
-    uploaded = current / 1024 / 1024  # Uploaded size in MB
-    total_size = total / 1024 / 1024  # Total size in MB
-
-    # Throttle updates: Only update if at least 2 seconds have passed since the last update
-    if time.time() - last_update_time[0] < 2:
-        return
-    last_update_time[0] = time.time()  # Update the last update time
-
-    text = (
-        f"📥 Upload Progress 📥\n\n"
-        f"{progress}\n\n"
-        f"🚧 Percentage: {percentage:.2f}%\n"
-        f"⚡️ Speed: {speed:.2f} MB/s\n"
-        f"📶 Uploaded: {uploaded:.2f} MB of {total_size:.2f} MB"
-    )
-    try:
-        await status_message.edit(text)
-    except Exception as e:
-        LOGGER.error(f"Error updating progress: {e}")
 
 async def aud_handler(client: Client, message: Message):
     # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    if user_id and banned_users.find_one({"user_id": user_id}):
+    # Await for MotorDB (async)
+    if user_id and await banned_users.find_one({"user_id": user_id}):
         await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /aud or /convert")
         return
@@ -98,10 +68,7 @@ async def aud_handler(client: Client, message: Message):
         await loop.run_in_executor(executor, convert_video_to_audio, video_file_path, audio_file_path)
         LOGGER.info(f"Converted video to audio at {audio_file_path}")
 
-        # Update the status message
-        await status_message.edit("**Uploading To Telegram✨..**")
-
-        # Start uploading the audio file to the user with a progress bar
+        # No intermediate status update: use progress_bar directly for upload
         start_time = time.time()
         last_update_time = [start_time]
 
