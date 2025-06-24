@@ -17,7 +17,7 @@ try:
     channel_db = channel_db_client.get_database(db_name)
     group_channel_bindings = channel_db["group_channel_bindings"]
 
-    LOGGER.info(f"DB Client Successfully Created using database '{db_name}'!")
+    LOGGER.info(f"DB Client Created Successfully! ")
 except Exception as e:
     LOGGER.error(f"Failed to create DB Client for Group-Channel Bindings: {e}")
     raise
