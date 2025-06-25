@@ -9,10 +9,9 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     Message,
-    ChatMemberUpdated,
-    ChatType
+    ChatMemberUpdated
 )
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 from pyrogram.errors import (
     ChatWriteForbidden,
     UserIsBlocked,
