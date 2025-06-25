@@ -14,7 +14,7 @@ from pyrogram.enums import ParseMode
 from moviepy import VideoFileClip
 from config import COMMAND_PREFIX
 from utils import LOGGER, progress_bar, notify_admin  # Import LOGGER, progress_bar, and notify_admin from utils
-from core import db_utils as dbutils  # Check if user is banned
+from core import banned_users  # Check if user is banned
 
 # Use the imported LOGGER
 logger = LOGGER
@@ -126,7 +126,7 @@ def setup_fb_handlers(app: Client):
     async def fb_handler(client: Client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await dbutils.banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
