@@ -21,21 +21,18 @@ from utils import (
     generate_invoice,
     handle_donate_callback
 )
-
 async def handle_callback_query(client, callback_query):
     call = callback_query
     chat_id = call.message.chat.id
     user_id = call.from_user.id
-
     if call.data == "stats":
         now = datetime.utcnow()
-        daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
-        weekly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
-        monthly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
-        yearly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
+        daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(days=1)}})
+        weekly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(weeks=1)}})
+        monthly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(days=30)}})
+        yearly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(days=365)}})
         total_users = await user_activity_collection.count_documents({"is_group": False})
         total_groups = await user_activity_collection.count_documents({"is_group": True})
-
         stats_text = (
             f"**Smart Bot Status ⇾ Report ✅**\n"
             f"**━━━━━━━━━━━━━━━━**\n"
@@ -48,11 +45,10 @@ async def handle_callback_query(client, callback_query):
             f"**━━━━━━━━━━━━━━━━**\n"
             f"**Total Smart Tools Users :** {total_users} ✅"
         )
-
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
         await call.message.edit_text(stats_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
-
+        
     if call.data == "server":
         ping_output = subprocess.getoutput("ping -c 1 google.com")
         ping = ping_output.split("time=")[1].split()[0] if "time=" in ping_output else "N/A"
