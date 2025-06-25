@@ -171,7 +171,7 @@ def setup_logs_handler(app: Client):
         if not await is_admin(user_id):
             logger.info("User not admin, sending callback answer")
             return await query.answer(
-                text="✘ Kids Not Allowed To Do This ↯",
+                text=" Kids Not Allowed To Do This ",
                 show_alert=True
             )
 
@@ -185,12 +185,12 @@ def setup_logs_handler(app: Client):
         elif data == "web_paste$":
             await query.answer("Uploading logs to Telegraph...")
             await query.message.edit_caption(
-                caption="**✘ Uploading SmartLogs To Telegraph ↯**",
+                caption="** Uploading SmartLogs To Telegraph **",
                 parse_mode=ParseMode.MARKDOWN
             )
             if not os.path.exists("botlog.txt"):
                 await query.message.edit_caption(
-                    caption="**✘ Sorry, No Logs Found ↯**",
+                    caption="** Sorry, No Logs Found **",
                     parse_mode=ParseMode.MARKDOWN
                 )
                 return await query.answer()
@@ -205,9 +205,9 @@ def setup_logs_handler(app: Client):
                             InlineKeyboardButton(f"[View Web Part {i+1}]", url=telegraph_urls[i])
                         ]
                         if i + 1 < len(telegraph_urls):
-                            row.append(InlineKeyboardButton(f"[View Web Part {i+2}]", url=telegraph_urls[i+1]))
+                            row.append(InlineKeyboardButton(f"View Web Part {i+2}", url=telegraph_urls[i+1]))
                         buttons.append(row)
-                    buttons.append([InlineKeyboardButton("[❌ Close]", callback_data="close_doc$")])
+                    buttons.append([InlineKeyboardButton("❌ Close", callback_data="close_doc$")])
                     # Get file size and line count for web paste caption
                     file_size_bytes = os.path.getsize("botlog.txt")
                     file_size_kb = file_size_bytes / 1024
@@ -233,13 +233,13 @@ def setup_logs_handler(app: Client):
                     )
                 else:
                     return await query.message.edit_caption(
-                        caption="**✘ Sorry, Unable to Upload to Telegraph ↯**",
+                        caption="** Sorry, Unable to Upload to Telegraph **",
                         parse_mode=ParseMode.MARKDOWN
                     )
             except Exception as e:
                 logger.error(f"Error uploading to Telegraph: {e}")
                 return await query.message.edit_caption(
-                    caption="**✘ Sorry, Unable to Upload to Telegraph ↯**",
+                    caption="** Sorry, Unable to Upload to Telegraph **",
                     parse_mode=ParseMode.MARKDOWN
                 )
         elif data == "display_logs":
@@ -251,7 +251,7 @@ def setup_logs_handler(app: Client):
         if not os.path.exists("botlog.txt"):
             return await client.send_message(
                 chat_id=chat_id,
-                text="**✘ Sorry, No Logs Found ↯**",
+                text="** Sorry, No Logs Found **",
                 parse_mode=ParseMode.MARKDOWN
             )
         try:
@@ -273,6 +273,6 @@ def setup_logs_handler(app: Client):
             logger.error(f"Error sending logs: {e}")
             return await client.send_message(
                 chat_id=chat_id,
-                text="**✘ Sorry, There Was an Issue on the Server ↯**",
+                text="** Sorry, There Was an Issue on the Server **",
                 parse_mode=ParseMode.MARKDOWN
             )
