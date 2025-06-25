@@ -29,12 +29,12 @@ async def handle_callback_query(client, callback_query):
 
     if call.data == "stats":
         now = datetime.utcnow()
-        daily_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
-        weekly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
-        monthly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
-        yearly_users = user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
-        total_users = user_activity_collection.count_documents({"is_group": False})
-        total_groups = user_activity_collection.count_documents({"is_group": True})
+        daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=1)}})
+        weekly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(weeks=1)}})
+        monthly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=30)}})
+        yearly_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gt": now - timedelta(days=365)}})
+        total_users = await user_activity_collection.count_documents({"is_group": False})
+        total_groups = await user_activity_collection.count_documents({"is_group": True})
 
         stats_text = (
             f"**Smart Bot Status ⇾ Report ✅**\n"
