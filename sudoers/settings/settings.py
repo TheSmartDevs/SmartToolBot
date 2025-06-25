@@ -276,10 +276,10 @@ def setup_settings_handler(app: Client):
         LOGGER.info(f"User_id {user_id} closed settings menu")
 
     # Register handlers
-    app.add_handler(MessageHandler(debug_all, filters.chat([ChatType.GROUP, ChatType.SUPERGROUP])), group=1)
-    app.add_handler(MessageHandler(show_settings, filters.command(["settings"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group)), group=1)
-    app.add_handler(MessageHandler(update_value, filters.text), group=1)
-    app.add_handler(CallbackQueryHandler(paginate_menu, filters.regex(r"^settings_page_(\d+)$")), group=1)
-    app.add_handler(CallbackQueryHandler(edit_var, filters.regex(r"^settings_edit_(.+)")), group=1)
-    app.add_handler(CallbackQueryHandler(cancel_edit, filters.regex(r"^settings_cancel_edit$")), group=1)
-    app.add_handler(CallbackQueryHandler(close_menu, filters.regex(r"^settings_closesettings$")), group=1)
+    app.add_handler(MessageHandler(debug_all, filters.chat([ChatType.GROUP, ChatType.SUPERGROUP]), group=3))
+    app.add_handler(MessageHandler(show_settings, filters.command(["settings"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group), group=3))
+    app.add_handler(MessageHandler(update_value, filters.text, group=3))
+    app.add_handler(CallbackQueryHandler(paginate_menu, filters.regex(r"^settings_page_(\d+)$"), group=4))
+    app.add_handler(CallbackQueryHandler(edit_var, filters.regex(r"^settings_edit_(.+)"), group=4))
+    app.add_handler(CallbackQueryHandler(cancel_edit, filters.regex(r"^settings_cancel_edit$"), group=4))
+    app.add_handler(CallbackQueryHandler(close_menu, filters.regex(r"^settings_closesettings$"), group=4))
