@@ -189,7 +189,7 @@ def setup_kang_handler(app: Client, bot_token: str):
     async def kang(client: Client, message: Message):
         # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and banned_users.find_one({"user_id": user_id}):
+        if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
             return
 
