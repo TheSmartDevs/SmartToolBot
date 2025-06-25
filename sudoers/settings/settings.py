@@ -19,16 +19,19 @@ user_session = {}
 def validate_message(func):
     async def wrapper(client: Client, message: Message):
         if not message or not message.from_user:
-            LOGGER.error("Invalid message received")
+            LOGGER.error("Invalid message received: No user or message")
             return
+        LOGGER.debug(f"Message received from user_id {message.from_user.id} in chat {message.chat.id}: {message.text or '[no text]'}")
         return await func(client, message)
     return wrapper
 
 def admin_only(func):
     async def wrapper(client: Client, message: Message):
         user_id = message.from_user.id
+        LOGGER.debug(f"Checking admin status for user_id {user_id}")
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
+        LOGGER.debug(f"Authorized admin IDs: {AUTH_ADMIN_IDS}, OWNER_ID: {OWNER_ID}")
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized settings access attempt by user_id {user_id}")
             await client.send_message(
@@ -37,6 +40,7 @@ def admin_only(func):
                 parse_mode=ParseMode.MARKDOWN
             )
             return
+        LOGGER.debug(f"User_id {user_id} is authorized for admin action")
         return await func(client, message)
     return wrapper
 
@@ -150,31 +154,44 @@ def setup_settings_handler(app: Client):
     @admin_only
     async def show_settings(client: Client, message: Message):
         """Show the settings menu."""
-        LOGGER.info(f"Settings command initiated by user_id {message.from_user.id}")
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        LOGGER.info(f"Settings command initiated by user_id {user_id} in chat {chat_id}, command: {message.text}")
         if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
             try:
-                chat = await client.get_chat(message.chat.id)
+                chat = await client.get_chat(chat_id)
                 if not chat.permissions.can_send_messages:
+                    LOGGER.warning(f"Cannot send messages in restricted group {chat_id}")
                     await client.send_message(
-                        chat_id=message.chat.id,
+                        chat_id=chat_id,
                         text="**Sorry Bro This Group Is Restricted**",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     return
             except Exception as e:
-                LOGGER.error(f"Failed to check permissions: {e}")
+                LOGGER.error(f"Failed to check permissions in chat {chat_id}: {e}")
                 return
 
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="**Select a change or edit 👇**",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=build_menu()
-        )
+        try:
+            await client.send_message(
+                chat_id=chat_id,
+                text="**Select a change or edit 👇**",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=build_menu()
+            )
+            LOGGER.info(f"Settings menu sent to user_id {user_id} in chat {chat_id}")
+        except Exception as e:
+            LOGGER.error(f"Failed to send settings menu to chat {chat_id}: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text="**✘ Error displaying settings menu!**",
+                parse_mode=ParseMode.MARKDOWN
+            )
 
     async def paginate_menu(client: Client, callback_query: CallbackQuery):
         """Handle pagination in the settings menu."""
         user_id = callback_query.from_user.id
+        LOGGER.debug(f"Pagination attempt by user_id {user_id}, callback_data: {callback_query.data}")
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
@@ -190,6 +207,7 @@ def setup_settings_handler(app: Client):
     async def edit_var(client: Client, callback_query: CallbackQuery):
         """Handle the selection of a variable to edit."""
         user_id = callback_query.from_user.id
+        LOGGER.debug(f"Edit variable attempt by user_id {user_id}, callback_data: {callback_query.data}")
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
@@ -218,6 +236,7 @@ def setup_settings_handler(app: Client):
     async def cancel_edit(client: Client, callback_query: CallbackQuery):
         """Cancel the editing process."""
         user_id = callback_query.from_user.id
+        LOGGER.debug(f"Cancel edit attempt by user_id {user_id}")
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
@@ -234,12 +253,15 @@ def setup_settings_handler(app: Client):
     async def update_value(client: Client, message: Message):
         """Update the value of a selected variable."""
         user_id = message.from_user.id
+        LOGGER.debug(f"Update value attempt by user_id {user_id} in chat {message.chat.id}")
         session = user_session.get(user_id)
         if not session:
+            LOGGER.debug(f"No active session for user_id {user_id}")
             return
 
         message_text = message.text or message.caption
         if not message_text:
+            LOGGER.warning(f"No text provided for variable update by user_id {user_id}")
             await client.send_message(
                 chat_id=message.chat.id,
                 text="**Please provide a text value to update.**",
@@ -264,6 +286,7 @@ def setup_settings_handler(app: Client):
     async def close_menu(client: Client, callback_query: CallbackQuery):
         """Close the settings menu."""
         user_id = callback_query.from_user.id
+        LOGGER.debug(f"Close menu attempt by user_id {user_id}")
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
@@ -276,6 +299,7 @@ def setup_settings_handler(app: Client):
         LOGGER.info(f"User_id {user_id} closed settings menu")
 
     # Register handlers
+    LOGGER.info(f"Registering settings handlers with COMMAND_PREFIX: {COMMAND_PREFIX}")
     app.add_handler(MessageHandler(debug_all, filters.chat([ChatType.GROUP, ChatType.SUPERGROUP])), group=3)
     app.add_handler(MessageHandler(show_settings, filters.command(["settings"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group)), group=3)
     app.add_handler(MessageHandler(update_value, filters.text), group=3)
