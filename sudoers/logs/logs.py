@@ -266,7 +266,7 @@ def setup_logs_handler(app: Client):
                 text=text if text else "No logs available.",
                 parse_mode=ParseMode.DISABLED,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("[❌ Back]", callback_data="close_logs$")]
+                    [InlineKeyboardButton("🔙 Back", callback_data="close_logs$")]
                 ])
             )
         except Exception as e:
