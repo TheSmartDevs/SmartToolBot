@@ -25,8 +25,8 @@ from config import (
     COMMAND_PREFIX,
     DEVELOPER_USER_ID
 )
-from core.database import auth_admins, user_activity_collection
-from utils.logger import LOGGER
+from core import auth_admins, user_activity_collection
+from utils import LOGGER
 
 async def update_user_activity(user_id: int, is_group: bool = False) -> None:
     """Update user or group activity in the database."""
