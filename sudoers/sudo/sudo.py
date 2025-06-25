@@ -6,7 +6,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ParseMode
 from config import OWNER_ID, COMMAND_PREFIX
-from database import auth_admins
+from core import auth_admins
 from utils import LOGGER
 from pyrogram.errors import UserIdInvalid, UsernameInvalid, PeerIdInvalid
 
