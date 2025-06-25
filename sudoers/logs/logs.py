@@ -146,10 +146,10 @@ def setup_logs_handler(app: Client):
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("[Display Logs]", callback_data="display_logs"),
-                        InlineKeyboardButton("[Web Paste]", callback_data="web_paste$")
+                        InlineKeyboardButton("Display Logs", callback_data="display_logs"),
+                        InlineKeyboardButton("Web Paste", callback_data="web_paste$")
                     ],
-                    [InlineKeyboardButton("[❌ Close]", callback_data="close_doc$")]
+                    [InlineKeyboardButton("❌ Close", callback_data="close_doc$")]
                 ])
             )
             await loading_message.delete()
