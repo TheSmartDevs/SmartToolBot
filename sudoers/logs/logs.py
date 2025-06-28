@@ -202,7 +202,7 @@ def setup_logs_handler(app: Client):
                     buttons = []
                     for i in range(0, len(telegraph_urls), 2):
                         row = [
-                            InlineKeyboardButton(f"[View Web Part {i+1}]", url=telegraph_urls[i])
+                            InlineKeyboardButton(f"View Web Part {i+1}", url=telegraph_urls[i])
                         ]
                         if i + 1 < len(telegraph_urls):
                             row.append(InlineKeyboardButton(f"View Web Part {i+2}", url=telegraph_urls[i+1]))
