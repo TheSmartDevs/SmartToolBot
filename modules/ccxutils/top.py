@@ -1,44 +1,61 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+#Copyright @ISmartCoder
+#Updates Channel: https://t.me/TheSmartDev
 import os
 import time
-import logging
 from collections import Counter
 from pyrogram import Client, filters, handlers
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message
-from config import COMMAND_PREFIX, MAX_TXT_SIZE
-from utils import LOGGER  # Import LOGGER from utils
-from core import banned_users  # Check if user is banned
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from config import COMMAND_PREFIX, MAX_TXT_SIZE, UPDATE_CHANNEL_URL
+from utils import LOGGER
+from core import banned_users
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Command to display top bins from a file
 async def handle_topbin_command(client, message: Message):
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
-        LOGGER.info(f"Banned user {user_id} attempted to use /topbin")
+        await client.send_message(
+            message.chat.id,
+            "**✘Sorry You're Banned From Using Me↯**",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+            )
+        )
         return
 
     if not message.reply_to_message or not message.reply_to_message.document or not message.reply_to_message.document.file_name.endswith('.txt'):
-        await client.send_message(message.chat.id, "<b>Reply to a text file containing credit cards to check top bins❌</b>", parse_mode=ParseMode.HTML)
-        LOGGER.warning("No valid text file provided for checking top bins.")
+        await client.send_message(
+            message.chat.id,
+            "**Reply to a text file containing credit cards to check top bins❌**",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+            )
+        )
         return
 
     file_size_mb = message.reply_to_message.document.file_size / (1024 * 1024)
     if file_size_mb > MAX_TXT_SIZE:
-        await client.send_message(message.chat.id, "<b>File size exceeds the 15MB limit❌</b>", parse_mode=ParseMode.HTML)
-        LOGGER.warning("File size exceeds the 15MB limit.")
+        await client.send_message(
+            message.chat.id,
+            "**File size exceeds the 15MB limit❌**",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+            )
+        )
         return
 
-    temp_msg = await client.send_message(message.chat.id, "<b>Finding Top Bins...</b>", parse_mode=ParseMode.HTML)
+    temp_msg = await client.send_message(
+        message.chat.id,
+        "**Finding Top Bins...**",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+        )
+    )
     start_time = time.time()
     file_path = await message.reply_to_message.download()
-    LOGGER.info(f"Downloaded file to {file_path}")
     with open(file_path, 'r') as file:
         content = file.readlines()
 
@@ -49,40 +66,44 @@ async def handle_topbin_command(client, message: Message):
 
     if not top_bins:
         await temp_msg.delete()
-        await client.send_message(message.chat.id, "<b>❌ No BIN data found in the file.</b>", parse_mode=ParseMode.HTML)
-        LOGGER.info("No BIN data found in the file.")
+        await client.send_message(
+            message.chat.id,
+            "**❌ No BIN data found in the file.**",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+            )
+        )
         os.remove(file_path)
         return
 
-    if message.from_user:
-        user_full_name = f"{message.from_user.first_name or ''} {message.from_user.last_name or ''}".strip()
-        user_profile_url = f"https://t.me/{message.from_user.username}" if message.from_user.username else None
-        user_link = f'<a href="{user_profile_url}">{user_full_name}</a>' if user_profile_url else user_full_name
-    else:
-        group_name = message.chat.title or "this group"
-        group_url = f"https://t.me/{message.chat.username}" if message.chat.username else "this group"
-        user_link = f'<a href="{group_url}">{group_name}</a>'
-
     response_message = (
-        f"<b>Here are the top 20 bins:</b>\n"
-        f"━━━━━━━━━━━━━━━━\n"
+        f"**Smart Top Bin Find → Successful  ✅**\n"
+        f"**━━━━━━━━━━━━━━━━━**\n"
     )
-    for i, (bin, count) in enumerate(top_bins, 1):
-        response_message += f"{i:02d}. BIN: <code>{bin}</code> - Count: <code>{count}</code>\n"
-
+    for bin, count in top_bins:
+        response_message += f"**⊗ BIN:** `{bin}` - **Amount:** `{count}`\n"
     response_message += (
-        f"\n<b>Checked By:</b> {user_link}\n"
-        f"<b>Time taken to validate:</b> <code>{time_taken:.2f} seconds</code>\n"
-        f"<b>📝 Extra Info:</b> <code>Use responsibly</code>\n"
-        f"<b>🔍 Verified:</b> <code>Yes</code>"
+        f"**━━━━━━━━━━━━━━━━━**\n"
+        f"**Smart Top Bin Finder → Activated  ✅**"
     )
 
     await temp_msg.delete()
-    await client.send_message(message.chat.id, response_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-    LOGGER.info("Top bins sent to the chat.")
+    await client.send_message(
+        message.chat.id,
+        response_message,
+        parse_mode=ParseMode.MARKDOWN,
+        disable_web_page_preview=True,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
+        )
+    )
     os.remove(file_path)
-    LOGGER.info(f"Temporary file {file_path} removed.")
 
-# Setup handler for topbin command
 def setup_topbin_handler(app: Client):
-    app.add_handler(handlers.MessageHandler(handle_topbin_command, filters.command(["topbin"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group)))
+    app.add_handler(
+        handlers.MessageHandler(
+            handle_topbin_command,
+            filters.command(["topbin"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group)
+        )
+    )
