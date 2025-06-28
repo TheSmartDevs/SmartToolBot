@@ -13,10 +13,6 @@ from config import OWNER_ID, UPDATE_CHANNEL_URL, COMMAND_PREFIX
 from core import auth_admins
 from utils import LOGGER
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = LOGGER
-
 async def get_auth_admins():
     """Retrieve all authorized admins from MongoDB."""
     try:
@@ -69,7 +65,7 @@ def setup_restart_handler(app: Client):
                 chat_id=message.chat.id,
                 message_id=response.id,
                 text="**✘Kids Not Allowed To Do This↯**",
-                parse_mode=ParseMode.HTML,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("👨🏼‍💻 Developer", url="https://t.me/abirxdhackz"),
