@@ -21,16 +21,21 @@ logger = LOGGER
 
 # Configuration
 class Config:
-    TEMP_DIR = Path("user")
+    TEMP_DIR = Path("temp_dir")  # Set default temporary directory
 
-Config.TEMP_DIR = None
+# Ensure the temp directory is created at startup
 def setup_temp_dir():
-    Config.TempDir = Path("temp_dir")
-    Config.Temp_dir.mkdir(exist_ok=True)
+    Config.TEMP_DIR.mkdir(exist_ok=True)  # Create the directory if it doesn't exist
+    logger.info(f"Temporary directory set up at {Config.TEMP_DIR}")
+
+# Call setup_temp_dir at module load to ensure TEMP_DIR is ready
+setup_temp_dir()
 
 class FacebookDownloader:
     def __init__(self, temp_dir: Path):
         self.temp_dir = temp_dir
+        self.temp_dir.mkdir(exist_ok=True)  # Ensure directory exists when instance is created
+        logger.info(f"FacebookDownloader initialized with temp_dir: {self.temp_dir}")
 
     async def sanitize_filename(self, title: str) -> str:
         """Sanitize file name by removing invalid characters."""
@@ -56,7 +61,6 @@ class FacebookDownloader:
             raise
 
     async def download_video(self, url: str, downloading_message: Message) -> Optional[dict]:
-        self.temp_dir.mkdir(exist_ok=True)
         api_url = f"https://smartfbdl.vercel.app/dl?url={url}"
         
         try:
