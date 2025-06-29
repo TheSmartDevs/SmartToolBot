@@ -21,10 +21,11 @@ logger = LOGGER
 
 # Configuration
 class Config:
-    TEMP_DIR = Path("temp_dir")  # Set default temporary directory
+    TEMP_DIR = Path("user")  # Set default temporary directory
 
 # Ensure the temp directory is created at startup
 def setup_temp_dir():
+    Config.TEMP_DIR = Path("temp_dir")  # Corrected attribute name
     Config.TEMP_DIR.mkdir(exist_ok=True)  # Create the directory if it doesn't exist
     logger.info(f"Temporary directory set up at {Config.TEMP_DIR}")
 
