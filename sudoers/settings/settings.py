@@ -1,5 +1,5 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel https://t.me/TheSmartDev
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
@@ -11,10 +11,8 @@ from config import COMMAND_PREFIX, OWNER_ID
 from core import auth_admins
 from utils import LOGGER
 
-# Load The Environment Variables
 load_dotenv()
 
-# Temp Session Storage
 user_session = {}
 
 settings_lock = asyncio.Lock()
@@ -34,18 +32,11 @@ def admin_only(func):
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized settings access attempt by user_id {user_id}")
-            await client.send_message(
-                chat_id=message.chat.id,
-                text="**✘Kids Not Allowed To Do This↯**",
-                parse_mode=ParseMode.MARKDOWN
-            )
             return
         return await func(client, message)
     return wrapper
 
-# Helper Functions
 def detect_duplicate_keys():
-    """Log a warning for duplicate keys in the .env file."""
     try:
         with open(".env") as f:
             lines = f.readlines()
@@ -63,7 +54,6 @@ def detect_duplicate_keys():
         LOGGER.error(f"Error detecting duplicate keys in .env: {e}")
 
 async def load_env_vars():
-    """Load all unique environment variables from the .env file asynchronously."""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, sync_load_env_vars)
 
@@ -88,12 +78,11 @@ def sync_load_env_vars():
         return {}
 
 async def update_env_var(key, value):
-    """Update a specific environment variable in the .env file and os.environ."""
     async with settings_lock:
         try:
             env_vars = await load_env_vars()
             env_vars[key] = value
-            os.environ[key] = value  # Update os.environ directly
+            os.environ[key] = value
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, sync_write_env_vars, env_vars)
             LOGGER.info(f"Updated environment variable: {key}")
@@ -105,13 +94,11 @@ def sync_write_env_vars(env_vars):
         for k, v in env_vars.items():
             f.write(f"{k}={v}\n")
 
-# Initialize config
 detect_duplicate_keys()
 config_keys = asyncio.get_event_loop().run_until_complete(load_env_vars())
 ITEMS_PER_PAGE = 10
 
 def build_menu(page=0):
-    """Build the inline keyboard menu for settings."""
     keys = list(config_keys.keys())
     start, end = page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE
     current_keys = keys[start:end]
@@ -143,11 +130,8 @@ def build_menu(page=0):
     return InlineKeyboardMarkup(rows)
 
 def setup_settings_handler(app: Client):
-    """Setup the settings handler for the Pyrogram app."""
-
     @validate_message
     async def debug_all(client: Client, message: Message):
-        """Catch-all handler to debug all group chat messages."""
         thread_id = getattr(message, "message_thread_id", None)
         is_reply = message.reply_to_message_id is not None
         message_text = message.text or message.caption or "[no text]"
@@ -162,7 +146,6 @@ def setup_settings_handler(app: Client):
     @validate_message
     @admin_only
     async def show_settings(client: Client, message: Message):
-        """Show the settings menu."""
         LOGGER.info(f"Settings command initiated by user_id {message.from_user.id}")
         if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
             try:
@@ -170,7 +153,7 @@ def setup_settings_handler(app: Client):
                 if not chat.permissions.can_send_messages:
                     await client.send_message(
                         chat_id=message.chat.id,
-                        text="**Sorry Bro This Group Is Restricted**",
+                        text="**Sorry Bro This Group Is Restricted ❌**",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     return
@@ -186,13 +169,12 @@ def setup_settings_handler(app: Client):
         )
 
     async def paginate_menu(client: Client, callback_query: CallbackQuery):
-        """Handle pagination in the settings menu."""
         user_id = callback_query.from_user.id
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized pagination attempt by user_id {user_id}")
-            await callback_query.answer("✘Kids Not Allowed To Do This↯", show_alert=True)
+            await callback_query.answer()
             return
 
         page = int(callback_query.data.split("_")[2])
@@ -201,13 +183,12 @@ def setup_settings_handler(app: Client):
         LOGGER.debug(f"Paginated to page {page} by user_id {user_id}")
 
     async def edit_var(client: Client, callback_query: CallbackQuery):
-        """Handle the selection of a variable to edit."""
         user_id = callback_query.from_user.id
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized edit attempt by user_id {user_id}")
-            await callback_query.answer("✘Kids Not Allowed To Do This↯", show_alert=True)
+            await callback_query.answer()
             return
 
         var_name = callback_query.data.split("_", 2)[2]
@@ -229,23 +210,21 @@ def setup_settings_handler(app: Client):
         LOGGER.info(f"User_id {user_id} started editing variable {var_name}")
 
     async def cancel_edit(client: Client, callback_query: CallbackQuery):
-        """Cancel the editing process."""
         user_id = callback_query.from_user.id
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized cancel edit attempt by user_id {user_id}")
-            await callback_query.answer("✘Kids Not Allowed To Do This↯", show_alert=True)
+            await callback_query.answer()
             return
 
         user_session.pop(user_id, None)
-        await callback_query.edit_message_text("**Variable Editing Cancelled**", parse_mode=ParseMode.MARKDOWN)
+        await callback_query.edit_message_text("**Variable Editing Cancelled ❌**", parse_mode=ParseMode.MARKDOWN)
         await callback_query.answer()
         LOGGER.info(f"User_id {user_id} cancelled variable editing")
 
     @validate_message
     async def update_value(client: Client, message: Message):
-        """Update the value of a selected variable."""
         user_id = message.from_user.id
         session = user_session.get(user_id)
         if not session or session["chat_id"] != message.chat.id:
@@ -255,7 +234,7 @@ def setup_settings_handler(app: Client):
         if not message_text:
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**Please provide a text value to update.**",
+                text="**Please provide a text value to update ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
             return
@@ -274,20 +253,18 @@ def setup_settings_handler(app: Client):
         LOGGER.info(f"User_id {user_id} updated variable {var} to {val}")
 
     async def close_menu(client: Client, callback_query: CallbackQuery):
-        """Close the settings menu."""
         user_id = callback_query.from_user.id
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
         if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
             LOGGER.info(f"Unauthorized close menu attempt by user_id {user_id}")
-            await callback_query.answer("✘Kids Not Allowed To Do This↯", show_alert=True)
+            await callback_query.answer()
             return
 
-        await callback_query.edit_message_text("**Settings Menu Closed Successfully ✅**", parse_mode=ParseMode.MARKDOWN)
+        await callback_query.edit_message_text("**Closed Settings Menu✅**", parse_mode=ParseMode.MARKDOWN)
         await callback_query.answer()
         LOGGER.info(f"User_id {user_id} closed settings menu")
 
-    # Register handlers
     app.add_handler(MessageHandler(debug_all, filters.chat([ChatType.GROUP, ChatType.SUPERGROUP])), group=10)
     app.add_handler(MessageHandler(show_settings, filters.command(["settings"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group)), group=2)
     app.add_handler(MessageHandler(update_value, filters.text), group=2)
