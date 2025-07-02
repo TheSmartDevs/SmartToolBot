@@ -49,15 +49,15 @@ async def run_speedtest_task(client: Client, chat_id: int, status_message: Messa
             result = await asyncio.get_running_loop().run_in_executor(pool, run_speedtest)
         except Exception as e:
             LOGGER.error(f"Error running speedtest task: {e}")
-            await status_message.edit_text("<b>Speed Test API Dead</b>", parse_mode=ParseMode.HTML)
+            await status_message.edit_text("<b>Speed Test API Dead ❌ </b>", parse_mode=ParseMode.HTML)
             return
 
     if "error" in result:
-        await status_message.edit_text(f"<b>Speed Test Failed: {result['error']}</b>", parse_mode=ParseMode.HTML)
+        await status_message.edit_text(f"<b>Speed Test Failed ❌ </b>", parse_mode=ParseMode.HTML)
         return
 
     response_text = (
-        "<b>Speedtest Check → Successful ✅</b>\n"
+        "<b>Smart Speedtest Check → Successful ✅</b>\n"
         "<b>━━━━━━━━━━━━━━━━━</b>\n"
         f"<b>⊗ Download:</b> <b>{speed_convert(result['download'])}</b>\n"
         f"<b>⊗ Upload:</b> <b>{speed_convert(result['upload'])}</b>\n"
@@ -68,13 +68,10 @@ async def run_speedtest_task(client: Client, chat_id: int, status_message: Messa
     )
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Updates Channel", url=UPDATE_CHANNEL_URL)]
+        [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]
     ])
 
-    await status_message.delete()
-
-    await client.send_message(
-        chat_id=chat_id,
+    await status_message.edit_text(
         text=response_text,
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard
@@ -84,18 +81,14 @@ async def speedtest_handler(client: Client, message: Message):
     user_id = message.from_user.id
     auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
     AUTH_ADMIN_IDS = [admin["user_id"] for admin in auth_admins_data]
+    
+    # Silently ignore non-admin and non-owner users
     if user_id != OWNER_ID and user_id not in AUTH_ADMIN_IDS:
-        LOGGER.info("User not admin or owner, sending restricted message")
-        await client.send_message(
-            chat_id=message.chat.id,
-            text="<b>Kids Not Allowed To Do This</b>",
-            parse_mode=ParseMode.HTML
-        )
         return
 
     status_message = await client.send_message(
         chat_id=message.chat.id,
-        text="<b>Running Speedtest On Your Server</b>",
+        text="<b>Processing SpeedTest Please Wait....</b>",
         parse_mode=ParseMode.HTML
     )
 
