@@ -1,5 +1,5 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+#Copyright @ISmartCoder
+#Updates Channel: https://t.me/TheSmartDev
 import os
 import asyncio
 import logging
@@ -12,11 +12,9 @@ from config import OWNER_ID, COMMAND_PREFIX, UPDATE_CHANNEL_URL
 from core import auth_admins
 from utils import LOGGER
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = LOGGER
 
-# Initialize Telegraph client
 telegraph = Telegraph()
 try:
     telegraph.create_account(
@@ -28,7 +26,6 @@ except Exception as e:
     logger.error(f"Failed to create or access Telegraph account: {e}")
 
 async def get_auth_admins():
-    """Retrieve all authorized admins from MongoDB."""
     try:
         admins = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         return {admin["user_id"] for admin in admins}
@@ -37,17 +34,13 @@ async def get_auth_admins():
         return set()
 
 async def is_admin(user_id):
-    """Check if the user is an admin (OWNER_ID or auth_admins)."""
     if user_id == OWNER_ID:
         return True
     auth_admin_ids = await get_auth_admins()
     return user_id in auth_admin_ids
 
 def setup_logs_handler(app: Client):
-    """Set up handlers for logs command and callback queries."""
-
     async def create_telegraph_page(content: str) -> list:
-        """Create Telegraph pages with the given content, each under 20 KB, and return list of URLs."""
         try:
             truncated_content = content[:40000]
             content_bytes = truncated_content.encode('utf-8', errors='ignore')
@@ -92,16 +85,11 @@ def setup_logs_handler(app: Client):
 
     @app.on_message(filters.command(["logs"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def logs_command(client: Client, message):
-        """Handle /logs command to send or display bot logs."""
         user_id = message.from_user.id
         logger.info(f"Logs command from user {user_id}")
         if not await is_admin(user_id):
-            logger.info("User not admin, sending restricted message")
-            return await client.send_message(
-                chat_id=message.chat.id,
-                text="**✘ Kids Not Allowed To Do This ↯**",
-                parse_mode=ParseMode.MARKDOWN
-            )
+            logger.info("User not admin, ignoring command")
+            return
 
         loading_message = await client.send_message(
             chat_id=message.chat.id,
@@ -113,19 +101,17 @@ def setup_logs_handler(app: Client):
 
         if not os.path.exists("botlog.txt"):
             await loading_message.edit_text(
-                text="**Sorry, No Logs Found**",
+                text="**Sorry, No Logs Found ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
             return await loading_message.delete()
 
         logger.info("User is admin, sending log document")
         try:
-            # Get file size and line count
             file_size_bytes = os.path.getsize("botlog.txt")
             file_size_kb = file_size_bytes / 1024
             with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
                 line_count = sum(1 for _ in f)
-            # Get current time and date
             now = datetime.now()
             time_str = now.strftime("%H-%M-%S")
             date_str = now.strftime("%Y-%m-%d")
@@ -157,23 +143,19 @@ def setup_logs_handler(app: Client):
         except Exception as e:
             logger.error(f"Error sending log document: {e}")
             await loading_message.edit_text(
-                text="**✘ Sorry, Unable to Send Log Document ↯**",
+                text="**Sorry, Unable to Send Log Document ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
             return await loading_message.delete()
 
     @app.on_callback_query(filters.regex(r"^(close_doc\$|close_logs\$|web_paste\$|display_logs)$"))
     async def handle_callback(client: Client, query: CallbackQuery):
-        """Handle callback queries for log actions."""
         user_id = query.from_user.id
         data = query.data
         logger.info(f"Callback query from user {user_id}, data: {data}")
         if not await is_admin(user_id):
-            logger.info("User not admin, sending callback answer")
-            return await query.answer(
-                text=" Kids Not Allowed To Do This ",
-                show_alert=True
-            )
+            logger.info("User not admin, ignoring callback")
+            return
 
         logger.info("User is admin, processing callback")
         if data == "close_doc$":
@@ -185,12 +167,12 @@ def setup_logs_handler(app: Client):
         elif data == "web_paste$":
             await query.answer("Uploading logs to Telegraph...")
             await query.message.edit_caption(
-                caption="** Uploading SmartLogs To Telegraph **",
+                caption="** Uploading SmartLogs To Telegraph✅**",
                 parse_mode=ParseMode.MARKDOWN
             )
             if not os.path.exists("botlog.txt"):
                 await query.message.edit_caption(
-                    caption="** Sorry, No Logs Found **",
+                    caption="** Sorry, No Logs Found ❌**",
                     parse_mode=ParseMode.MARKDOWN
                 )
                 return await query.answer()
@@ -208,12 +190,10 @@ def setup_logs_handler(app: Client):
                             row.append(InlineKeyboardButton(f"View Web Part {i+2}", url=telegraph_urls[i+1]))
                         buttons.append(row)
                     buttons.append([InlineKeyboardButton("❌ Close", callback_data="close_doc$")])
-                    # Get file size and line count for web paste caption
                     file_size_bytes = os.path.getsize("botlog.txt")
                     file_size_kb = file_size_bytes / 1024
                     with open("botlog.txt", "r", encoding="utf-8", errors="ignore") as f:
                         line_count = sum(1 for _ in f)
-                    # Get current time and date
                     now = datetime.now()
                     time_str = now.strftime("%H-%M-%S")
                     date_str = now.strftime("%Y-%m-%d")
@@ -233,25 +213,24 @@ def setup_logs_handler(app: Client):
                     )
                 else:
                     return await query.message.edit_caption(
-                        caption="** Sorry, Unable to Upload to Telegraph **",
+                        caption="** Sorry, Unable to Upload to Telegraph ❌**",
                         parse_mode=ParseMode.MARKDOWN
                     )
             except Exception as e:
                 logger.error(f"Error uploading to Telegraph: {e}")
                 return await query.message.edit_caption(
-                    caption="** Sorry, Unable to Upload to Telegraph **",
+                    caption="** Sorry, Unable to Upload to Telegraph ❌**",
                     parse_mode=ParseMode.MARKDOWN
                 )
         elif data == "display_logs":
             return await send_logs_page(client, query.message.chat.id, query)
 
     async def send_logs_page(client: Client, chat_id: int, query: CallbackQuery):
-        """Send the last 20 lines of botlog.txt, respecting Telegram's 4096-character limit."""
         logger.info(f"Sending latest logs to chat {chat_id}")
         if not os.path.exists("botlog.txt"):
             return await client.send_message(
                 chat_id=chat_id,
-                text="** Sorry, No Logs Found **",
+                text="** Sorry, No Logs Found ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
         try:
@@ -263,7 +242,7 @@ def setup_logs_handler(app: Client):
                 text = text[-4096:]
             return await client.send_message(
                 chat_id=chat_id,
-                text=text if text else "No logs available.",
+                text=text if text else "No logs available.❌",
                 parse_mode=ParseMode.DISABLED,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Back", callback_data="close_logs$")]
@@ -273,6 +252,6 @@ def setup_logs_handler(app: Client):
             logger.error(f"Error sending logs: {e}")
             return await client.send_message(
                 chat_id=chat_id,
-                text="** Sorry, There Was an Issue on the Server **",
+                text="** Sorry, There Was an Issue on the Server ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
