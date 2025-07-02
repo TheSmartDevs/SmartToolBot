@@ -60,6 +60,7 @@ from .stikxutils.quote import setup_q_handler
 from .timexutils.times import setup_time_handler
 from .toolxutils.rs import setup_rs_handler
 from .toolxutils.getusr import setup_getusr_handler
+from .toolxutils.cpn import setup_cpn_handler
 from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
 from .webxutils.ws import setup_ws_handler
@@ -127,6 +128,7 @@ def setup_modules_handlers(app):
     setup_q_handler(app)
     setup_time_handler(app)
     setup_rs_handler(app)
+    setup_cpn_handler(app)
     setup_txt_handler(app)
     setup_ws_handler(app)
     setup_ss_handler(app)
