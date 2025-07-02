@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel https://t.me/TheSmartDev
 import asyncio
 from datetime import datetime, timedelta
 from pyrogram import Client, filters
@@ -29,11 +31,9 @@ from core import auth_admins, user_activity_collection
 from utils import LOGGER
 
 async def update_user_activity(user_id: int, chat_id: int = None, is_group: bool = False) -> None:
-    """Update user or group activity in the database."""
     try:
         now = datetime.utcnow()
         
-        # Always track individual user activity
         user_update_data = {
             "$set": {
                 "user_id": user_id,
@@ -49,11 +49,10 @@ async def update_user_activity(user_id: int, chat_id: int = None, is_group: bool
         )
         LOGGER.debug(f"Updated user activity for user_id {user_id}")
         
-        # If it's a group message, also track group activity
         if is_group and chat_id and chat_id != user_id:
             group_update_data = {
                 "$set": {
-                    "user_id": chat_id,  # Using chat_id as the identifier for groups
+                    "user_id": chat_id,
                     "last_activity": now,
                     "is_group": True
                 },
@@ -70,7 +69,6 @@ async def update_user_activity(user_id: int, chat_id: int = None, is_group: bool
         LOGGER.error(f"Error updating user activity for user_id {user_id}, chat_id {chat_id}: {str(e)}")
 
 async def is_admin(user_id: int) -> bool:
-    """Check if the user is an admin."""
     try:
         auth_admins_data = await auth_admins.find({}, {"user_id": 1, "_id": 0}).to_list(None)
         return user_id == OWNER_ID or user_id in [admin["user_id"] for admin in auth_admins_data]
@@ -79,7 +77,6 @@ async def is_admin(user_id: int) -> bool:
         return False
 
 async def broadcast_handler(client: Client, message: Message) -> None:
-    """Handle broadcast and send commands."""
     if not message.from_user or not message.chat:
         LOGGER.error("Invalid user or chat information for broadcast command")
         return
@@ -87,7 +84,6 @@ async def broadcast_handler(client: Client, message: Message) -> None:
     user_id = message.from_user.id
     if not await is_admin(user_id):
         LOGGER.info(f"Unauthorized broadcast attempt by user_id {user_id}")
-        await client.send_message(message.chat.id, "**✘ Sorry You're Not Authorized Bro!**", parse_mode=ParseMode.MARKDOWN)
         return
 
     is_broadcast = message.command[0].lower() in ["broadcast", "b"]
@@ -110,7 +106,7 @@ async def broadcast_handler(client: Client, message: Message) -> None:
             if msg.from_user and msg.from_user.id == user_id and msg.chat.id == message.chat.id:
                 if not (msg.text or msg.photo or msg.video or msg.audio or msg.document):
                     await client.send_message(
-                        msg.chat.id, "**✘ Send a valid text, photo, video, audio, or document!**",
+                        msg.chat.id, "**Send a valid text, photo, video, audio, or document ❌ **",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     return
@@ -120,7 +116,6 @@ async def broadcast_handler(client: Client, message: Message) -> None:
         client.add_handler(handler, group=2)
 
 async def process_broadcast(client: Client, content, is_broadcast: bool = True, chat_id: int = None) -> None:
-    """Process the broadcast or forward operation."""
     try:
         if isinstance(content, str):
             broadcast_text = content
@@ -133,7 +128,7 @@ async def process_broadcast(client: Client, content, is_broadcast: bool = True, 
 
         LOGGER.info(f"Processing {'broadcast' if is_broadcast else 'forward'}")
         processing_msg = await client.send_message(
-            chat_id, f"**💫 {'Broadcasting' if is_broadcast else 'Sending'} In Progress...**",
+            chat_id, f"**Broadcating Your Message To Users...**",
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -250,10 +245,9 @@ async def process_broadcast(client: Client, content, is_broadcast: bool = True, 
                     f"{blocked_users} blocked users, {failed_groups} failed groups")
     except Exception as e:
         LOGGER.error(f"Error in {'broadcast' if is_broadcast else 'forward'}: {str(e)}")
-        await client.send_message(chat_id, "**✘ Error Processing Request!**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(chat_id, "**Sorry Broadcast Send Failed ❌**", parse_mode=ParseMode.MARKDOWN)
 
 async def stats_handler(client: Client, message: Message) -> None:
-    """Handle stats command."""
     if not message.from_user or not message.chat:
         LOGGER.error("Invalid user or chat for stats command")
         return
@@ -261,7 +255,6 @@ async def stats_handler(client: Client, message: Message) -> None:
     user_id = message.from_user.id
     if not await is_admin(user_id):
         LOGGER.info(f"Unauthorized stats attempt by user_id {user_id}")
-        await client.send_message(message.chat.id, "**✘ Unauthorized Access!**", parse_mode=ParseMode.MARKDOWN)
         return
 
     LOGGER.info(f"Stats command by user_id {user_id}")
@@ -293,10 +286,9 @@ async def stats_handler(client: Client, message: Message) -> None:
         LOGGER.info("Stats command completed")
     except Exception as e:
         LOGGER.error(f"Error in stats: {str(e)}")
-        await client.send_message(message.chat.id, "**✘ Error Fetching Stats!**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, "**Sorry Database Client Unavailable ❌**", parse_mode=ParseMode.MARKDOWN)
 
 async def group_added_handler(client: Client, message: Message) -> None:
-    """Handle bot being added to a group."""
     try:
         if not message.new_chat_members or not message.chat:
             return
@@ -315,7 +307,6 @@ async def group_added_handler(client: Client, message: Message) -> None:
         LOGGER.error(f"Error in group_added_handler for chat_id {message.chat.id}: {str(e)}")
 
 async def group_removed_handler(client: Client, member_update: ChatMemberUpdated) -> None:
-    """Handle bot being removed or banned from a group."""
     try:
         if (member_update.old_chat_member and member_update.old_chat_member.status in ["member", "administrator"] and
             member_update.new_chat_member and member_update.new_chat_member.status in ["banned", "left"] and
@@ -327,9 +318,7 @@ async def group_removed_handler(client: Client, member_update: ChatMemberUpdated
         LOGGER.error(f"Error in group_removed_handler for chat_id {member_update.chat.id}: {str(e)}")
 
 async def update_user_activity_handler(client: Client, message: Message) -> None:
-    """Update user activity for ALL messages in private chats, groups, and supergroups."""
     try:
-        # Only process messages from users (not bots) and only in relevant chat types
         if (message.from_user and message.chat and 
             message.chat.type in [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP]):
             
@@ -337,7 +326,6 @@ async def update_user_activity_handler(client: Client, message: Message) -> None
             chat_id = message.chat.id
             is_group = message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]
             
-            # Update user activity
             await update_user_activity(user_id, chat_id, is_group)
             
             LOGGER.debug(f"Activity updated for user {user_id} in chat {chat_id} (is_group: {is_group})")
@@ -346,10 +334,8 @@ async def update_user_activity_handler(client: Client, message: Message) -> None
         LOGGER.error(f"Error in update_user_activity_handler for message_id {getattr(message, 'id', 'unknown')}: {str(e)}")
 
 def setup_admin_handler(app: Client) -> None:
-    """Set up all admin and activity handlers."""
     prefixes = COMMAND_PREFIX + [""]
     
-    # Admin command handlers
     app.add_handler(
         MessageHandler(
             broadcast_handler,
@@ -368,18 +354,16 @@ def setup_admin_handler(app: Client) -> None:
         group=2
     )
     
-    # Activity tracking handler - This will track ALL messages
     app.add_handler(
         MessageHandler(
             update_user_activity_handler,
             (filters.all & 
              (filters.private | filters.group) & 
-             ~filters.bot)  # Exclude bot messages
+             ~filters.bot)
         ),
-        group=1  # Higher priority group to ensure it catches all messages
+        group=1
     )
     
-    # Group management handlers
     app.add_handler(
         MessageHandler(
             group_added_handler,
