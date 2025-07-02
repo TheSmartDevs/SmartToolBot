@@ -121,13 +121,13 @@ async def fetch_bot_data(bot_token: str) -> Optional[dict]:
     """Fetch bot user data from the API."""
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://api.safone.co/tgusers?bot_token={bot_token}") as resp:
+            async with session.get(f"https://web-production-5ec1f.up.railway.app/tgusers?token={bot_token}") as resp:
                 if resp.status != 200:
                     LOGGER.warning(f"API returned status {resp.status} for bot token")
                     return None
                 data = await resp.json()
                 # Validate expected keys in API response
-                if not isinstance(data, dict) or "bot_info" not in data or "stats" not in data:
+                if not isinstance(data, dict) or "bot_info" not in data or "users" not in data or "chats" not in data:
                     LOGGER.error(f"Invalid API response structure for bot token")
                     return None
                 return data
@@ -144,13 +144,15 @@ async def save_and_send_data(client: Client, chat_id: int, data: dict, file_path
 
     # Prepare caption with bot info
     bot_info = data.get("bot_info", {})
-    stats = data.get("stats", {})
+    total_users = data.get("total_users", 0)
+    total_chats = data.get("total_chats", 0)
     
     caption = (
         "**📌 Requested Users**\n"
         "**━━━━━━━━**\n"
         f"**👤 Username:** `{bot_info.get('username', 'N/A')}`\n"
-        f"**👥 Total Users:** `{stats.get('total_users', 0)}`\n"
+        f"**👥 Total Users:** `{total_users}`\n"
+        f"**👥 Total Chats:** `{total_chats}`\n"
         "**━━━━━━━━**\n"
         "**📂 File contains user & chat IDs.**"
     )
