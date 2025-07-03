@@ -30,21 +30,21 @@ async def handle_fmail_command(client, message: Message):
     start_time = time.time()
     user_id = message.from_user.id if message.from_user else None
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
         return
 
     if not message.reply_to_message or not message.reply_to_message.document or not message.reply_to_message.document.file_name.endswith('.txt'):
-        await client.send_message(message.chat.id, "<b>⚠️ Reply to a message with a text file❌</b>", parse_mode=ParseMode.HTML)
+        await client.send_message(message.chat.id, "**⚠️ Reply to a message with a text file❌**", parse_mode=ParseMode.MARKDOWN)
         return
 
-    temp_msg = await client.send_message(message.chat.id, "<b> Fetching And Filtering Mails...✨</b>", parse_mode=ParseMode.HTML)
+    temp_msg = await client.send_message(message.chat.id, "**Fetching And Filtering Mails...✨**", parse_mode=ParseMode.MARKDOWN)
     
     file_path = await message.reply_to_message.download()
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
     
     if file_size_mb > MAX_TXT_SIZE:
         await temp_msg.delete()
-        await client.send_message(message.chat.id, "**⚠️ File size exceeds the 15MB limit❌**")
+        await client.send_message(message.chat.id, "**⚠️ File size exceeds the 15MB limit❌**", parse_mode=ParseMode.MARKDOWN)
         os.remove(file_path)
         return
 
@@ -54,18 +54,18 @@ async def handle_fmail_command(client, message: Message):
     emails = await filter_emails(content)
     if not emails:
         await temp_msg.delete()
-        await client.send_message(message.chat.id, "<b>❌ No valid emails found in the file.</b>", parse_mode=ParseMode.HTML)
+        await client.send_message(message.chat.id, "**❌ No valid emails found in the file.**", parse_mode=ParseMode.MARKDOWN)
         os.remove(file_path)
         return
 
     if message.from_user:
         user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
         user_profile_url = f"https://t.me/{message.from_user.username}" if message.from_user.username else None
-        user_link = f'<a href="{user_profile_url}">{user_full_name}</a>' if user_profile_url else user_full_name
+        user_link = f'[{user_full_name}]({user_profile_url})' if user_profile_url else user_full_name
     else:
         group_name = message.chat.title or "this group"
         group_url = f"https://t.me/{message.chat.username}" if message.chat.username else "this group"
-        user_link = f'<a href="{group_url}">{group_name}</a>'
+        user_link = f'[{group_name}]({group_url})'
 
     time_taken = round(time.time() - start_time, 2)
     total_lines = len(content)
@@ -74,10 +74,10 @@ async def handle_fmail_command(client, message: Message):
     caption = (
         f"**Smart Mail Extraction Complete ✅**\n"
         f"**━━━━━━━━━━━━━━━━━**\n"
-        f"**⊗ Total Size:** {file_size_mb:.2f} MB\n"
-        f"**⊗ Total Mails:** {total_mails}\n"
-        f"**⊗ Total Lines:** {total_lines}\n"
-        f"**⊗ Time Taken:** {time_taken} seconds\n"
+        f"**⊗ Total Size:** `{file_size_mb:.2f} MB`\n"
+        f"**⊗ Total Mails:** `{total_mails}`\n"
+        f"**⊗ Total Lines:** `{total_lines}`\n"
+        f"**⊗ Time Taken:** `{time_taken} seconds`\n"
         f"**━━━━━━━━━━━━━━━━━**\n"
         f"**Requested By {user_link}**"
     )
@@ -85,16 +85,16 @@ async def handle_fmail_command(client, message: Message):
     button = InlineKeyboardMarkup([[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]])
 
     if len(emails) > 10:
-        file_name = "Smart_Tool_⚙️_Email_Results.txt"
+        file_name = "ProcessedFile"
         with open(file_name, 'w', encoding='utf-8') as f:
             f.write("\n".join(emails))
         await temp_msg.delete()
-        await client.send_document(message.chat.id, file_name, caption=caption, parse_mode=ParseMode.HTML, reply_markup=button)
+        await client.send_document(message.chat.id, file_name, caption=caption, parse_mode=ParseMode.MARKDOWN, reply_markup=button)
         os.remove(file_name)
     else:
         formatted_emails = '\n'.join(f'`{email}`' for email in emails)
         await temp_msg.delete()
-        await client.send_message(message.chat.id, f"{caption}\n\n{formatted_emails}", parse_mode=ParseMode.HTML, reply_markup=button)
+        await client.send_message(message.chat.id, f"{caption}\n\n{formatted_emails}", parse_mode=ParseMode.MARKDOWN, reply_markup=button)
     
     os.remove(file_path)
 
@@ -102,21 +102,21 @@ async def handle_fpass_command(client, message: Message):
     start_time = time.time()
     user_id = message.from_user.id if message.from_user else None
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
         return
 
     if not message.reply_to_message or not message.reply_to_message.document or not message.reply_to_message.document.file_name.endswith('.txt'):
-        await client.send_message(message.chat.id, "<b>⚠️ Reply to a message with a text file.</b>", parse_mode=ParseMode.HTML)
+        await client.send_message(message.chat.id, "**⚠️ Reply to a message with a text file.**", parse_mode=ParseMode.MARKDOWN)
         return
 
-    temp_msg = await client.send_message(message.chat.id, "<b>Filtering And Extracting Mail Pass...✨</b>", parse_mode=ParseMode.HTML)
+    temp_msg = await client.send_message(message.chat.id, "**Filtering And Extracting Mail Pass...✨**", parse_mode=ParseMode.MARKDOWN)
     
     file_path = await message.reply_to_message.download()
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
     
     if file_size_mb > MAX_TXT_SIZE:
         await temp_msg.delete()
-        await client.send_message(message.chat.id, "**⚠️ File size exceeds the 15MB limit❌**")
+        await client.send_message(message.chat.id, "**⚠️ File size exceeds the 15MB limit❌**", parse_mode=ParseMode.MARKDOWN)
         os.remove(file_path)
         return
 
@@ -126,18 +126,18 @@ async def handle_fpass_command(client, message: Message):
     email_passes = await filter_email_pass(content)
     if not email_passes:
         await temp_msg.delete()
-        await client.send_message(message.chat.id, "<b>❌ No Mail Pass Combo Found</b>", parse_mode=ParseMode.HTML)
+        await client.send_message(message.chat.id, "**❌ No Mail Pass Combo Found**", parse_mode=ParseMode.MARKDOWN)
         os.remove(file_path)
         return
 
     if message.from_user:
         user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
         user_profile_url = f"https://t.me/{message.from_user.username}" if message.from_user.username else None
-        user_link = f'<a href="{user_profile_url}">{user_full_name}</a>' if user_profile_url else user_full_name
+        user_link = f'[{user_full_name}]({user_profile_url})' if user_profile_url else user_full_name
     else:
         group_name = message.chat.title or "this group"
         group_url = f"https://t.me/{message.chat.username}" if message.chat.username else "this group"
-        user_link = f'<a href="{group_url}">{group_name}</a>'
+        user_link = f'[{group_name}]({group_url})'
 
     time_taken = round(time.time() - start_time, 2)
     total_lines = len(content)
@@ -147,11 +147,11 @@ async def handle_fpass_command(client, message: Message):
     caption = (
         f"**Smart Mail-Pass Combo Process Complete ✅**\n"
         f"**━━━━━━━━━━━━━━━━━**\n"
-        f"**⊗ Total Size:** {file_size_mb:.2f} MB\n"
-        f"**⊗ Total Mails:** {total_mails}\n"
-        f"**⊗ Total Pass:** {total_pass}\n"
-        f"**⊗ Total Lines:** {total_lines}\n"
-        f"**⊗ Time Taken:** {time_taken} seconds\n"
+        f"**⊗ Total Size:** `{file_size_mb:.2f} MB`\n"
+        f"**⊗ Total Mails:** `{total_mails}`\n"
+        f"**⊗ Total Pass:** `{total_pass}`\n"
+        f"**⊗ Total Lines:** `{total_lines}`\n"
+        f"**⊗ Time Taken:** `{time_taken} seconds`\n"
         f"**━━━━━━━━━━━━━━━━━**\n"
         f"**Requested By {user_link}**"
     )
@@ -159,16 +159,16 @@ async def handle_fpass_command(client, message: Message):
     button = InlineKeyboardMarkup([[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]])
 
     if len(email_passes) > 10:
-        file_name = "Smart_Tool_⚙️_Email_Pass_Results.txt"
+        file_name = "ProcessedFile"
         with open(file_name, 'w', encoding='utf-8') as f:
             f.write("\n".join(email_passes))
         await temp_msg.delete()
-        await client.send_document(message.chat.id, file_name, caption=caption, parse_mode=ParseMode.HTML, reply_markup=button)
+        await client.send_document(message.chat.id, file_name, caption=caption, parse_mode=ParseMode.MARKDOWN, reply_markup=button)
         os.remove(file_name)
     else:
         formatted_email_passes = '\n'.join(f'`{email_pass}`' for email_pass in email_passes)
         await temp_msg.delete()
-        await client.send_message(message.chat.id, f"{caption}\n\n{formatted_email_passes}", parse_mode=ParseMode.HTML, reply_markup=button)
+        await client.send_message(message.chat.id, f"{caption}\n\n{formatted_email_passes}", parse_mode=ParseMode.MARKDOWN, reply_markup=button)
     
     os.remove(file_path)
 
