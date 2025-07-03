@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates t.me/TheSmartDev
+
 import os
 import re
 import asyncio
@@ -13,44 +14,38 @@ from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from moviepy import VideoFileClip
 from config import COMMAND_PREFIX
-from utils import LOGGER, progress_bar, notify_admin  # Import LOGGER, progress_bar, and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from utils import LOGGER, progress_bar, notify_admin
+from core import banned_users
 
-# Use the imported LOGGER
 logger = LOGGER
 
-# Configuration
 class Config:
-    TEMP_DIR = Path("user")  # Set default temporary directory
+    TEMP_DIR = Path("user")
 
-# Ensure the temp directory is created at startup
 def setup_temp_dir():
-    Config.TEMP_DIR = Path("temp_dir")  # Corrected attribute name
-    Config.TEMP_DIR.mkdir(exist_ok=True)  # Create the directory if it doesn't exist
+    Config.TEMP_DIR = Path("temp_dir")
+    Config.TEMP_DIR.mkdir(exist_ok=True)
     logger.info(f"Temporary directory set up at {Config.TEMP_DIR}")
 
-# Call setup_temp_dir at module load to ensure TEMP_DIR is ready
 setup_temp_dir()
 
 class FacebookDownloader:
     def __init__(self, temp_dir: Path):
         self.temp_dir = temp_dir
-        self.temp_dir.mkdir(exist_ok=True)  # Ensure directory exists when instance is created
+        self.temp_dir.mkdir(exist_ok=True)
         logger.info(f"FacebookDownloader initialized with temp_dir: {self.temp_dir}")
 
     async def sanitize_filename(self, title: str) -> str:
-        """Sanitize file name by removing invalid characters."""
         title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).strip()
         return f"{title.replace(' ', '_')}_{int(time.time())}"
 
     async def download_file(self, session: aiohttp.ClientSession, url: str, dest: Path) -> None:
-        """Helper method to download a file (video or thumbnail)."""
         try:
             async with session.get(url) as response:
                 if response.status == 200:
                     logger.info(f"Downloading file from {url} to {dest}")
                     async with aiofiles.open(dest, mode='wb') as f:
-                        async for chunk in response.content.iter_chunked(1024 * 1024):  # 1MB chunks
+                        async for chunk in response.content.iter_chunked(1024 * 1024):
                             await f.write(chunk)
                     logger.info(f"File downloaded successfully to {dest}")
                 else:
@@ -74,7 +69,6 @@ class FacebookDownloader:
                     if response.status == 200:
                         data = await response.json()
                         logger.info(f"API response: {data}")
-                        # Find HD quality video URL
                         video_url = next(
                             (link["url"] for link in data.get("links", []) if link.get("quality") == "HD"),
                             None
@@ -89,7 +83,6 @@ class FacebookDownloader:
                         video_filename = self.temp_dir / f"{safe_title}.mp4"
                         await self.download_file(session, video_url, video_filename)
                         
-                        # Download thumbnail if available
                         thumbnail_url = data.get("thumbnail")
                         thumbnail_filename = None
                         if thumbnail_url:
@@ -98,7 +91,7 @@ class FacebookDownloader:
                                 await self.download_file(session, thumbnail_url, thumbnail_filename)
                             except Exception as e:
                                 logger.warning(f"Failed to download thumbnail: {e}")
-                                thumbnail_filename = None  # Proceed without thumbnail if download fails
+                                thumbnail_filename = None
 
                         return {
                             'title': title,
@@ -124,24 +117,20 @@ class FacebookDownloader:
 def setup_fb_handlers(app: Client):
     fb_downloader = FacebookDownloader(Config.TEMP_DIR)
 
-    # Create a regex pattern from the COMMAND_PREFIX list
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
 
     @app.on_message(filters.regex(rf"^{command_prefix_regex}fb(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def fb_handler(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             return
 
         url = None
-        # Check if URL from reply
         if message.reply_to_message and message.reply_to_message.text:
             match = re.search(r"https?://(www\.facebook\.com|fb\.watch|m\.facebook\.com)/\S+", message.reply_to_message.text)
             if match:
                 url = match.group(0)
-        # Check if URL from command
         if not url:
             command_parts = message.text.split(maxsplit=1)
             if len(command_parts) > 1:
@@ -177,10 +166,10 @@ def setup_fb_handlers(app: Client):
             thumbnail = video_info['thumbnail']
             webpage_url = video_info['webpage_url']
 
-            # Get video duration using moviepy
             video_clip = VideoFileClip(filename)
-            duration = video_clip.duration  # Duration in seconds
-            video_clip.close()  # Close the clip to free resources
+            duration = video_clip.duration
+            duration_str = f"{int(duration // 60)}:{int(duration % 60):02d}"
+            video_clip.close()
 
             if message.from_user:
                 user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
@@ -191,11 +180,13 @@ def setup_fb_handlers(app: Client):
                 user_info = f"[{group_name}]({group_url})"
 
             caption = (
-                f"🎥 **Title**: `{title}`\n"
-                f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🔗 **Link**: [Watch on Facebook]({webpage_url})\n"
-                f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"**Downloaded By**: {user_info}"
+                f"**Smart Facebook Download →Successful ✅**\n"
+                f"**━━━━━━━━━━━━━━━━━━━**\n"
+                f"**Title:** **{title}**\n"
+                f"**URL:** [Watch On Facebook]({webpage_url})\n"
+                f"**Duration:** **{duration_str}**\n"
+                f"**━━━━━━━━━━━━━━━━━━━**\n"
+                f"**Video Downloaded By: {user_info} ✅**"
             )
 
             async with aiofiles.open(filename, 'rb'):
@@ -213,7 +204,6 @@ def setup_fb_handlers(app: Client):
                     'progress': progress_bar,
                     'progress_args': (downloading_message, start_time, last_update_time)
                 }
-                # Add thumbnail if available
                 if thumbnail:
                     send_video_params['thumb'] = thumbnail
 
@@ -221,7 +211,6 @@ def setup_fb_handlers(app: Client):
 
             await downloading_message.delete()
             
-            # Clean up files
             if os.path.exists(filename):
                 os.remove(filename)
                 logger.info(f"Deleted video file: {filename}")
@@ -233,7 +222,6 @@ def setup_fb_handlers(app: Client):
             logger.error(f"Error processing Facebook video: {e}")
             await notify_admin(client, f"{COMMAND_PREFIX}fb", e, downloading_message)
             await downloading_message.edit_text("**Facebook Downloader API Dead**", parse_mode=ParseMode.MARKDOWN)
-            # Clean up files in case of error
             if 'filename' in locals() and os.path.exists(filename):
                 os.remove(filename)
                 logger.info(f"Deleted video file on error: {filename}")
