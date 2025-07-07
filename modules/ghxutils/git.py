@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import asyncio
 import aiohttp
@@ -9,12 +10,11 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def fetch_github_api(session: aiohttp.ClientSession, url: str) -> dict | None:
-    """Fetch data from GitHub API."""
     try:
         async with session.get(url) as response:
             response.raise_for_status()
@@ -25,7 +25,6 @@ async def fetch_github_api(session: aiohttp.ClientSession, url: str) -> dict | N
         return None
 
 async def get_repo_branches(session: aiohttp.ClientSession, repo_url: str) -> list | None:
-    """Fetch branches using GitHub API."""
     try:
         parts = repo_url.rstrip('/').split('/')
         user_name = parts[-2]
@@ -42,7 +41,6 @@ async def get_repo_branches(session: aiohttp.ClientSession, repo_url: str) -> li
         return None
 
 async def get_github_repo_details(session: aiohttp.ClientSession, repo_url: str) -> dict | None:
-    """Get repository details from GitHub API."""
     try:
         parts = repo_url.rstrip('/').split('/')
         user_name = parts[-2]
@@ -63,7 +61,6 @@ async def get_github_repo_details(session: aiohttp.ClientSession, repo_url: str)
         return None
 
 async def download_repo_zip(session: aiohttp.ClientSession, repo_url: str, branch: str, clone_dir: str) -> str | None:
-    """Download repository as zip using GitHub API."""
     try:
         parts = repo_url.rstrip('/').split('/')
         user_name = parts[-2]
@@ -87,7 +84,6 @@ async def download_repo_zip(session: aiohttp.ClientSession, repo_url: str, branc
         return None
 
 async def normalize_url(repo_url: str) -> str:
-    """Normalize GitHub URL by adding https:// if missing."""
     repo_url = repo_url.strip()
     LOGGER.info(f"Normalizing URL: '{repo_url}'")
     if not repo_url.startswith(('http://', 'https://')):
@@ -98,12 +94,9 @@ async def normalize_url(repo_url: str) -> str:
     return repo_url
 
 async def git_download_handler(client: Client, message: Message):
-    """Handle git command to download GitHub repository."""
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /git")
         return
 
@@ -123,7 +116,6 @@ async def git_download_handler(client: Client, message: Message):
         repo_url = await normalize_url(message.command[1])
         requested_branch = message.command[2] if len(message.command) > 2 else None
 
-        # Validate URL structure
         parts = repo_url.rstrip('/').split('/')
         if len(parts) < 5 or parts[2] != "github.com":
             LOGGER.error(f"Invalid GitHub URL format: '{repo_url}'")
@@ -141,12 +133,10 @@ async def git_download_handler(client: Client, message: Message):
         )
 
         try:
-            # Extract repo info
             user_name = parts[-2]
             repo_name = parts[-1].replace('.git', '')
             LOGGER.info(f"Processing repo: '{user_name}/{repo_name}'")
 
-            # Concurrently fetch repo details and branches
             repo_details_task = get_github_repo_details(session, repo_url)
             branches_task = get_repo_branches(session, repo_url)
             repo_details, branches = await asyncio.gather(repo_details_task, branches_task)
@@ -158,7 +148,6 @@ async def git_download_handler(client: Client, message: Message):
             forks_count = repo_details['forks_count']
             description = repo_details['description']
 
-            # Determine branch
             if requested_branch:
                 if requested_branch not in branches:
                     LOGGER.error(f"Branch '{requested_branch}' not found in '{repo_url}'. Available branches: {branches}")
@@ -168,14 +157,12 @@ async def git_download_handler(client: Client, message: Message):
                 branch = "main" if "main" in branches else "master" if "master" in branches else branches[0]
             LOGGER.info(f"Selected branch: '{branch}'")
 
-            # Download repository as zip
             clone_dir = f"repos/{repo_name}_{branch}"
             zip_path = await download_repo_zip(session, repo_url, branch, clone_dir)
             if not zip_path:
                 LOGGER.error(f"Failed to download zip for '{repo_url}' branch '{branch}'")
                 raise Exception("Failed to download repository zip")
 
-            # Prepare repository details message
             repo_info = (
                 "<b>📁 Repository Details</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -189,7 +176,6 @@ async def git_download_handler(client: Client, message: Message):
                 f"🌱 <b>Branches:</b> <code>{', '.join(branches)}</code>"
             )
 
-            # Send results and delete status message
             await status_msg.delete()
             await client.send_document(
                 chat_id=message.chat.id,
@@ -207,7 +193,6 @@ async def git_download_handler(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         finally:
-            # Async cleanup
             try:
                 if 'zip_path' in locals() and os.path.exists(zip_path):
                     await aiofiles.os.remove(zip_path)
@@ -217,7 +202,6 @@ async def git_download_handler(client: Client, message: Message):
                 await notify_admin(client, "/git cleanup", e, message)
 
 def setup_git_handler(app: Client):
-    """Register git command handler."""
     app.add_handler(
         MessageHandler(
             git_download_handler,
