@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import pytz
 import pycountry
 from datetime import datetime
@@ -7,16 +8,15 @@ import calendar
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from utils import get_holidays, LOGGER  # Added LOGGER for logging
-from config import COMMAND_PREFIX
-from core import banned_users  # Banned user check
+from utils import get_holidays, LOGGER
+from config import COMMAND_PREFIX, BAN_REPLY
+from core import banned_users
 
 async def get_calendar_markup(year, month, country_code):
     cal = calendar.Calendar()
     month_days = cal.monthdayscalendar(year, month)
     now = datetime.now()
 
-    # Navigation buttons
     prev_month = month - 1 if month > 1 else 12
     next_month = month + 1 if month < 12 else 1
     prev_year = year - 1 if month == 1 else year
@@ -28,14 +28,11 @@ async def get_calendar_markup(year, month, country_code):
         InlineKeyboardButton(">", callback_data=f"nav_{country_code}_{next_year}_{next_month}"),
     ]
 
-    # Days of the week header
     days_buttons = [[InlineKeyboardButton(day, callback_data="ignore") 
                    for day in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]]]
 
-    # Get holidays for the country
     country_holidays = get_holidays(country_code)
 
-    # Calendar days
     day_buttons = []
     for week in month_days:
         day_row = []
@@ -57,7 +54,6 @@ async def get_calendar_markup(year, month, country_code):
                 day_row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
         day_buttons.append(day_row)
 
-    # Get country info
     country = pycountry.countries.get(alpha_2=country_code)
     if not country:
         raise ValueError("Invalid country code")
@@ -65,7 +61,6 @@ async def get_calendar_markup(year, month, country_code):
     country_name = country.name
     flag_emoji = "".join(chr(0x1F1E6 + ord(c) - ord('A')) for c in country_code)
 
-    # Get timezone
     time_zones = pytz.country_timezones.get(country_code)
     if not time_zones:
         raise ValueError("No timezone found for this country")
@@ -74,7 +69,6 @@ async def get_calendar_markup(year, month, country_code):
     now = datetime.now(tz)
     current_time = now.strftime("%I:%M:%S %p")
 
-    # Build keyboard
     keyboard = [
         [InlineKeyboardButton(f"{calendar.month_name[month]} {year} 🟢", callback_data="ignore"),
          InlineKeyboardButton(f"{now.strftime('%d %b, %Y')}", callback_data="ignore")],
@@ -99,14 +93,11 @@ async def get_time_and_calendar(country_code):
     now = datetime.now(tz)
     time_str = now.strftime("%I:%M:%S %p")
     
-    # Get today's holiday
     country_holidays = get_holidays(country_code)
     today_holiday = country_holidays.get((now.month, now.day))
     
-    # Prepare message
     message = f"📅 {flag_emoji} <b>{country_name} Calendar | ⏰ {time_str} 👇</b>"
     
-    # Add today's holiday if exists
     if today_holiday:
         message += f"\n\n<b>🎊 Today's Holiday:</b> {today_holiday}"
 
@@ -118,11 +109,10 @@ def setup_time_handler(app: Client):
     @app.on_message(filters.command(["time", "calendar"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def handle_time_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 message.chat.id,
-                "**✘Sorry You're Banned From Using Me↯**",
+                BAN_REPLY,
                 parse_mode=ParseMode.HTML
             )
             return
