@@ -1,18 +1,18 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
+
 import os
-from utils import LOGGER  # Import LOGGER from utils
-from core import banned_users  # Check if user is banned
+from utils import LOGGER
+from core import banned_users
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from config import BOT_TOKEN, COMMAND_PREFIX
+from config import BOT_TOKEN, COMMAND_PREFIX, BAN_REPLY
 import uuid
 import asyncio
 import aiohttp
 from PIL import Image
 import subprocess
 
-# Function to get sticker set details
 async def get_sticker_set(bot_token: str, name: str):
     url = f"https://api.telegram.org/bot{bot_token}/getStickerSet"
     try:
@@ -26,7 +26,6 @@ async def get_sticker_set(bot_token: str, name: str):
         LOGGER.error(f"Error fetching sticker set: {str(e)}")
         return None
 
-# Function to add a PNG sticker to an existing set
 async def add_sticker_to_set(bot_token: str, user_id: int, name: str, png_sticker: str, emojis: str):
     url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
     with open(png_sticker, "rb") as sticker_file:
@@ -43,7 +42,6 @@ async def add_sticker_to_set(bot_token: str, user_id: int, name: str, png_sticke
                     raise Exception(error["description"])
                 return await response.json()
 
-# Function to add a video sticker
 async def add_video_sticker_to_set(bot_token: str, user_id: int, name: str, webm_sticker: str, emojis: str):
     url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
     with open(webm_sticker, "rb") as sticker_file:
@@ -60,7 +58,6 @@ async def add_video_sticker_to_set(bot_token: str, user_id: int, name: str, webm
                     raise Exception(error["description"])
                 return await response.json()
 
-# Function to add an animated sticker
 async def add_animated_sticker_to_set(bot_token: str, user_id: int, name: str, tgs_sticker: str, emojis: str):
     url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
     with open(tgs_sticker, "rb") as sticker_file:
@@ -77,7 +74,6 @@ async def add_animated_sticker_to_set(bot_token: str, user_id: int, name: str, t
                     raise Exception(error["description"])
                 return await response.json()
 
-# Function to create a new sticker set
 async def create_sticker_set(bot_token: str, user_id: int, name: str, title: str, sticker_file: str, emojis: str, sticker_type: str):
     url = f"https://api.telegram.org/bot{bot_token}/createNewStickerSet"
     file_param = "png_sticker" if sticker_type == "png" else "tgs_sticker" if sticker_type == "tgs" else "webm_sticker"
@@ -96,7 +92,6 @@ async def create_sticker_set(bot_token: str, user_id: int, name: str, title: str
                     raise Exception(error["description"])
                 return await response.json()
 
-# Function to resize PNG for Telegram sticker requirements
 async def resize_png_for_sticker(input_file: str, output_file: str):
     try:
         async with asyncio.Lock():
@@ -106,7 +101,6 @@ async def resize_png_for_sticker(input_file: str, output_file: str):
                 im.save(output_file, "PNG", optimize=True)
                 return output_file
             
-            # Calculate new dimensions to ensure one side is 512
             if width > height:
                 new_width = 512
                 new_height = int((512 / width) * height)
@@ -114,7 +108,6 @@ async def resize_png_for_sticker(input_file: str, output_file: str):
                 new_height = 512
                 new_width = int((512 / height) * width)
             
-            # Resize and save
             im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
             im.save(output_file, "PNG", optimize=True)
             return output_file
@@ -122,7 +115,6 @@ async def resize_png_for_sticker(input_file: str, output_file: str):
         LOGGER.error(f"Error resizing PNG: {str(e)}")
         return None
 
-# Function to process video stickers
 async def process_video_sticker(input_file: str, output_file: str):
     try:
         command = [
@@ -152,7 +144,6 @@ async def process_video_sticker(input_file: str, output_file: str):
         LOGGER.error(f"Error processing video: {str(e)}")
         return None
 
-# Function to process GIF to WebM
 async def process_gif_to_webm(input_file: str, output_file: str):
     try:
         command = [
@@ -182,15 +173,13 @@ async def process_gif_to_webm(input_file: str, output_file: str):
         LOGGER.error(f"Error processing GIF: {str(e)}")
         return None
 
-# Setup the /kang command handler
 def setup_kang_handler(app: Client, bot_token: str):
     
     @app.on_message(filters.command(["kang"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def kang(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         user = message.from_user
@@ -201,7 +190,6 @@ def setup_kang_handler(app: Client, bot_token: str):
 
         temp_message = await client.send_message(chat_id=message.chat.id, text="<b>Kanging this Sticker...✨</b>")
 
-        # Find an available sticker pack
         while True:
             sticker_set = await get_sticker_set(bot_token, packname)
             if sticker_set and len(sticker_set["stickers"]) >= max_stickers:
@@ -214,7 +202,6 @@ def setup_kang_handler(app: Client, bot_token: str):
             await temp_message.edit_text("<b>Please reply to a sticker, image, or document to kang it!</b>")
             return
 
-        # Get file ID
         reply = message.reply_to_message
         if reply.sticker:
             file_id = reply.sticker.file_id
@@ -228,7 +215,6 @@ def setup_kang_handler(app: Client, bot_token: str):
             await temp_message.edit_text("<b>Please reply to a valid sticker, image, GIF, or document!</b>")
             return
 
-        # Determine sticker format
         sticker_format = "png"
         if reply.sticker:
             if reply.sticker.is_animated:
@@ -238,7 +224,6 @@ def setup_kang_handler(app: Client, bot_token: str):
         elif reply.animation or (reply.document and reply.document.mime_type == "image/gif"):
             sticker_format = "gif"
 
-        # Download file
         try:
             file_name = f"kangsticker_{uuid.uuid4().hex}"
             if sticker_format == "tgs":
@@ -261,14 +246,12 @@ def setup_kang_handler(app: Client, bot_token: str):
             await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
             return
 
-        # Select emoji
         sticker_emoji = "🌟"
         if len(message.command) > 1:
             sticker_emoji = message.command[1]
         elif reply.sticker and reply.sticker.emoji:
             sticker_emoji = reply.sticker.emoji
 
-        # Process files
         try:
             if sticker_format == "png":
                 output_file = f"resized_{uuid.uuid4().hex}.png"
@@ -303,7 +286,6 @@ def setup_kang_handler(app: Client, bot_token: str):
             await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
             return
 
-        # Add sticker to the pack
         try:
             if sticker_format == "tgs":
                 await add_animated_sticker_to_set(bot_token, user.id, packname, kang_file, sticker_emoji)
@@ -330,7 +312,6 @@ def setup_kang_handler(app: Client, bot_token: str):
                 await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
         
         finally:
-            # Cleanup all temporary files
             for file in temp_files:
                 if os.path.exists(file):
                     try:
