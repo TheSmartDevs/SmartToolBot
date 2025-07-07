@@ -1,33 +1,32 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import asyncio
-import requests
+import aiohttp
 import random
 import pycountry
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import BIN_KEY, COMMAND_PREFIX
-from utils import notify_admin, LOGGER  # Import notify_admin and LOGGER from utils
+from config import BIN_KEY, COMMAND_PREFIX, BAN_REPLY
+from utils import notify_admin, LOGGER
 from core import banned_users
 
-# Helper function to fetch BIN info
-def get_bin_info(bin, client, message):
+async def get_bin_info(bin, client, message):
     headers = {'x-api-key': BIN_KEY}
     try:
-        response = requests.get(f"https://data.handyapi.com/bin/{bin}", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            LOGGER.error(f"API returned status code {response.status_code}")
-            raise Exception(f"API returned status code {response.status_code}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://data.handyapi.com/bin/{bin}", headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    LOGGER.error(f"API returned status code {response.status}")
+                    raise Exception(f"API returned status code {response.status}")
     except Exception as e:
         LOGGER.error(f"Error fetching BIN info: {str(e)}")
-        # Notify admins about the error
         asyncio.create_task(notify_admin(client, "/extp", e, message))
         return None
 
-# Helper function to validate a number using Luhn's Algorithm
 def luhn_algorithm(number):
     def digits_of(n):
         return [int(d) for d in str(n)]
@@ -40,7 +39,6 @@ def luhn_algorithm(number):
         checksum += sum(digits_of(d * 2))
     return checksum % 10 == 0
 
-# Helper function to generate valid extrapolated numbers using Luhn's Algorithm
 def generate_extrapolated_numbers(bin, amount=5):
     extrapolated_numbers = set()
     while len(extrapolated_numbers) < amount:
@@ -66,11 +64,9 @@ def get_flag_emoji(country_code):
 def setup_extp_handler(app):
     @app.on_message(filters.command(["extp"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def extrapolate(client, message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         command_parts = message.text.split()
@@ -80,7 +76,7 @@ def setup_extp_handler(app):
         
         bin = command_parts[1]
         progress_message = await client.send_message(message.chat.id, "**Extrapolation In Progress...✨**", parse_mode=ParseMode.MARKDOWN)
-        bin_info = get_bin_info(bin, client, message)
+        bin_info = await get_bin_info(bin, client, message)
         if not bin_info or bin_info.get('Status') != 'SUCCESS':
             await progress_message.edit_text("**BIN Not Found In Database❌**", parse_mode=ParseMode.MARKDOWN)
             return
@@ -93,12 +89,12 @@ def setup_extp_handler(app):
         flag_emoji = get_flag_emoji(country_code) if country_code else ''
         
         result_message = (
-            f"𝗘𝘅𝘁𝗿𝗮𝗽 ⇾ {bin}\n"
-            f"𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {len(formatted_numbers)}\n\n"
+            f"**𝗘𝘅𝘁𝗿𝗮𝗽** ⇾ {bin}\n"
+            f"**Amount** ⇾ {len(formatted_numbers)}\n\n"
             + "\n".join(formatted_numbers) + "\n\n"
-            f"**𝗕𝗮𝗻𝗸:** {bin_info.get('Issuer', 'None')}\n"
-            f"**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n"
-            f"**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
+            f"**Bank:** {bin_info.get('Issuer', 'None')}\n"
+            f"**Country:** {country_name} {flag_emoji}\n"
+            f"**Bin Info** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
         )
 
         markup = InlineKeyboardMarkup(
@@ -110,15 +106,13 @@ def setup_extp_handler(app):
 
     @app.on_callback_query(filters.regex(r"^regenerate_\d{6}$"))
     async def regenerate_callback(client, callback_query):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(callback_query.message.chat.id, BAN_REPLY)
             return
 
         bin = callback_query.data.split("_")[1]
-        bin_info = get_bin_info(bin, client, callback_query.message)
+        bin_info = await get_bin_info(bin, client, callback_query.message)
         if not bin_info or bin_info.get('Status') != 'SUCCESS':
             await callback_query.message.edit_text("**❌Invalid BIN provided**", parse_mode=ParseMode.MARKDOWN)
             return
@@ -131,12 +125,12 @@ def setup_extp_handler(app):
         flag_emoji = get_flag_emoji(country_code) if country_code else ''
         
         regenerated_message = (
-            f"𝗘𝘅𝘁𝗿𝗮𝗽 ⇾ {bin}\n"
-            f"𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {len(formatted_numbers)}\n\n"
+            f"**𝗘𝘅𝘁𝗿𝗮𝗽** ⇾ {bin}\n"
+            f"**Amount** ⇾ {len(formatted_numbers)}\n\n"
             + "\n".join(formatted_numbers) + "\n\n"
-            f"**𝗕𝗮𝗻𝗸:** {bin_info.get('Issuer', 'None')}\n"
-            f"**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n"
-            f"**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
+            f"**Bank :** {bin_info.get('Issuer', 'None')}\n"
+            f"**Country:** {country_name} {flag_emoji}\n"
+            f"** Bin Info:** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
         )
 
         if callback_query.message.text != regenerated_message:
