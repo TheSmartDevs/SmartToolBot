@@ -1,18 +1,17 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-# Note This Script Supports Both Text And File 
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import asyncio
 import base64
 import binascii
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 def setup_decoders_handler(app: Client):
-    # Define command functions
     commands = {
         "b64en": lambda text: base64.b64encode(text.encode()).decode(),
         "b64de": lambda text: base64.b64decode(text).decode(),
@@ -41,15 +40,12 @@ def setup_decoders_handler(app: Client):
         )
     }
 
-    # Register handlers for each command
     for command, func in commands.items():
         @app.on_message(filters.command([command], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
         async def handle_command(client, message, func=func, command=command):
-            # Check if user is banned
             user_id = message.from_user.id if message.from_user else None
-            # FIX: Await the banned_users.find_one as it's an async call
             if user_id and await banned_users.find_one({"user_id": user_id}):
-                await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+                await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
                 LOGGER.info(f"Banned user {user_id} attempted to use /{command}")
                 return
 
@@ -60,16 +56,13 @@ def setup_decoders_handler(app: Client):
 
                 if message.reply_to_message:
                     if message.reply_to_message.document:
-                        # If it's a document, download and process it
                         file_path = await client.download_media(message.reply_to_message.document)
                         with open(file_path, "r", encoding="utf-8") as file:
                             text = file.read()
-                        os.remove(file_path)  # Remove file after processing
+                        os.remove(file_path)
                     else:
-                        # Process replied text message
                         text = message.reply_to_message.text
                 else:
-                    # Process text input from command
                     text = message.text.split(maxsplit=1)[1] if len(message.command) > 1 else None
 
                 if not text:
@@ -80,13 +73,11 @@ def setup_decoders_handler(app: Client):
 
                 result = func(text)
 
-                # Get user's full name and profile URL
                 if message.from_user:
                     user_full_name = message.from_user.first_name + (" " + message.from_user.last_name if message.from_user.last_name else "")
                     user_profile_url = f"tg://user?id={message.from_user.id}"
                     user_mention = f"<a href='{user_profile_url}'>{user_full_name}</a>"
                 else:
-                    # If user info is not available, use the bot's hyperlink
                     user_mention = "<a href='https://t.me/ItsSmartToolBot'>ItsSmartToolBot</a>"
 
                 LOGGER.info(f"Processed /{command} for user {user_id or 'unknown'} in chat {message.chat.id}")
@@ -105,7 +96,7 @@ def setup_decoders_handler(app: Client):
                                 f"📜 <b>Processed Successfully!</b> ✅",
                         parse_mode=ParseMode.HTML
                     )
-                    os.remove(file_name)  # Remove the file after sending
+                    os.remove(file_name)
                 else:
                     await client.send_message(
                         message.chat.id,
@@ -122,4 +113,4 @@ def setup_decoders_handler(app: Client):
                     parse_mode=ParseMode.HTML
                 )
 
-            await processing_msg.delete()  # Remove "Processing..." message after completion
+            await processing_msg.delete()
