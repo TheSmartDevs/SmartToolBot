@@ -1,14 +1,14 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Use LOGGER and notify_admin
-from core import banned_users          # Use banned_users
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Function to verify a Stripe key
 async def verify_stripe_key(stripe_key: str) -> str:
     url = "https://api.stripe.com/v1/account"
     headers = {
@@ -25,7 +25,6 @@ async def verify_stripe_key(stripe_key: str) -> str:
         LOGGER.error(f"Error verifying Stripe key: {e}")
         return "**Error verifying Stripe key.**"
 
-# Function to get information about a Stripe key
 async def get_stripe_key_info(stripe_key: str) -> str:
     url = "https://api.stripe.com/v1/account"
     headers = {
@@ -57,9 +56,8 @@ async def get_stripe_key_info(stripe_key: str) -> str:
 
 async def stripe_key_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, BAN_REPLY)
         return
 
     if len(message.command) <= 1:
@@ -97,9 +95,8 @@ async def stripe_key_handler(client: Client, message: Message):
 
 async def stripe_key_info_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, BAN_REPLY)
         return
 
     if len(message.command) <= 1:
