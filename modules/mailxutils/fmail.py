@@ -1,5 +1,5 @@
 # Copyright @ISmartCoder
-# Channel t.me/TheSmartDev
+# Updates Channel: https://t.me/TheSmartDev
 
 import re
 import os
@@ -7,8 +7,9 @@ import time
 from pyrogram import Client, filters, handlers
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from config import COMMAND_PREFIX, MAX_TXT_SIZE, UPDATE_CHANNEL_URL
+from config import COMMAND_PREFIX, MAX_TXT_SIZE, UPDATE_CHANNEL_URL, BAN_REPLY
 from core import banned_users
+from utils import LOGGER, notify_admin
 
 async def filter_emails(content):
     email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
@@ -30,7 +31,7 @@ async def handle_fmail_command(client, message: Message):
     start_time = time.time()
     user_id = message.from_user.id if message.from_user else None
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         return
 
     if not message.reply_to_message or not message.reply_to_message.document or not message.reply_to_message.document.file_name.endswith('.txt'):
@@ -102,7 +103,7 @@ async def handle_fpass_command(client, message: Message):
     start_time = time.time()
     user_id = message.from_user.id if message.from_user else None
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         return
 
     if not message.reply_to_message or not message.reply_to_message.document or not message.reply_to_message.document.file_name.endswith('.txt'):
