@@ -1,4 +1,4 @@
-#Copyright @ISmartCoder
+# Copyright @ISmartCoder
 # Updates Channel t.me/TheSmartDev
 
 import os
@@ -14,7 +14,7 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Optional
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
 import urllib.parse
@@ -215,7 +215,7 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
     except Exception as e:
         await status_message.edit_text("**❌ Sorry Bro Spotify DL API Dead**", parse_mode=ParseMode.MARKDOWN)
         logger.error(f"Error processing Spotify request: {str(e)}")
-        await notify_admin(client, status_message, f"{COMMAND_PREFIX}sp", Exception(str(e)))
+        await notify_admin(client, f"{COMMAND_PREFIX}sp", Exception(str(e)), status_message)
 
 def setup_spotify_handler(app: Client):
     command_prefix_regex = rf"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
@@ -223,8 +223,8 @@ def setup_spotify_handler(app: Client):
     @app.on_message(filters.regex(rf"^{command_prefix_regex}sp(\s+.*)?$") & (filters.private | filters.group))
     async def spotify_command(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         command_parts = message.text.split(maxsplit=1)
