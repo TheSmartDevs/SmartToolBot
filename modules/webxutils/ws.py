@@ -1,3 +1,6 @@
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import re
 import asyncio
@@ -9,26 +12,23 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
-from utils import LOGGER
-from core import banned_users  # Add banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Test log to confirm LOGGER is working
 LOGGER.debug("URL Downloader initialized - logs should appear in console and botlog.txt")
 
 class UrlDownloader:
-    """Download webpage components based on the input URL, optimized for speed."""
     def __init__(self, imgFlg=True, linkFlg=True, scriptFlg=True):
         self.soup = None
         self.imgFlg = imgFlg
         self.linkFlg = linkFlg
         self.scriptFlg = scriptFlg
         self.linkType = ('css', 'png', 'ico', 'jpg', 'jpeg', 'mov', 'ogg', 'gif', 'xml', 'js')
-        self.size_limit = 10 * 1024 * 1024  # 10 MB limit
+        self.size_limit = 10 * 1024 * 1024
         self.semaphore = asyncio.Semaphore(50)
 
     async def savePage(self, url, pagefolder='page', session=None):
-        """Save webpage components based on the input URL and directory name."""
         LOGGER.debug(f"Starting download: {url}")
         try:
             async with session.get(url, timeout=10) as response:
@@ -36,7 +36,6 @@ class UrlDownloader:
                 if len(content) > self.size_limit:
                     LOGGER.error(f"Size limit exceeded: {url}")
                     return False, "Size limit of 10 MB exceeded."
-                # Try lxml parser, fall back to html.parser if lxml is unavailable
                 try:
                     self.soup = BeautifulSoup(content, features="lxml")
                     LOGGER.debug(f"Parsed HTML with lxml for: {url}")
@@ -67,7 +66,6 @@ class UrlDownloader:
             return False, f"Failed to download: {str(e)}"
 
     async def _soupfindnSave(self, url, pagefolder, tag2find='img', inner='src', session=None):
-        """Saves all tag2find objects in the specified pagefolder."""
         pagefolder = os.path.join(pagefolder, tag2find)
         if not os.path.exists(pagefolder):
             LOGGER.debug(f"Creating folder: {pagefolder}")
@@ -88,7 +86,6 @@ class UrlDownloader:
             await asyncio.gather(*tasks[i:i+50])
 
     async def _download_file(self, fileurl, filepath, session):
-        """Download a single file and save it asynchronously."""
         async with self.semaphore:
             try:
                 LOGGER.debug(f"Downloading: {fileurl}")
@@ -104,7 +101,6 @@ class UrlDownloader:
                 LOGGER.error(f"Failed to download {fileurl}: {exc}")
 
 def create_zip(folder_path):
-    """Create a zip file from the folder in memory."""
     LOGGER.debug(f"Creating zip: {folder_path}")
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
@@ -119,13 +115,12 @@ def create_zip(folder_path):
 
 def setup_ws_handler(app: Client):
     @app.on_message(filters.command(["ws", "websource"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
-    async def websource(client: Client, message):
+    async def websource(client, message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**✘Sorry You're Banned From Using Me↯**",
+                text=BAN_REPLY,
                 parse_mode=ParseMode.MARKDOWN
             )
             return
@@ -165,6 +160,7 @@ def setup_ws_handler(app: Client):
                     text="**❌ Failed to download source code. Please check the URL and try again.**",
                     parse_mode=ParseMode.MARKDOWN
                 )
+                await notify_admin(client, "/ws", Exception(error), message)
                 if os.path.exists(pagefolder):
                     LOGGER.debug(f"Cleaning up: {pagefolder}")
                     import shutil
