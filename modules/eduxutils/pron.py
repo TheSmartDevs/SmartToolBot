@@ -1,21 +1,22 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from pyrogram.handlers import MessageHandler
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def fetch_pronunciation_info(word):
     url = f"https://abirthetech.serv00.net/pr.php?prompt={word}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                response.raise_for_status()  # Raise an exception for non-200 status codes
+                response.raise_for_status()
                 result = await response.json()
                 pronunciation_info = result['response']
                 LOGGER.info(f"Successfully fetched pronunciation info for '{word}'")
@@ -32,18 +33,14 @@ async def fetch_pronunciation_info(word):
         return None
 
 async def pronunciation_check(client: Client, message: Message):
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # Await for MotorDB (async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /prn")
         return
 
-    # Check if the message is a reply
     if message.reply_to_message and message.reply_to_message.text:
         word = message.reply_to_message.text.strip()
-        # Ensure reply contains a single word
         if len(word.split()) != 1:
             await client.send_message(
                 message.chat.id,
@@ -53,7 +50,6 @@ async def pronunciation_check(client: Client, message: Message):
             LOGGER.warning(f"Invalid reply format: {word}")
             return
     else:
-        # Check if command has a single word
         user_input = message.text.split(maxsplit=1)
         if len(user_input) < 2 or len(user_input[1].split()) != 1:
             await client.send_message(
@@ -78,7 +74,6 @@ async def pronunciation_check(client: Client, message: Message):
                 parse_mode=ParseMode.MARKDOWN
             )
             LOGGER.error(f"Pronunciation API returned no data for word '{word}'")
-            # Notify admins
             await notify_admin(client, "/prn", Exception("Pronunciation API returned no data"), message)
             return
 
@@ -94,7 +89,6 @@ async def pronunciation_check(client: Client, message: Message):
                 LOGGER.info(f"Downloaded audio for word '{word}'")
             except aiohttp.ClientError as e:
                 LOGGER.error(f"Failed to download audio for word '{word}': {e}")
-                # Notify admins
                 await notify_admin(client, "/prn audio", e, message)
                 audio_filename = None
 
@@ -125,9 +119,7 @@ async def pronunciation_check(client: Client, message: Message):
         await checking_message.delete()
     except Exception as e:
         LOGGER.error(f"Error processing pronunciation check for word '{word}': {e}")
-        # Notify admins
         await notify_admin(client, "/prn", e, message)
-        # Send user-facing error message
         await checking_message.edit(
             text="**❌ Sorry Bro Pronunciation API Dead**",
             parse_mode=ParseMode.MARKDOWN
