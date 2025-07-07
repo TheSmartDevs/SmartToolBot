@@ -1,20 +1,20 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import yt_dlp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX, YT_COOKIES_PATH
-from utils import LOGGER, notify_admin  # Use LOGGER and notify_admin
-from core import banned_users           # Use banned_users
+from config import COMMAND_PREFIX, YT_COOKIES_PATH, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def ytag_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
         await client.send_message(
             message.chat.id,
-            "**✘Sorry You're Banned From Using Me↯**",
+            BAN_REPLY,
             parse_mode=ParseMode.MARKDOWN
         )
         return
@@ -40,7 +40,7 @@ async def ytag_handler(client: Client, message: Message):
         'quiet': True,
         'skip_download': True,
         'force_generic_extractor': True,
-        'cookiefile': YT_COOKIES_PATH,  # Correct path to your cookie file
+        'cookiefile': YT_COOKIES_PATH,
     }
 
     try:
