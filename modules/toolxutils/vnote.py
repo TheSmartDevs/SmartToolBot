@@ -1,3 +1,6 @@
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import subprocess
 import traceback
@@ -6,24 +9,21 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from config import COMMAND_PREFIX
-from utils import LOGGER, progress_bar
-from core import banned_users  # Add banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin, progress_bar
+from core import banned_users
 
-# Thread pool for non-blocking FFmpeg execution
 executor = ThreadPoolExecutor(max_workers=7)
 
 def run_ffmpeg(ffmpeg_cmd):
-    """Run FFmpeg command in a separate thread."""
     return subprocess.run(ffmpeg_cmd, check=True)
 
 def setup_vnote_handler(app: Client):
     @app.on_message(filters.command("vnote", prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def vnote_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         if not message.reply_to_message or not message.reply_to_message.video:
@@ -43,7 +43,6 @@ def setup_vnote_handler(app: Client):
 
             output_path = "video_note_ready.mp4"
 
-            # Crop to center square and encode for Telegram
             ffmpeg_cmd = [
                 "ffmpeg", "-y", "-i", input_path,
                 "-vf", "crop='min(in_w,in_h)':'min(in_w,in_h)',scale=640:640",
@@ -53,27 +52,27 @@ def setup_vnote_handler(app: Client):
                 output_path
             ]
 
-            # Run FFmpeg in a separate thread to avoid blocking
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(executor, run_ffmpeg, ffmpeg_cmd)
 
-            # Use progress_bar from utils to upload
-            await progress_bar(
-                client,
-                message,
-                output_path,
-                status_msg,
-                send_method="send_video_note",
-                send_method_kwargs={"video_note": output_path, "length": 640},
+            start_time = time.time()
+            last_update_time = [start_time]
+            await client.send_video_note(
+                chat_id=message.chat.id,
+                video_note=output_path,
+                length=640,
+                progress=progress_bar,
+                progress_args=(status_msg, start_time, last_update_time)
             )
 
             await status_msg.delete()
 
         except Exception as e:
             LOGGER.error("Error while processing video:\n" + traceback.format_exc())
+            await notify_admin(client, "/vnote", e, message)
             await status_msg.edit("**Sorry I Can't Process This Media**")
         finally:
-            # Clean up files
             for f in ["input_video.mp4", "video_note_ready.mp4"]:
                 if os.path.exists(f):
                     os.remove(f)
+                    LOGGER.info(f"Cleaned up file: {f}")
