@@ -1,16 +1,16 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX, DOMAIN_API_KEY, DOMAIN_API_URL, DOMAIN_CHK_LIMIT
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users          # Import banned_users from core
+from config import COMMAND_PREFIX, DOMAIN_API_KEY, DOMAIN_API_URL, DOMAIN_CHK_LIMIT, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def format_date(date_str):
-    # Placeholder function to format date strings, implement as needed
     return date_str
 
 async def get_domain_info(domain: str) -> str:
@@ -23,9 +23,9 @@ async def get_domain_info(domain: str) -> str:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(DOMAIN_API_URL, params=params) as response:
-                response.raise_for_status()  # Raise an exception for non-200 status codes
+                response.raise_for_status()
                 data = await response.json()
-                LOGGER.info(f"Response for domain {domain}: {data}")  # Log the response data
+                LOGGER.info(f"Response for domain {domain}: {data}")
                 if data.get("WhoisRecord"):
                     whois_record = data["WhoisRecord"]
                     status = whois_record.get("status", "Unknown").lower()
@@ -47,20 +47,17 @@ async def get_domain_info(domain: str) -> str:
                     return f"**✅ {domain}**: Available for registration!"
     except aiohttp.ClientError as e:
         LOGGER.error(f"Failed to fetch info for domain {domain}: {e}")
-        # Notify admins
         await notify_admin(None, f"{COMMAND_PREFIX}dmn", e, None)
         return f"**❌ Sorry Bro Domain API Dead**"
     except Exception as e:
         LOGGER.error(f"Exception occurred while fetching info for domain {domain}: {e}")
-        # Notify admins
         await notify_admin(None, f"{COMMAND_PREFIX}dmn", e, None)
         return f"**❌ Sorry Bro Domain Check API Dead**"
 
 async def domain_info_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, BAN_REPLY)
         return
 
     if len(message.command) < 2:
@@ -71,7 +68,7 @@ async def domain_info_handler(client: Client, message: Message):
         )
         return
 
-    domains = message.command[1:]  # Extract all domains from the command
+    domains = message.command[1:]
     if len(domains) > DOMAIN_CHK_LIMIT:
         await client.send_message(
             chat_id=message.chat.id,
@@ -89,12 +86,10 @@ async def domain_info_handler(client: Client, message: Message):
     try:
         results = await asyncio.gather(*[get_domain_info(domain) for domain in domains], return_exceptions=True)
 
-        # Combine all results into a single message
         result_message = []
         for domain, result in zip(domains, results):
             if isinstance(result, Exception):
                 LOGGER.error(f"Error processing domain {domain}: {result}")
-                # Notify admins
                 await notify_admin(client, f"{COMMAND_PREFIX}dmn", result, message)
                 result_message.append(f"**❌ {domain}**: Failed to check domain")
             else:
@@ -102,7 +97,6 @@ async def domain_info_handler(client: Client, message: Message):
 
         result_message = "\n\n".join(result_message)
 
-        # Check if all domains are available for registration
         if all("✅" in result for result in result_message.split("\n\n")):
             await progress_message.edit_text(result_message, parse_mode=ParseMode.MARKDOWN)
             return
@@ -121,9 +115,7 @@ async def domain_info_handler(client: Client, message: Message):
 
     except Exception as e:
         LOGGER.error(f"Error processing domain check: {e}")
-        # Notify admins
         await notify_admin(client, f"{COMMAND_PREFIX}dmn", e, message)
-        # Send user-facing error message
         await progress_message.edit_text(
             "**❌ Sorry Bro Domain Check API Dead**",
             parse_mode=ParseMode.MARKDOWN
