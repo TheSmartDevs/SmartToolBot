@@ -1,18 +1,19 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import re
 import time
 import random
 import string
 import hashlib
-import requests
+import aiohttp
 from bs4 import BeautifulSoup
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import COMMAND_PREFIX
-from utils import LOGGER
-from core import banned_users  # Add banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 user_data = {}
 token_map = {}
@@ -36,46 +37,49 @@ def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for i in range(length))
 
-def get_domain():
+async def get_domain():
     try:
-        response = requests.get(f"{BASE_URL}/domains", headers=HEADERS)
-        data = response.json()
-        if isinstance(data, list) and data:
-            return data[0]['domain']
-        elif 'hydra:member' in data and data['hydra:member']:
-            return data['hydra:member'][0]['domain']
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{BASE_URL}/domains", headers=HEADERS) as response:
+                data = await response.json()
+                if isinstance(data, list) and data:
+                    return data[0]['domain']
+                elif 'hydra:member' in data and data['hydra:member']:
+                    return data['hydra:member'][0]['domain']
     except Exception as e:
         LOGGER.error(f"Error fetching domain: {e}")
     return None
 
-def create_account(email, password):
+async def create_account(email, password):
     data = {
         "address": email,
         "password": password
     }
     try:
-        response = requests.post(f"{BASE_URL}/accounts", headers=HEADERS, json=data)
-        if response.status_code in [200, 201]:
-            return response.json()
-        else:
-            LOGGER.error(f"Error Code: {response.status_code} Response: {response.text}")
-            return None
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{BASE_URL}/accounts", headers=HEADERS, json=data) as response:
+                if response.status in [200, 201]:
+                    return await response.json()
+                else:
+                    LOGGER.error(f"Error Code: {response.status} Response: {await response.text()}")
+                    return None
     except Exception as e:
         LOGGER.error(f"Error in create_account: {e}")
         return None
 
-def get_token(email, password):
+async def get_token(email, password):
     data = {
         "address": email,
         "password": password
     }
     try:
-        response = requests.post(f"{BASE_URL}/token", headers=HEADERS, json=data)
-        if response.status_code == 200:
-            return response.json().get('token')
-        else:
-            LOGGER.error(f"Token Error Code: {response.status_code} Token Response: {response.text}")
-            return None
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{BASE_URL}/token", headers=HEADERS, json=data) as response:
+                if response.status == 200:
+                    return (await response.json()).get('token')
+                else:
+                    LOGGER.error(f"Token Error Code: {response.status} Token Response: {await response.text()}")
+                    return None
     except Exception as e:
         LOGGER.error(f"Error in get_token: {e}")
         return None
@@ -93,21 +97,22 @@ def get_text_from_html(html_content_list):
     cleaned_content = re.sub(r'\s+', ' ', text_content).strip()
     return cleaned_content
 
-def list_messages(token):
+async def list_messages(token):
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Authorization": f"Bearer {token}"
     }
     try:
-        response = requests.get(f"{BASE_URL}/messages", headers=headers)
-        data = response.json()
-        if isinstance(data, list):
-            return data
-        elif 'hydra:member' in data:
-            return data['hydra:member']
-        else:
-            return []
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{BASE_URL}/messages", headers=headers) as response:
+                data = await response.json()
+                if isinstance(data, list):
+                    return data
+                elif 'hydra:member' in data:
+                    return data['hydra:member']
+                else:
+                    return []
     except Exception as e:
         LOGGER.error(f"Error in list_messages: {e}")
         return []
@@ -116,11 +121,10 @@ def setup_tmail_handler(app: Client):
     @app.on_message(filters.command(["tmail"], prefixes=COMMAND_PREFIX))
     async def generate_mail(client, message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**✘Sorry You're Banned From Using Me↯**"
+                text=BAN_REPLY
             )
             return
 
@@ -144,7 +148,7 @@ def setup_tmail_handler(app: Client):
             username = generate_random_username()
             password = generate_random_password()
 
-        domain = get_domain()
+        domain = await get_domain()
         if not domain:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -154,7 +158,7 @@ def setup_tmail_handler(app: Client):
             return
 
         email = f"{username}@{domain}"
-        account = create_account(email, password)
+        account = await create_account(email, password)
         if not account:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -163,10 +167,9 @@ def setup_tmail_handler(app: Client):
             await client.delete_messages(message.chat.id, [loading_msg.message_id])
             return
 
-        # Just a short delay to avoid race conditions
-        time.sleep(2)
+        await asyncio.sleep(2)
 
-        token = get_token(email, password)
+        token = await get_token(email, password)
         if not token:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -215,7 +218,7 @@ def setup_tmail_handler(app: Client):
 
         user_tokens[callback_query.from_user.id] = token
         
-        messages = list_messages(token)
+        messages = await list_messages(token)
         if not messages:
             await callback_query.answer("No messages received ❌", show_alert=True)
             return
@@ -272,39 +275,40 @@ def setup_tmail_handler(app: Client):
             "Authorization": f"Bearer {token}"
         }
         try:
-            response = requests.get(f"{BASE_URL}/messages/{message_id}", headers=headers)
-            if response.status_code == 200:
-                details = response.json()
-                if 'html' in details:
-                    message_text = get_text_from_html(details['html'])
-                elif 'text' in details:
-                    message_text = details['text']
-                else:
-                    message_text = "Content not available."
-                
-                # Truncate the message if it's too long
-                if len(message_text) > MAX_MESSAGE_LENGTH:
-                    message_text = message_text[:MAX_MESSAGE_LENGTH - 100] + "... [message truncated]"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{BASE_URL}/messages/{message_id}", headers=headers) as response:
+                    if response.status == 200:
+                        details = await response.json()
+                        if 'html' in details:
+                            message_text = get_text_from_html(details['html'])
+                        elif 'text' in details:
+                            message_text = details['text']
+                        else:
+                            message_text = "Content not available."
+                        
+                        if len(message_text) > MAX_MESSAGE_LENGTH:
+                            message_text = message_text[:MAX_MESSAGE_LENGTH - 100] + "... [message truncated]"
 
-                output = f"**From:** `{details['from']['address']}`\n**Subject:** `{details['subject']}`\n━━━━━━━━━━━━━━━━━━\n{message_text}"
+                        output = f"**From:** `{details['from']['address']}`\n**Subject:** `{details['subject']}`\n━━━━━━━━━━━━━━━━━━\n{message_text}"
 
-                keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Close", callback_data="close_message")]
-                ])
+                        keyboard = InlineKeyboardMarkup([
+                            [InlineKeyboardButton("Close", callback_data="close_message")]
+                        ])
 
-                await client.send_message(
-                    chat_id=callback_query.message.chat.id,
-                    text=output,
-                    disable_web_page_preview=True,
-                    reply_markup=keyboard
-                )
-            else:
-                await client.send_message(
-                    chat_id=callback_query.message.chat.id,
-                    text="**❌ Error retrieving message details**"
-                )
+                        await client.send_message(
+                            chat_id=callback_query.message.chat.id,
+                            text=output,
+                            disable_web_page_preview=True,
+                            reply_markup=keyboard
+                        )
+                    else:
+                        await client.send_message(
+                            chat_id=callback_query.message.chat.id,
+                            text="**❌ Error retrieving message details**"
+                        )
         except Exception as e:
             LOGGER.error(f"Error in read_message: {e}")
+            await notify_admin(client, "/cmail read", e, callback_query.message)
             await client.send_message(
                 chat_id=callback_query.message.chat.id,
                 text="**❌ Error retrieving message details**"
@@ -313,11 +317,10 @@ def setup_tmail_handler(app: Client):
     @app.on_message(filters.command(["cmail"], prefixes=COMMAND_PREFIX))
     async def manual_check_mail(client, message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**✘Sorry You're Banned From Using Me↯**"
+                text=BAN_REPLY
             )
             return
 
@@ -343,7 +346,7 @@ def setup_tmail_handler(app: Client):
             return
 
         user_tokens[message.from_user.id] = token
-        messages = list_messages(token)
+        messages = await list_messages(token)
         if not messages:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -357,7 +360,7 @@ def setup_tmail_handler(app: Client):
         
         buttons = []
         for idx, msg in enumerate(messages[:10], 1):
-            output += f"{idx}. From: {msg['from']['address']} - Subject: {msg['subject']}\n"
+            output += f"{idx}. From: `{msg['from']['address']}` - Subject: {msg['subject']}\n"
             button = InlineKeyboardButton(f"{idx}", callback_data=f"read_{msg['id']}")
             buttons.append(button)
 
