@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 import os
@@ -10,14 +11,12 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from googletrans import Translator, LANGUAGES
-from config import COMMAND_PREFIX, OCR_WORKER_URL, IMGAI_SIZE_LIMIT
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, OCR_WORKER_URL, IMGAI_SIZE_LIMIT, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Initialize Google Translator
 translator = Translator()
 
-# Image To Base64
 def image_to_base64(image_path: str, max_size: int = IMGAI_SIZE_LIMIT) -> str:
     try:
         file_size = os.path.getsize(image_path)
@@ -35,7 +34,6 @@ def image_to_base64(image_path: str, max_size: int = IMGAI_SIZE_LIMIT) -> str:
         LOGGER.error(f"Error converting image to base64: {e}")
         raise
 
-# Google Translate Library
 def translate_text(text: str, target_lang: str) -> str:
     try:
         translation = translator.translate(text, dest=target_lang)
@@ -89,20 +87,16 @@ async def ocr_extract_text(client: Client, message: Message) -> str:
             LOGGER.info(f"Deleted temporary image file: {photo_path}")
 
 async def translate_handler(client: Client, message: Message):
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /tr")
         return
 
-    # Check if command is combined format (e.g., /tren)
     combined_format = len(message.command[0]) > 2 and message.command[0][2:].lower() in LANGUAGES
     photo_mode = message.reply_to_message and message.reply_to_message.photo
     text_mode = (message.reply_to_message and message.reply_to_message.text) or (len(message.command) > (1 if combined_format else 2))
 
-    # Determine target language
     if combined_format:
         target_lang = message.command[0][2:].lower()
         text_to_translate = " ".join(message.command[1:]) if not (photo_mode or (message.reply_to_message and message.reply_to_message.text)) else None
@@ -127,7 +121,6 @@ async def translate_handler(client: Client, message: Message):
         LOGGER.warning(f"Invalid language code: {target_lang}")
         return
 
-    # Handle text input (direct or replied text)
     if text_mode and not photo_mode:
         text_to_translate = message.reply_to_message.text if message.reply_to_message and message.reply_to_message.text else text_to_translate
         if not text_to_translate:
@@ -156,7 +149,6 @@ async def translate_handler(client: Client, message: Message):
         LOGGER.warning("No valid input provided for translation")
         return
 
-    # Send processing message
     loading_message = await client.send_message(
         chat_id=message.chat.id,
         text="**Translating Your Input...✨**",
@@ -164,7 +156,6 @@ async def translate_handler(client: Client, message: Message):
     )
 
     try:
-        # If photo, extract text using OCR
         if photo_mode:
             text_to_translate = await ocr_extract_text(client, message)
             if not text_to_translate:
@@ -176,7 +167,6 @@ async def translate_handler(client: Client, message: Message):
                 await notify_admin(client, "/tr ocr", Exception("No valid text extracted from image"), message)
                 return
 
-        # Translate the text
         try:
             translated_text = translate_text(text_to_translate, target_lang)
         except Exception as e:
