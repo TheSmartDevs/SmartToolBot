@@ -1,3 +1,6 @@
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 import base64
@@ -7,7 +10,7 @@ from pyrogram.types import Message
 from pyrogram.enums import ParseMode, ChatType, ChatAction
 from pyrogram.raw.functions.users import GetFullUser
 from PIL import Image
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER
 from core import banned_users
 import json
@@ -393,11 +396,11 @@ async def generate_quote(client: Client, message: Message, session):
                 os.remove('Quotly.webp')
 
 def setup_q_handler(app: Client):
-    @app.on_message(filters.command(["q", "qoute", "csticker"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
+    @app.on_message(filters.command(["q"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def q_command(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         async with aiohttp.ClientSession() as session:
