@@ -1,13 +1,15 @@
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from core import banned_users
 from utils import notify_admin, LOGGER
-import aiohttp
 import time
 
-# Temporary pagination session storage
 pagination_sessions = {}
 
 def setup_cpn_handler(app: Client):
@@ -19,7 +21,7 @@ def setup_cpn_handler(app: Client):
 
         if await banned_users.find_one({"user_id": user_id}):
             LOGGER.info(f"[CPN] Blocked banned user: {user_id}")
-            await client.send_message(chat_id, "**✘ Sorry, You're Banned From Using Me ↯**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(chat_id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         args = message.text.split()
