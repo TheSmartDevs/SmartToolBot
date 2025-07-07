@@ -44,6 +44,19 @@
       "description": "OpenAI API Key from OpenAI API Developer Console. Required for AI features.",
       "required": true
     },
+    "REPLICATE_API_TOKEN": {
+      "description": "Replicate.com API token for AI image and LLM features.",
+      "required": false
+    },
+    "GOOGLE_API_KEY": {
+      "description": "Google API Key for Google-based services.",
+      "required": false
+    },
+    "MODEL_NAME": {
+      "description": "Model name for Gemini API (e.g. gemini-1.5 HEM).",
+      "value": "gemini-1.5 HEM",
+      "required": false
+    },
     "GROQ_API_KEY": {
       "description": "GROQ API Key from GROQ API Console.",
       "required": false
@@ -56,14 +69,6 @@
     "TEXT_MODEL": {
       "description": "Text model for GROQ API. Defaults to deepseek-r1-distill-llama-70b.",
       "value": "deepseek-r1-distill-llama-70b",
-      "required": false
-    },
-    "LOCATIONIQ_API_KEY": {
-      "description": "LocationIQ API Key from LocationIQ website.",
-      "required": false
-    },
-    "IPINFO_API_TOKEN": {
-      "description": "IPInfo API Token from IPInfo website.",
       "required": false
     },
     "NEWS_API_KEY": {
@@ -124,8 +129,13 @@
       "required": false
     },
     "UPDATE_CHANNEL_URL": {
-      "description": "Bot updates channel URL. Defaults to t.me/TheSmartDev.",
-      "value": "t.me/TheSmartDev",
+      "description": "Bot updates channel URL. Defaults to https://t.me/TheSmartDev.",
+      "value": "https://t.me/TheSmartDev",
+      "required": false
+    },
+    "LOG_CHANNEL_ID": {
+      "description": "Bot log channel ID. Defaults to -100432424242.",
+      "value": "-100432424242",
       "required": false
     },
     "PROFILE_ERROR_URL": {
@@ -178,6 +188,11 @@
     "VIDEO_RESOLUTION": {
       "description": "Video resolution for YouTube downloads. Defaults to 1280x720.",
       "value": "1280x720",
+      "required": false
+    },
+    "BAN_REPLY": {
+      "description": "Reply message for banned users. Defaults to **Sorry Bro You're Banned From Using Me ❌**.",
+      "value": "**Sorry Bro You're Banned From Using Me ❌**",
       "required": false
     }
   },
