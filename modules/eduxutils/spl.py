@@ -1,20 +1,21 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from pyrogram.handlers import MessageHandler
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def check_spelling(word):
     url = f"https://abirthetech.serv00.net/spl.php?prompt={word}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                response.raise_for_status()  # Raise an exception for non-200 status codes
+                response.raise_for_status()
                 result = await response.json()
                 if 'response' not in result:
                     raise ValueError("Invalid API response: 'response' key missing")
@@ -25,18 +26,14 @@ async def check_spelling(word):
         raise
 
 async def spell_check(client: Client, message: Message):
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # Await for MotorDB (async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /spell")
         return
 
-    # Check if the message is a reply
     if message.reply_to_message and message.reply_to_message.text:
         user_input = message.reply_to_message.text.strip()
-        # Ensure reply contains a single word
         if len(user_input.split()) != 1:
             await client.send_message(
                 message.chat.id,
@@ -46,7 +43,6 @@ async def spell_check(client: Client, message: Message):
             LOGGER.warning(f"Invalid reply format: {user_input}")
             return
     else:
-        # Check if command has a single word
         user_input = message.text.split(maxsplit=1)
         if len(user_input) < 2 or len(user_input[1].split()) != 1:
             await client.send_message(
@@ -58,7 +54,6 @@ async def spell_check(client: Client, message: Message):
             return
         user_input = user_input[1].strip()
 
-    # Proceed with spell check
     checking_message = await client.send_message(
         message.chat.id,
         "**Checking Spelling...✨**",
@@ -73,9 +68,7 @@ async def spell_check(client: Client, message: Message):
         LOGGER.info(f"Spelling correction sent for '{user_input}' in chat {message.chat.id}")
     except Exception as e:
         LOGGER.error(f"Error processing spelling check for word '{user_input}': {e}")
-        # Notify admins
         await notify_admin(client, "/spell", e, message)
-        # Send user-facing error message
         await checking_message.edit(
             text="**❌ Sorry, Spelling Check API Failed**",
             parse_mode=ParseMode.MARKDOWN
