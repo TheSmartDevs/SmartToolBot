@@ -1,24 +1,26 @@
-#Copyright @ISmartCoder
-#Updates Channel: https://t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Channel t.me/TheSmartDev
+
 import asyncio
-import requests
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
-from config import BIN_KEY, COMMAND_PREFIX, UPDATE_CHANNEL_URL
+from config import BIN_KEY, COMMAND_PREFIX, UPDATE_CHANNEL_URL, BAN_REPLY
 from utils import notify_admin, LOGGER
 from core import banned_users
 import pycountry
 
-def get_bin_info(bin, client, message):
+async def get_bin_info(bin, client, message):
     headers = {'x-api-key': BIN_KEY}
     try:
-        response = requests.get(f"https://data.handyapi.com/bin/{bin}", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            LOGGER.error(f"API returned status code {response.status_code}")
-            raise Exception(f"API returned status code {response.status_code}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://data.handyapi.com/bin/{bin}", headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    LOGGER.error(f"API returned status code {response.status}")
+                    raise Exception(f"API returned status code {response.status}")
     except Exception as e:
         LOGGER.error(f"Error fetching BIN info: {str(e)}")
         asyncio.create_task(notify_admin(client, "/bin", e, message))
@@ -39,7 +41,7 @@ def setup_bin_handler(app: Client):
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(
                 message.chat.id, 
-                "**✘Sorry You're Banned From Using Me↯**", 
+                BAN_REPLY, 
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup(
                     [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
@@ -68,7 +70,7 @@ def setup_bin_handler(app: Client):
                 [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
             )
         )
-        bin_info = get_bin_info(bin[:6], client, message)
+        bin_info = await get_bin_info(bin[:6], client, message)
         await progress_message.delete()
 
         if not bin_info or bin_info.get("Status") != "SUCCESS":
