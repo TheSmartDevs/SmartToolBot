@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 import os
@@ -9,15 +10,14 @@ from PIL import Image
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX, OCR_WORKER_URL, IMGAI_SIZE_LIMIT
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin
-from core import banned_users          # Import banned_users
+from config import COMMAND_PREFIX, OCR_WORKER_URL, IMGAI_SIZE_LIMIT, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def ocr_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # FIX: Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, BAN_REPLY)
         return
 
     if not message.reply_to_message or not message.reply_to_message.photo:
@@ -37,18 +37,15 @@ async def ocr_handler(client: Client, message: Message):
     photo_path = None
 
     try:
-        # Download image
         LOGGER.info("Downloading image...")
         photo_path = await client.download_media(
             message=message.reply_to_message,
             file_name=f"ocr_temp_{message.id}.jpg"
         )
 
-        # Convert to base64
         LOGGER.info("Converting image to base64...")
         img_base64 = image_to_base64(photo_path)
 
-        # Send to OCR API
         LOGGER.info("Sending image to OCR API...")
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -64,13 +61,11 @@ async def ocr_handler(client: Client, message: Message):
                         text="<b>❌ Sorry Bro OCR API Dead</b>",
                         parse_mode=ParseMode.HTML
                     )
-                    # Notify admins of API error
                     await notify_admin(client, "/ocr", Exception(f"API returned status {response.status}"), message)
                     return
 
                 result = await response.json()
 
-        # Send whatever text is received from API
         LOGGER.info(f"OCR API Response: {result}")
         text = result.get('text', '')
 
@@ -101,7 +96,6 @@ async def ocr_handler(client: Client, message: Message):
         )
         await notify_admin(client, "/ocr", e, message)
     finally:
-        # Cleanup
         if photo_path and os.path.exists(photo_path):
             os.remove(photo_path)
             LOGGER.info(f"Deleted temporary image file: {photo_path}")
