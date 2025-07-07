@@ -1,11 +1,12 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import random
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX, MULTI_CCGEN_LIMIT
+from config import COMMAND_PREFIX, MULTI_CCGEN_LIMIT, BAN_REPLY
 from utils import notify_admin, LOGGER
 from core import banned_users
 
@@ -84,7 +85,7 @@ def setup_multi_handler(app: Client):
     async def multigen_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         user_input = message.text.split()
@@ -135,7 +136,7 @@ def setup_multi_handler(app: Client):
             total_size = total_lines
 
             caption = (
-                "**Smart Multiple  CC Generator ✅**\n"
+                "**Smart Multiple CC Generator ✅**\n"
                 "**━━━━━━━━━━━━━━━━━**\n"
                 f"**⊗ Total Amount:** {total_amount}\n"
                 f"**⊗ Bins: ** **Multiple Bins Used **\n"
