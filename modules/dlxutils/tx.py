@@ -1,3 +1,6 @@
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
+
 import os
 import re
 import asyncio
@@ -10,7 +13,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from moviepy import VideoFileClip
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
 
@@ -26,7 +29,6 @@ class TwitterDownloader:
         self.temp_dir = temp_dir
 
     async def sanitize_filename(self, title: str) -> str:
-        """Sanitize file name by removing invalid characters."""
         title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).strip()
         return f"{title.replace(' ', '_')}_{int(time.time())}"
 
@@ -111,8 +113,8 @@ def setup_tx_handler(app: Client):
     @app.on_message(filters.regex(rf"^{command_prefix_regex}tx(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def tx_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         url = None
@@ -154,10 +156,9 @@ def setup_tx_handler(app: Client):
             filename = video_info['filename']
             webpage_url = video_info['webpage_url']
 
-            # Get video duration using moviepy
             video_clip = VideoFileClip(filename)
-            duration = video_clip.duration  # Duration in seconds
-            video_clip.close()  # Close the clip to free resources
+            duration = video_clip.duration
+            video_clip.close()
 
             if message.from_user:
                 user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
