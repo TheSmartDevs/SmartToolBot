@@ -1,6 +1,7 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
 # This Script Mainly Based On https://github.com/abirxdhackz/SmartPayBot
+
 import uuid
 import hashlib
 import time
@@ -26,11 +27,10 @@ from pyrogram.raw.types import (
     KeyboardButtonBuy
 )
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler, RawUpdateHandler
-from config import COMMAND_PREFIX, OWNER_ID, DEVELOPER_USER_ID
-from utils import LOGGER  # Import LOGGER from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, OWNER_ID, DEVELOPER_USER_ID, BAN_REPLY
+from utils import LOGGER
+from core import banned_users
 
-# Use the imported LOGGER
 logger = LOGGER
 
 # Shared Strings and Emojis
@@ -77,12 +77,9 @@ INVALID_INPUT_TEXT = "**❌ Sorry Bro! Invalid Input! Use a positive number.**"
 INVOICE_FAILED_TEXT = "**❌ Invoice Creation Failed, Bruh! Try Again!**"
 PAYMENT_FAILED_TEXT = "**❌ Sorry Bro! Payment Declined! Contact Support!**"
 
-# Store active invoices to prevent duplicates (in-memory, replace with DB for production)
 active_invoices = {}
 
-# Modular Handler Setup
 def setup_donate_handler(app):
-    # Generate Dynamic Contribution Buttons
     def get_donation_buttons(amount: int = 5):
         if amount == 5:
             return InlineKeyboardMarkup([
@@ -95,13 +92,11 @@ def setup_donate_handler(app):
              InlineKeyboardButton("+5", callback_data=f"increment_gift_{amount}")]
         ])
 
-    # Generate and Send Invoice Function
     async def generate_invoice(client: Client, chat_id: int, user_id: int, amount: int):
         if active_invoices.get(user_id):
             await client.send_message(chat_id, DUPLICATE_INVOICE_TEXT, parse_mode=ParseMode.MARKDOWN)
             return
 
-        # Send loading message with back button
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="show_donate_options")]])
         loading_message = await client.send_message(
             chat_id,
@@ -113,7 +108,6 @@ def setup_donate_handler(app):
         try:
             active_invoices[user_id] = True
 
-            # Generate unique payload with UUID
             timestamp = int(time.time())
             unique_id = str(uuid.uuid4())[:8]
             invoice_payload = f"contribution_{user_id}_{amount}_{timestamp}_{unique_id}"
@@ -123,7 +117,6 @@ def setup_donate_handler(app):
             description = f"Contribute {amount} Stars to support ongoing development and keep the tools free, fast, and reliable for everyone 💫 Every star helps us grow!"
             currency = "XTR"
 
-            # Create Invoice object
             invoice = Invoice(
                 currency=currency,
                 prices=[LabeledPrice(label=f"⭐ {amount} Stars", amount=amount)],
@@ -138,7 +131,6 @@ def setup_donate_handler(app):
                 flexible=False
             )
 
-            # Create InputMediaInvoice
             media = InputMediaInvoice(
                 title=title,
                 description=description,
@@ -148,7 +140,6 @@ def setup_donate_handler(app):
                 provider_data=DataJSON(data="{}")
             )
 
-            # Create ReplyInlineMarkup with KeyboardButtonBuy
             markup = ReplyInlineMarkup(
                 rows=[
                     KeyboardButtonRow(
@@ -159,10 +150,8 @@ def setup_donate_handler(app):
                 ]
             )
 
-            # Resolve peer
             peer = await client.resolve_peer(chat_id)
 
-            # Send the invoice
             await client.invoke(
                 SendMedia(
                     peer=peer,
@@ -173,7 +162,6 @@ def setup_donate_handler(app):
                 )
             )
 
-            # Edit loading message to confirmation
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
@@ -195,17 +183,14 @@ def setup_donate_handler(app):
         finally:
             active_invoices.pop(user_id, None)
 
-    # Handle /donate and /gift Commands
     async def donate_command(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         logger.info(f"Donation command received: user: {user_id or 'unknown'}, chat: {message.chat.id}")
         if len(message.command) == 1:
-            # Show contribution options with dynamic buttons
             reply_markup = get_donation_buttons()
             await client.send_message(
                 chat_id=message.chat.id,
@@ -214,11 +199,9 @@ def setup_donate_handler(app):
                 reply_markup=reply_markup
             )
         elif len(message.command) == 2 and message.command[1].isdigit() and int(message.command[1]) > 0:
-            # Generate invoice for specified amount
             amount = int(message.command[1])
             await generate_invoice(client, message.chat.id, message.from_user.id, amount)
         else:
-            # Invalid command
             await client.send_message(
                 chat_id=message.chat.id,
                 text=INVALID_INPUT_TEXT,
@@ -226,21 +209,18 @@ def setup_donate_handler(app):
                 reply_to_message_id=message.id
             )
 
-    # Handle Callback Queries for Contribution Buttons and "Back"
     async def handle_donate_callback(client: Client, callback_query: CallbackQuery):
         data = callback_query.data
         chat_id = callback_query.message.chat.id
         user_id = callback_query.from_user.id
 
-        # Check if user is banned
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(chat_id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(chat_id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             await callback_query.answer("You are banned!", show_alert=True)
             return
 
         logger.info(f"Callback query received: data={data}, user: {user_id}, chat: {chat_id}")
         if data.startswith("gift_"):
-            # Handle gift_X
             quantity = int(data.split("_")[1])
             await generate_invoice(client, chat_id, user_id, quantity)
             await callback_query.answer("✅ Invoice Generated! Pay Now! 🌟")
@@ -258,7 +238,7 @@ def setup_donate_handler(app):
             await callback_query.answer(f"Updated to {new_amount} Stars")
         elif data.startswith("decrement_gift_"):
             current_amount = int(data.split("_")[2])
-            new_amount = max(5, current_amount - 5)  # Minimum 5 Stars
+            new_amount = max(5, current_amount - 5)
             reply_markup = get_donation_buttons(new_amount)
             await client.edit_message_text(
                 chat_id,
@@ -269,7 +249,6 @@ def setup_donate_handler(app):
             )
             await callback_query.answer(f"Updated to {new_amount} Stars")
         elif data == "show_donate_options":
-            # Show contribution options again
             reply_markup = get_donation_buttons()
             await client.edit_message_text(
                 chat_id,
@@ -280,7 +259,6 @@ def setup_donate_handler(app):
             )
             await callback_query.answer()
 
-    # Raw Update Handler for Payment Processing
     async def raw_update_handler(client: Client, update, users, chats):
         if isinstance(update, UpdateBotPrecheckoutQuery):
             try:
@@ -305,7 +283,7 @@ def setup_donate_handler(app):
                 await client.invoke(
                     SetBotShippingResults(
                         query_id=update.query_id,
-                        shipping_options=[]  # No shipping for digital contributions
+                        shipping_options=[]
                     )
                 )
                 logger.info(f"✅ Shipping query {update.query_id} OK for user {update.user_id}")
@@ -320,7 +298,6 @@ def setup_donate_handler(app):
         elif isinstance(update, UpdateNewMessage) and isinstance(update.message, MessageService) and isinstance(update.message.action, MessageActionPaymentSentMe):
             payment = update.message.action
             try:
-                # Extract user_id and chat_id
                 user_id = update.message.from_id.user_id if update.message.from_id and hasattr(update.message.from_id, 'user_id') else None
                 if not user_id and users:
                     possible_user_ids = [uid for uid in users if uid > 0]
@@ -329,11 +306,10 @@ def setup_donate_handler(app):
                 if not user_id:
                     raise ValueError(f"Invalid user_id ({user_id})")
 
-                # Check if user is banned
-                if await banned_users.find_one({"user_id": user_id}):
+                if await banned_users.banned_users.find_one({"user_id": user_id}):
                     await client.send_message(
                         user_id,
-                        "**✘Sorry You're Banned From Using Me↯**",
+                        BAN_REPLY,
                         parse_mode=ParseMode.MARKDOWN
                     )
                     return
@@ -348,24 +324,21 @@ def setup_donate_handler(app):
                     chat_id = None
 
                 if not chat_id and user_id:
-                    chat_id = user_id  # Assume private chat
+                    chat_id = user_id
 
                 if not chat_id:
                     raise ValueError(f"Invalid chat_id ({chat_id})")
 
-                # Get user details
                 user = users.get(user_id)
                 full_name = f"{user.first_name} {getattr(user, 'last_name', '')}".strip() or "Unknown" if user else "Unknown"
                 username = f"@{user.username}" if user and user.username else "@N/A"
 
-                # Send success message to user
                 await client.send_message(
                     chat_id=chat_id,
                     text=PAYMENT_SUCCESS_TEXT.format(full_name, payment.total_amount, payment.charge.id),
                     parse_mode=ParseMode.MARKDOWN
                 )
 
-                # Notify Admins
                 admin_text = ADMIN_NOTIFICATION_TEXT.format(full_name, user_id, username, payment.total_amount, payment.charge.id)
                 for admin_id in OWNER_ID:
                     try:
@@ -387,7 +360,6 @@ def setup_donate_handler(app):
                         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Support", url=f"tg://user?id={DEVELOPER_USER_ID}")]])
                     )
 
-    # Register Handlers
     app.add_handler(
         MessageHandler(
             donate_command,
