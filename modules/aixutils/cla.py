@@ -4,17 +4,16 @@
 import os
 import logging
 import json
-import requests
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY, REPLICATE_API_TOKEN
 from core import banned_users
-from utils import notify_admin 
-from config import REPLICATE_API_TOKEN
+from utils import LOGGER, notify_admin
 
 CLAUDE_API_URL = "https://api.replicate.com/v1/models/anthropic/claude-3.7-sonnet/predictions"
 
-def query_claude(prompt: str) -> str:
+async def query_claude(prompt: str) -> str:
     headers = {
         "Authorization": f"Bearer {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
@@ -32,24 +31,23 @@ def query_claude(prompt: str) -> str:
         }
     }
 
-    response = requests.post(CLAUDE_API_URL, headers=headers, data=json.dumps(payload))
-
-    if response.status_code == 201:
-        result = response.json()
-        output = result.get("output", [])
-        if isinstance(output, list):
-            return ''.join(output).strip()
-        return str(output)
-    else:
-        raise Exception(f"Claude API error {response.status_code}: {response.text}")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(CLAUDE_API_URL, headers=headers, data=json.dumps(payload)) as response:
+            if response.status == 201:
+                result = await response.json()
+                output = result.get("output", [])
+                if isinstance(output, list):
+                    return ''.join(output).strip()
+                return str(output)
+            else:
+                raise Exception(f"Claude API error {response.status}: {await response.text()}")
 
 def setup_cla_handler(app: Client):
     @app.on_message(filters.command(["cla"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def claude_handler(client: Client, message: Message):
         user_id = message.from_user.id
-        # FIX: Await the banned_users.find_one as it's an async call
         if await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘ Sorry, you're banned from using me ↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         loading_message = None
@@ -67,7 +65,7 @@ def setup_cla_handler(app: Client):
                 await client.edit_message_text(message.chat.id, loading_message.id, "**⚠️ Please provide a prompt for Claude AI ✨**")
                 return
 
-            response_text = query_claude(prompt)
+            response_text = await query_claude(prompt)
 
             # Telegram message limit: 4096 chars
             if len(response_text) > 4000:
@@ -79,7 +77,7 @@ def setup_cla_handler(app: Client):
                 await client.edit_message_text(message.chat.id, loading_message.id, response_text)
 
         except Exception as e:
-            logging.error(f"Error during Claude generation: {e}")
+            LOGGER.error(f"Error during Claude generation: {e}")
             if loading_message:
                 await client.edit_message_text(message.chat.id, loading_message.id, "**🔍 Sorry, Claude AI ✨ failed to respond.**")
             await notify_admin(client, "/cla", e, message)
