@@ -1,12 +1,13 @@
-#Copyright @ISmartCoder
-#Updates Channel: https://t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import re
 import os
 import time
 from pyrogram import Client, filters, handlers
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from config import COMMAND_PREFIX, MAX_TXT_SIZE, UPDATE_CHANNEL_URL
+from config import COMMAND_PREFIX, MAX_TXT_SIZE, UPDATE_CHANNEL_URL, BAN_REPLY
 from utils import notify_admin, LOGGER
 from core import banned_users
 
@@ -86,7 +87,7 @@ async def handle_fcc_command(client, message: Message):
     if user_id and await banned_users.find_one({"user_id": user_id}):
         await client.send_message(
             message.chat.id,
-            "**✘Sorry You're Banned From Using Me↯**",
+            BAN_REPLY,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]]
