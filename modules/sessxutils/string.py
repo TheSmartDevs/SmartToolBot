@@ -1,6 +1,7 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-import requests
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
@@ -24,27 +25,23 @@ from telethon.errors import (
 )
 from asyncio.exceptions import TimeoutError
 import asyncio
-from config import COMMAND_PREFIX
-from utils import LOGGER  # Import LOGGER from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Use the imported LOGGER
 logger = LOGGER
 
-# Constants for timeouts
-TIMEOUT_OTP = 600  # 10 minutes
-TIMEOUT_2FA = 300  # 5 minutes
+TIMEOUT_OTP = 600
+TIMEOUT_2FA = 300
 
 session_data = {}
 
 def setup_string_handler(app: Client):
     @app.on_message(filters.command(["pyro", "tele"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def session_setup(client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         if message.chat.type in (ChatType.SUPERGROUP, ChatType.GROUP):
@@ -60,40 +57,36 @@ def setup_string_handler(app: Client):
 
     @app.on_callback_query(filters.regex(r"^session_start_"))
     async def callback_query_start_handler(client, callback_query):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(callback_query.message.chat.id, BAN_REPLY)
             return
 
         await handle_callback_query(client, callback_query)
 
     @app.on_callback_query(filters.regex(r"^session_restart_"))
     async def callback_query_restart_handler(client, callback_query):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(callback_query.message.chat.id, BAN_REPLY)
             return
 
         await handle_callback_query(client, callback_query)
 
     @app.on_callback_query(filters.regex(r"^session_close$"))
     async def callback_query_close_handler(client, callback_query):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(callback_query.message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(callback_query.message.chat.id, BAN_REPLY)
             return
 
         await handle_callback_query(client, callback_query)
 
     @app.on_message(filters.text & filters.create(lambda _, __, message: message.chat.id in session_data))
     async def text_handler(client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         await handle_text(client, message)
@@ -232,7 +225,6 @@ async def send_otp(client, message, otp_message):
         session["code"] = code
         session["stage"] = "otp"
         
-        # Start a timeout task for OTP expiry
         asyncio.create_task(handle_otp_timeout(client, message))
 
         await client.send_message(
@@ -319,7 +311,6 @@ async def validate_otp(client, message, otp_message):
     except (SessionPasswordNeeded, SessionPasswordNeededError):
         session["stage"] = "2fa"
         
-        # Start a timeout task for 2FA expiry
         asyncio.create_task(handle_2fa_timeout(client, message))
         
         await client.send_message(
