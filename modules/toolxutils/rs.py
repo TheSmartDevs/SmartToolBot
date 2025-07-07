@@ -1,19 +1,20 @@
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
 import aiofiles
 from PIL import Image
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from tempfile import mkstemp
-from config import COMMAND_PREFIX
-from utils import LOGGER
-from core import banned_users  # Add banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 import asyncio
 
-# Async-safe temp image storage per user
 image_store = {}
 image_store_lock = asyncio.Lock()
 
-# Format resolutions (unchanged)
 RESOLUTIONS = {
     "dp_square": (1080, 1080),
     "widescreen": (1920, 1080),
@@ -37,7 +38,6 @@ RESOLUTIONS = {
     "bot_father": (640, 360)
 }
 
-# Async resize function (unchanged)
 async def resize_image(input_path, width, height):
     fd, output_path = mkstemp(suffix=".jpg")
     os.close(fd)
@@ -54,24 +54,20 @@ async def resize_image(input_path, width, height):
     return output_path
 
 def setup_rs_handler(app: Client):
-
     @app.on_message(filters.command(["rs", "res"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def resize_menu_handler(client: Client, message: Message):
         chat_id = message.chat.id
         user_id = message.from_user.id
 
-        # Banned user check (await for Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(chat_id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(chat_id, BAN_REPLY)
             return
 
-        # Check if the replied message contains a photo or an image file
         reply = message.reply_to_message
         if not reply or (not reply.photo and not reply.document):
             await client.send_message(chat_id, "**❌ Reply to a photo or an image file**")
             return
 
-        # Validate document type if it's a document
         if reply.document:
             mime_type = reply.document.mime_type
             file_name = reply.document.file_name
@@ -82,7 +78,6 @@ def setup_rs_handler(app: Client):
 
         status_msg = await client.send_message(chat_id, "**Resizing Your Image...**")
         try:
-            # Download image (photo or document)
             media = reply.photo or reply.document
             original_file = await client.download_media(media, file_name=f"res_{user_id}.jpg")
             async with image_store_lock:
@@ -121,6 +116,7 @@ def setup_rs_handler(app: Client):
 
         except Exception as e:
             LOGGER.error(f"[{user_id}] Error downloading image: {e}", exc_info=True)
+            await notify_admin(client, "/rs", e, message)
             await client.send_message(chat_id, "**This Image Can Not Be Resized**")
         finally:
             await status_msg.delete()
@@ -155,6 +151,7 @@ def setup_rs_handler(app: Client):
             await callback_query.answer(f"Image successfully resized to {width}x{height}!")
         except Exception as e:
             LOGGER.error(f"[{user_id}] Resizing error: {e}", exc_info=True)
+            await notify_admin(client, "/rs", e, callback_query.message)
             await callback_query.answer("Failed to resize image.", show_alert=True)
         finally:
             async with image_store_lock:
