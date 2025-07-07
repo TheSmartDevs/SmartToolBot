@@ -1,5 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
+
 import os
 import time
 import re
@@ -11,26 +12,22 @@ import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
-from utils import LOGGER, progress_bar, notify_admin  # Import LOGGER, progress_bar, and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, progress_bar, notify_admin
+from core import banned_users
 
-# Use the imported LOGGER
 logger = LOGGER
 
-# Configuration
 class Config:
     TEMP_DIR = Path("temp")
 
 Config.TEMP_DIR.mkdir(exist_ok=True)
 
 async def sanitize_filename(title: str) -> str:
-    """Sanitize file name by removing invalid characters."""
     title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).strip()
     return f"{title.replace(' ', '_')}_{int(time.time())}"
 
 async def download_video(url: str, downloading_message: Message) -> Optional[dict]:
-    """Download video from TikTok URL using API."""
     api_url = "https://downloader.bot/api/tiktok/info"
     payload = {"url": url}
     headers = {
@@ -45,7 +42,6 @@ async def download_video(url: str, downloading_message: Message) -> Optional[dic
 
         if data.get("error"):
             logger.error(f"API error: {data['error']}")
-            # Notify admins
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}tt", Exception(f"API error: {data['error']}"), downloading_message)
             return None
 
@@ -53,7 +49,6 @@ async def download_video(url: str, downloading_message: Message) -> Optional[dic
         video_url = info.get("mp4")
         if not video_url:
             logger.error("No video URL found in API response")
-            # Notify admins
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}tt", Exception("No video URL found in API response"), downloading_message)
             return None
 
@@ -77,35 +72,29 @@ async def download_video(url: str, downloading_message: Message) -> Optional[dic
                     }
                 else:
                     logger.error(f"Failed to download video: HTTP {video_response.status}")
-                    # Notify admins
                     await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}tt", Exception(f"Failed to download video: HTTP {video_response.status}"), downloading_message)
                     return None
     except Exception as e:
         logger.error(f"Error downloading video: {e}")
-        # Notify admins
         await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}tt", e, downloading_message)
         return None
 
 def setup_tt_handler(app: Client):
-    # Create a regex pattern from the COMMAND_PREFIX list
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
 
     @app.on_message(filters.regex(rf"^{command_prefix_regex}tt(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def tiktok_handler(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         url = None
-        # Check if the message is a reply to another message containing a URL
         if message.reply_to_message and message.reply_to_message.text:
             replied_text = message.reply_to_message.text
             if re.match(r'https?://\S+', replied_text):
                 url = replied_text
 
-        # If no URL from reply, check the command arguments
         if not url:
             command_parts = message.text.split(maxsplit=1)
             if len(command_parts) < 2:
@@ -171,7 +160,5 @@ def setup_tt_handler(app: Client):
 
         except Exception as e:
             logger.error(f"An error occurred: {e}")
-            # Notify admins
-            await notify_admin(client, f"{COMMAND_PREFIX}tt", e, message)
-            # Send user-facing error message
+            await notify_admin(client, f"{COMMAND_PREFIX}tt", e, status_message)
             await status_message.edit_text("**TikTok Downloader API Dead**", parse_mode=ParseMode.MARKDOWN)
