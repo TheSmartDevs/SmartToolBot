@@ -1,13 +1,14 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin   # Use LOGGER and notify_admin from utils
-from core import banned_users           # Use banned_users from core
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 async def get_ip_info(ip: str) -> str:
     url = f"https://ipinfo.io/{ip}/json"
@@ -24,7 +25,6 @@ async def get_ip_info(ip: str) -> str:
         city = data.get("city", "Unknown")
         timezone = data.get("timezone", "Unknown")
 
-        # Simulated IP fraud score and risk level for demonstration
         fraud_score = 0
         risk_level = "low" if fraud_score < 50 else "high"
 
@@ -53,9 +53,8 @@ async def get_ip_info(ip: str) -> str:
 
 async def ip_info_handler(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        await client.send_message(message.chat.id, BAN_REPLY)
         return
 
     if len(message.command) <= 1:
