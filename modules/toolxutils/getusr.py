@@ -1,8 +1,11 @@
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from core import banned_users
-from utils import LOGGER
+from utils import LOGGER, notify_admin
 import aiohttp
 import aiofiles
 import json
@@ -12,22 +15,19 @@ from typing import Optional
 def setup_getusr_handler(app: Client) -> None:
     @app.on_message(filters.command(["getusers"], prefixes=COMMAND_PREFIX))
     async def get_users(client: Client, message) -> None:
-        """Handle /getusers command to fetch bot user data."""
         user_id = message.from_user.id
         chat_id = message.chat.id
         LOGGER.info(f"User {user_id} initiated /getusers command in chat {chat_id}")
 
-        # Check if user is banned (await for Motor async)
         if await banned_users.find_one({"user_id": user_id}):
             LOGGER.warning(f"Banned user {user_id} attempted to use /getusers")
             await client.send_message(
                 chat_id,
-                "**✘ You're banned from using this bot.**",
+                BAN_REPLY,
                 parse_mode=ParseMode.MARKDOWN
             )
             return
 
-        # Restrict to private chats only
         if message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}:
             LOGGER.info(f"User {user_id} attempted /getusers in group chat {chat_id}")
             await client.send_message(
@@ -37,7 +37,6 @@ def setup_getusr_handler(app: Client) -> None:
             )
             return
 
-        # Validate command arguments
         args = message.text.split(maxsplit=1)
         if len(args) < 2 or not args[1].strip():
             LOGGER.error(f"User {user_id} provided no bot token")
@@ -55,7 +54,6 @@ def setup_getusr_handler(app: Client) -> None:
             parse_mode=ParseMode.MARKDOWN
         )
 
-        # Validate bot token using Telegram's getMe API
         LOGGER.info(f"Validating bot token ending in {bot_token[-4:]}")
         bot_info = await validate_bot_token(bot_token)
         if bot_info is None:
@@ -68,7 +66,6 @@ def setup_getusr_handler(app: Client) -> None:
             )
             return
 
-        # Fetch data from API
         LOGGER.info(f"Fetching data for bot {bot_info.get('username', 'N/A')}")
         data = await fetch_bot_data(bot_token)
         if data is None:
@@ -81,7 +78,6 @@ def setup_getusr_handler(app: Client) -> None:
             )
             return
 
-        # Save and send data
         file_path = f"/tmp/users_{user_id}.json"
         try:
             await save_and_send_data(client, chat_id, data, file_path)
@@ -89,6 +85,7 @@ def setup_getusr_handler(app: Client) -> None:
             await loading_message.delete()
         except Exception as e:
             LOGGER.exception(f"Error processing data for user {user_id}: {str(e)}")
+            await notify_admin(client, "/getusers", e, message)
             await client.edit_message_text(
                 chat_id,
                 loading_message.id,
@@ -101,7 +98,6 @@ def setup_getusr_handler(app: Client) -> None:
                 LOGGER.debug(f"Cleaned up temporary file {file_path}")
 
 async def validate_bot_token(bot_token: str) -> Optional[dict]:
-    """Validate bot token using Telegram's getMe API."""
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.telegram.org/bot{bot_token}/getMe") as resp:
@@ -118,7 +114,6 @@ async def validate_bot_token(bot_token: str) -> Optional[dict]:
         return None
 
 async def fetch_bot_data(bot_token: str) -> Optional[dict]:
-    """Fetch bot user data from the API."""
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://web-production-5ec1f.up.railway.app/tgusers?token={bot_token}") as resp:
@@ -126,7 +121,6 @@ async def fetch_bot_data(bot_token: str) -> Optional[dict]:
                     LOGGER.warning(f"API returned status {resp.status} for bot token")
                     return None
                 data = await resp.json()
-                # Validate expected keys in API response
                 if not isinstance(data, dict) or "bot_info" not in data or "users" not in data or "chats" not in data:
                     LOGGER.error(f"Invalid API response structure for bot token")
                     return None
@@ -136,13 +130,10 @@ async def fetch_bot_data(bot_token: str) -> Optional[dict]:
         return None
 
 async def save_and_send_data(client: Client, chat_id: int, data: dict, file_path: str) -> None:
-    """Save data to file and send as document."""
-    # Save data to temporary file
     async with aiofiles.open(file_path, mode='w') as f:
         await f.write(json.dumps(data, indent=4))
     LOGGER.debug(f"Saved data to {file_path}")
 
-    # Prepare caption with bot info
     bot_info = data.get("bot_info", {})
     total_users = data.get("total_users", 0)
     total_chats = data.get("total_chats", 0)
@@ -157,7 +148,6 @@ async def save_and_send_data(client: Client, chat_id: int, data: dict, file_path
         "**📂 File contains user & chat IDs.**"
     )
 
-    # Send document
     await client.send_document(
         chat_id=chat_id,
         document=file_path,
