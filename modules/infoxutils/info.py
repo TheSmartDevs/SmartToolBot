@@ -1,12 +1,13 @@
 # Copyright @ISmartCoder
-# Channel t.me/TheSmartDev
+# Updates Channel t.me/TheSmartDev
+
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from pyrogram import filters, Client
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ParseMode, ChatType, UserStatus
 from pyrogram.errors import PeerIdInvalid, UsernameNotOccupied, ChannelInvalid
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, get_dc_locations
 from core import banned_users
 
@@ -41,8 +42,8 @@ def setup_info_handler(app):
     @app.on_message(filters.command(["info", "id"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def handle_info_command(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         logger.info("Received /info or /id command")
