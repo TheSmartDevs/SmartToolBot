@@ -1,12 +1,13 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import Message
 import re
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Use LOGGER and notify_admin
-from core import banned_users           # Add banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 def youtube_parser(url):
     reg_exp = r"(?:youtube\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)|.*[?&]v=)|youtu\.be/)([^\"&?/ ]{11})"
@@ -19,11 +20,10 @@ def youtube_parser(url):
 
 async def handle_yth_command(client: Client, message: Message):
     user_id = message.from_user.id if message.from_user else None
-    # Await the banned_users check (Motor async)
     if user_id and await banned_users.find_one({"user_id": user_id}):
         await client.send_message(
             chat_id=message.chat.id,
-            text="**✘Sorry You're Banned From Using Me↯**",
+            text=BAN_REPLY,
             parse_mode=ParseMode.HTML
         )
         return
