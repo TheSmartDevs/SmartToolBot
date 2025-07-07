@@ -85,6 +85,8 @@ VIDEO_RESOLUTION = get_env_or_default("VIDEO_RESOLUTION", "1280x720", lambda x: 
 DOMAIN_CHK_LIMIT = get_env_or_default("DOMAIN_CHK_LIMIT", 20, int)
 PROXY_CHECK_LIMIT = get_env_or_default("PROXY_CHECK_LIMIT", 20, int)
 
+BAN_REPLY = get_env_or_default("BAN_REPLY", "**Sorry Bro You're Banned From Using Me ❌**")
+
 # Validation for critical variables
 required_vars = {
     "API_ID": API_ID,
