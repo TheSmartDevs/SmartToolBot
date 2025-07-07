@@ -1,6 +1,6 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-# Note This Script Based On https://github.com/abirxdhack/Binance-P2P 
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import aiohttp
 import asyncio
 import json
@@ -9,11 +9,10 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Binance API URL and headers
 url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
 headers = {
     "Content-Type": "application/json",
@@ -47,7 +46,7 @@ async def fetch_page(session, asset, fiat, trade_type, pay_type, page, rows=20, 
 
 async def fetch_sellers(asset, fiat, trade_type, pay_type, client=None, message=None):
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch_page(session, asset, fiat, trade_type, pay_type, page, client=client, message=message) for page in range(1, 8)]  # Fetch first 7 pages
+        tasks = [fetch_page(session, asset, fiat, trade_type, pay_type, page, client=client, message=message) for page in range(1, 8)]
         results = await asyncio.gather(*tasks)
         all_sellers = [seller for result in results for seller in result if result]
         LOGGER.info(f"Fetched {len(all_sellers)} sellers for {asset} in {fiat}")
@@ -76,13 +75,12 @@ def save_to_json_file(data, filename, client=None, message=None):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
         LOGGER.info(f"Data saved to {path}")
-        # Schedule file for deletion after 10 minutes
         asyncio.create_task(delete_file_after_delay(path, 10*60))
     except Exception as e:
         LOGGER.error(f"Error saving to {filename}: {e}")
         if client and message:
             asyncio.create_task(notify_admin(client, "/p2p", e, message))
-        raise  # Re-raise to inform caller
+        raise
 
 def load_from_json_file(filename, client=None, message=None):
     try:
@@ -96,7 +94,7 @@ def load_from_json_file(filename, client=None, message=None):
         LOGGER.error(f"Error loading from {filename}: {e}")
         if client and message:
             asyncio.create_task(notify_admin(client, "/p2p", e, message))
-        raise  # Re-raise to inform caller
+        raise
 
 async def delete_file_after_delay(file_path, delay):
     await asyncio.sleep(delay)
@@ -125,16 +123,13 @@ def get_pay_type(fiat):
     pay_types = {
         "BDT": "bKash",
         "INR": "UPI"
-        # Add more fiat to pay type mappings as needed
     }
     return pay_types.get(fiat.upper(), "Unknown")
 
 async def p2p_handler(client, message):
-    # Check if user is banned
     user_id = message.from_user.id if message.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /p2p")
         return
 
@@ -176,11 +171,9 @@ async def p2p_handler(client, message):
         await notify_admin(client, "/p2p", e, message)
 
 async def next_page(client, callback_query):
-    # Check if user is banned
     user_id = callback_query.from_user.id if callback_query.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await callback_query.message.edit_text(BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use next page for {callback_query.data}")
         return
 
@@ -210,11 +203,9 @@ async def next_page(client, callback_query):
         await notify_admin(client, "/p2p next", e, callback_query.message)
 
 async def prev_page(client, callback_query):
-    # Check if user is banned
     user_id = callback_query.from_user.id if callback_query.from_user else None
-    # FIX: Await the banned_users.find_one as it's an async call
     if user_id and await banned_users.find_one({"user_id": user_id}):
-        await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        await callback_query.message.edit_text(BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use previous page for {callback_query.data}")
         return
 
