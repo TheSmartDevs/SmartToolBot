@@ -1,24 +1,25 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
-import requests
+import aiohttp
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 BASE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 
 async def fetch_crypto_data():
-    loop = asyncio.get_event_loop()
     try:
-        response = await loop.run_in_executor(None, requests.get, BASE_URL)
-        response.raise_for_status()
-        LOGGER.info("Successfully fetched crypto data from Binance API")
-        return response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(BASE_URL) as response:
+                response.raise_for_status()
+                LOGGER.info("Successfully fetched crypto data from Binance API")
+                return await response.json()
     except Exception as e:
         LOGGER.error(f"Failed to fetch crypto data: {e}")
         raise
@@ -48,11 +49,9 @@ def format_crypto_info(data, start_index=0):
 def setup_binance_handler(app: Client):
     @app.on_message(filters.command(["gainers", "losers"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def handle_command(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use /{message.command[0]}")
             return
 
@@ -83,16 +82,13 @@ def setup_binance_handler(app: Client):
             await fetching_message.delete()
             await client.send_message(message.chat.id, f"<b>❌ Sorry Binance API Dead</b>", parse_mode=ParseMode.HTML)
             LOGGER.error(f"Error processing /{command}: {e}")
-            # Notify admins about the error
             await notify_admin(client, f"/{command}", e, message)
 
     @app.on_callback_query(filters.regex(r"^(gainers|losers)_\d+"))
     async def handle_pagination(client: Client, callback_query: CallbackQuery):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+            await callback_query.message.edit_text(BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use pagination for {callback_query.data}")
             return
 
@@ -127,5 +123,4 @@ def setup_binance_handler(app: Client):
         except Exception as e:
             await callback_query.message.edit_text(f"<b>❌ Sorry Bro Binance API Dead</b>", parse_mode=ParseMode.HTML)
             LOGGER.error(f"Error in pagination for {command} (page {page}): {e}")
-            # Notify admins about the error
             await notify_admin(client, f"/{command} pagination", e, callback_query.message)
