@@ -1,5 +1,5 @@
-#Copyright @ISmartCoder
-#Updates Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
 
 import os
 import re
@@ -12,7 +12,7 @@ from typing import Optional
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
 
@@ -127,8 +127,8 @@ def setup_pinterest_handler(app: Client):
     )
     async def pin_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         url = None
