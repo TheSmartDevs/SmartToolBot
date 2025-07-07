@@ -1,36 +1,74 @@
-# Copyright @ISmartDevs
+# Copyright @ISmartCoder
 # Channel t.me/TheSmartDev
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from utils import LOGGER, notify_admin
+from core import banned_users
 
-# Temporary in-memory storage
 price_storage = {}
 
-async def get_binance_conversion_rate(base_coin: str, target_coin: str) -> float:
-    """
-    Fetch the conversion rate from Binance API for the base coin to the target coin.
-    """
-    url = f"https://api.binance.com/api/v3/ticker/price?symbol={base_coin.upper()}{target_coin.upper()}"
+async def get_spot_price(symbol: str) -> float | None:
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol.upper()}"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status != 200:
-                LOGGER.error("API request failed with status code %s", response.status)
-                raise Exception("API request failed")
+                LOGGER.error("API request failed with status code %s for symbol %s", response.status, symbol)
+                return None
             data = await response.json()
-            LOGGER.info("Successfully fetched conversion rate for %s to %s", base_coin, target_coin)
-            return float(data["price"])  # Use the "price" key for the conversion rate
+            return float(data.get("price")) if "price" in data else None
+
+async def get_conversion_data(base_coin: str, target_coin: str, amount: float):
+    direct_symbol = base_coin + target_coin
+    inverse_symbol = target_coin + base_coin
+
+    price = await get_spot_price(direct_symbol)
+    inverted = False
+    if price is None:
+        price = await get_spot_price(inverse_symbol)
+        if price is None:
+            return None
+        inverted = True
+
+    base_usdt_price = await get_spot_price(base_coin + "USDT") or 0.0
+    target_usdt_price = await get_spot_price(target_coin + "USDT") or 0.0
+
+    if inverted:
+        converted_amount = amount / price
+    else:
+        converted_amount = amount * price
+
+    total_in_usdt = amount * base_usdt_price
+
+    return {
+        "base_coin": base_coin,
+        "target_coin": target_coin,
+        "amount": amount,
+        "converted_amount": converted_amount,
+        "total_in_usdt": total_in_usdt,
+        "base_usdt_price": base_usdt_price,
+        "target_usdt_price": target_usdt_price,
+    }
+
+def format_response(data: dict) -> str:
+    return (
+        "Smart Binance Convert Successful ✅\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⊗ Base Coin:        {data['base_coin']}\n"
+        f"⊗ Target Coin:      {data['target_coin']}\n"
+        f"⊗ Amount:           {data['amount']:.4f} {data['base_coin']}\n"
+        f"⊗ Total In USDT:    {data['total_in_usdt']:.4f} USDT\n"
+        f"⊗ Converted Amount: {data['converted_amount']:.4f} {data['target_coin']}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Smooth Coin Converter → Activated ✅"
+    )
 
 def setup_coin_handler(app: Client):
     @app.on_message(filters.command(["cx"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def coin_handler(client, message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use /cx")
@@ -43,131 +81,55 @@ def setup_coin_handler(app: Client):
         if len(command) < 4:
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**❌ Please Provide Valid Format /cx `<amount>` `<base_coin>` `<target_coin>`**",
+                text="**Invalid format. Use /cx 10 ton usdt**",
                 parse_mode=ParseMode.MARKDOWN
             )
             LOGGER.warning("Invalid command format: %s", message.text)
             return
 
         try:
-            amount = float(command[1])  # The amount the user wants to convert
+            amount = float(command[1])
         except ValueError:
             await client.send_message(
                 chat_id=message.chat.id,
-                text="**❌ Please Provide a Valid Amount**",
+                text="**Invalid format. Use `/cx 10 ton usdt`**",
                 parse_mode=ParseMode.MARKDOWN
             )
             LOGGER.warning("Invalid amount provided: %s", command[1])
             return
-        
-        base_coin = command[2].upper()  # The coin the user is converting from
-        target_coin = command[3].upper()  # The coin the user is converting to
+
+        base_coin = command[2].upper()
+        target_coin = command[3].upper()
 
         loading_msg = await client.send_message(
             chat_id=message.chat.id,
-            text="**💥 SmartTools Fetching Database✨**",
+            text="**Fetching Token Price, Please Wait....**",
             parse_mode=ParseMode.MARKDOWN
         )
 
         try:
-            # Get the conversion rate (price of 1 unit of the base_coin in terms of target_coin) from Binance API
-            conversion_rate = await get_binance_conversion_rate(base_coin, target_coin)
+            data = await get_conversion_data(base_coin, target_coin, amount)
+            if data is None:
+                await loading_msg.edit_text(
+                    "**❌ Failed! This token pair may not exist on Binance.**",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
 
-            # Calculate the total amount in target coin based on the specified amount
-            total_converted = round(conversion_rate * amount, 6)
+            price_storage[message.chat.id] = data
 
-            # Store the conversion rate for potential refresh
-            price_storage[message.chat.id] = {"conversion_rate": conversion_rate, "total_converted": total_converted}
-
-            # Send the result back to the user
             await loading_msg.edit_text(
-                f"💥 **Coin Conversion Result:**\n\n"
-                f"✨ **Base Coin:** `{base_coin}`\n"
-                f"💥 **Convert Amount:** `{amount}`\n"
-                f"⚡️ **Total in {target_coin}:** `{total_converted}`\n\n"
-                f"🙈 **Target Coin:** `{target_coin}`",
+                format_response(data),
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton("💰 Refresh", callback_data=f"refresh${base_coin}${target_coin}${amount}${total_converted}"),
-                            InlineKeyboardButton("🌐 Binance Convert", url=f"https://www.binance.com/en/convert/{base_coin}/{target_coin}")
-                        ]
-                    ]
+                    [[InlineKeyboardButton("Binance Convert 💸", url=f"https://www.binance.com/en/convert/{base_coin}/{target_coin}")]]
                 )
             )
-            LOGGER.info("Coin conversion result sent for %s to %s: %s %s", base_coin, target_coin, total_converted, target_coin)
+            LOGGER.info(f"Coin conversion result sent for {base_coin} to {target_coin}: {data['converted_amount']} {target_coin}")
         except Exception as e:
             await loading_msg.edit_text(
-                "**Sorry, the API is down for the converter**",
+                "**❌ Failed! This token pair may not exist on Binance.**",
                 parse_mode=ParseMode.MARKDOWN
             )
             LOGGER.error("Exception occurred: %s", e)
-            # Notify admins about the error
             await notify_admin(client, "/cx", e, message)
-
-    @app.on_callback_query(filters.regex(r"refresh\$(\w+)\$(\w+)\$(\d+\.\d+|\d+)\$(\d+\.\d+|\d+)"))
-    async def refresh_callback(client: Client, callback_query: CallbackQuery):
-        # Check if user is banned
-        user_id = callback_query.from_user.id if callback_query.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
-            LOGGER.info(f"Banned user {user_id} attempted to use refresh for {callback_query.data}")
-            return
-
-        _, base_coin, target_coin, amount, previous_total_converted = callback_query.data.split("$")
-        amount = float(amount)
-        previous_total_converted = float(previous_total_converted)
-
-        try:
-            # Get the updated conversion rate from Binance API
-            current_conversion_rate = await get_binance_conversion_rate(base_coin, target_coin)
-            total_converted = round(current_conversion_rate * amount, 6)
-
-            previous_data = price_storage.get(callback_query.message.chat.id, None)
-            if not previous_data:
-                await callback_query.answer("No previous data found.", show_alert=True)
-                LOGGER.info("No previous data found for refresh in chat %s", callback_query.message.chat.id)
-                return
-
-            previous_conversion_rate = previous_data["conversion_rate"]
-            previous_total_converted = previous_data["total_converted"]
-
-            if current_conversion_rate == previous_conversion_rate:
-                await callback_query.answer("No Change Detected From Binance Database❌", show_alert=True)
-                LOGGER.info("No change detected for %s to %s", base_coin, target_coin)
-            else:
-                change_percentage = ((current_conversion_rate - previous_conversion_rate) / previous_conversion_rate) * 100
-                last_rate = current_conversion_rate
-
-                price_storage[callback_query.message.chat.id] = {"conversion_rate": current_conversion_rate, "total_converted": total_converted}
-
-                await callback_query.message.edit_text(
-                    f"**💥 Coin Conversion Result:**\n\n"
-                    f"✨ **Base Coin:** `{base_coin}`\n"
-                    f"💥 **Convert Amount:** `{amount}`\n"
-                    f"⚡️ **Total in {target_coin}:** `{total_converted}`\n\n"
-                    f"🙈 **Target Coin:** `{target_coin}`\n\n"
-                    f"↕️ **Change:** `{change_percentage:.2f}%`\n"
-                    f"💰 **Last Rate:** `{last_rate}`",
-                    parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup(
-                        [
-                            [
-                                InlineKeyboardButton("💰 Refresh", callback_data=f"refresh${base_coin}${target_coin}${amount}${total_converted}"),
-                                InlineKeyboardButton("🌐 Binance Convert", url=f"https://www.binance.com/en/convert/{base_coin}/{target_coin}")
-                            ]
-                        ]
-                    )
-                )
-                await callback_query.answer("Token Conversion Updated✨", show_alert=True)
-                LOGGER.info("Price updated for %s to %s: %s %s", base_coin, target_coin, total_converted, target_coin)
-        except Exception as e:
-            await callback_query.message.edit_text(
-                "**Sorry, the API is down for the converter**",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            LOGGER.error("Exception occurred during refresh: %s", e)
-            # Notify admins about the error
-            await notify_admin(client, "/cx refresh", e, callback_query.message)
