@@ -1,13 +1,13 @@
-#Copyright @ISmartDevs
-#Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
-from config import COMMAND_PREFIX
+from config import COMMAND_PREFIX, BAN_REPLY
 from core import banned_users
 
-# Define the BIN databases for each country
 bin_databases = {
     "Bangladesh": (
         "Smart Tool ⚙️ - Bin database 📋\n"
@@ -101,16 +101,14 @@ bin_databases = {
     ),
 }
 
-# List of accepted countries
 accepted_countries = ["Bangladesh", "India", "Algeria", "China", "Brazil", "Brasil", "Argentina", "Japan", "Mexico"]
 
 def setup_db_handlers(app: Client):
     @app.on_message(filters.command(["bindb"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def bindb_handler(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘ Sorry You're Banned From Using Me ↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         user_input = message.text.split(maxsplit=1)
@@ -125,12 +123,10 @@ def setup_db_handlers(app: Client):
 
         fetching_message = await client.send_message(message.chat.id, f"**Fetching Bins Database For Your Country Name**")
 
-        # Simulate fetching delay
         await asyncio.sleep(2)
 
         await fetching_message.delete()
 
-        # Handle the case where "Brasil" is used instead of "Brazil"
         if country == "Brasil":
             country = "Brazil"
 
