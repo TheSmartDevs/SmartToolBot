@@ -1,24 +1,25 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-import requests
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
+import aiohttp
 import asyncio
 from pyrogram import Client as PyroClient, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
-from config import COMMAND_PREFIX
-from utils import LOGGER, notify_admin  # Import LOGGER and notify_admin from utils
-from core import banned_users  # Check if user is banned
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 BASE_URL = "https://api.binance.com/api/v3/ticker/24hr?symbol="
 
 async def fetch_crypto_data(token=None):
     try:
         url = f"{BASE_URL}{token}USDT"
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, requests.get, url)
-        response.raise_for_status()
-        LOGGER.info(f"Successfully fetched data for {token}")
-        return response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                LOGGER.info(f"Successfully fetched data for {token}")
+                return await response.json()
     except Exception as e:
         LOGGER.error(f"Error fetching data for {token}: {e}")
         raise Exception("<b>❌ Data unavailable or invalid token symbol </b>")
@@ -38,11 +39,9 @@ def format_crypto_info(data):
 def setup_crypto_handler(app: PyroClient):
     @app.on_message(filters.command("price", prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def handle_price_command(client: PyroClient, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use /price")
             return
 
@@ -68,18 +67,14 @@ def setup_crypto_handler(app: PyroClient):
 
         except Exception as e:
             LOGGER.error(f"Error processing /price for {token}: {e}")
-            # Notify admins
             await notify_admin(client, "/price", e, message)
-            # Send user-facing error message
             await fetching_message.edit(f"❌ <b>Nothing Detected From Binance Database</b>", parse_mode=ParseMode.HTML)
 
     @app.on_callback_query(filters.regex(r"refresh_(.*)"))
     async def handle_refresh_callback(client: PyroClient, callback_query: CallbackQuery):
-        # Check if user is banned
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await callback_query.message.edit_text("**✘Sorry You're Banned From Using Me↯**", parse_mode=ParseMode.MARKDOWN)
+            await callback_query.message.edit_text(BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Banned user {user_id} attempted to use refresh for {callback_query.data}")
             return
 
@@ -105,7 +100,5 @@ def setup_crypto_handler(app: PyroClient):
 
         except Exception as e:
             LOGGER.error(f"Error in refresh for {token}: {e}")
-            # Notify admins
             await notify_admin(client, "/price refresh", e, callback_query.message)
-            # Send user-facing error message
             await callback_query.answer("❌ No Changes Detected From Binance Database", show_alert=True)
