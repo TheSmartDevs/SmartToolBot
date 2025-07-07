@@ -1,27 +1,28 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 import os
-import requests
+import aiohttp
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from config import BIN_KEY, COMMAND_PREFIX
-from utils import notify_admin, LOGGER  # Import notify_admin and LOGGER from utils
+from config import BIN_KEY, COMMAND_PREFIX, BAN_REPLY
+from utils import notify_admin, LOGGER
 from core import banned_users
 
 async def get_bin_info(bin, client, message):
     headers = {'x-api-key': BIN_KEY}
     try:
-        response = requests.get(f"https://data.handyapi.com/bin/{bin}", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            LOGGER.error(f"API returned status code {response.status_code}")
-            raise Exception(f"API returned status code {response.status_code}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://data.handyapi.com/bin/{bin}", headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    LOGGER.error(f"API returned status code {response.status}")
+                    raise Exception(f"API returned status code {response.status}")
     except Exception as e:
         LOGGER.error(f"Error retrieving info for BIN: {bin} - {e}")
-        # Notify admins about the error
         await notify_admin(client, "/mbin", e, message)
         return None
 
@@ -33,17 +34,14 @@ def get_flag_emoji(country_code):
 def setup_mbin_handler(app: Client):
     @app.on_message(filters.command(["mbin"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def bin_handler(client: Client, message: Message):
-        # Check if user is banned
         user_id = message.from_user.id if message.from_user else None
-        # FIX: Await the banned_users.find_one as it's an async call
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         LOGGER.info(f"Received /mbin command from user: {message.from_user.id}")
         bins = []
         
-        # Check if the command is a reply to a text file
         if message.reply_to_message and message.reply_to_message.document:
             file_name = await message.reply_to_message.download()
             with open(file_name, 'r') as file:
@@ -51,7 +49,6 @@ def setup_mbin_handler(app: Client):
             os.remove(file_name)
             LOGGER.info(f"BINs extracted from the uploaded file by user: {message.from_user.id}")
         else:
-            # Otherwise, get bins from the command input
             input_text = message.text.split(maxsplit=1)
             if len(input_text) < 2:
                 await client.send_message(message.chat.id, "**Provide a valid BIN (6 digits) or reply to a text file containing BINs❌**", parse_mode=ParseMode.MARKDOWN)
