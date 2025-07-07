@@ -1,13 +1,13 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
+
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import COMMAND_PREFIX
-from utils import LOGGER  # (optional, for logging consistency)
-from core import banned_users  # Banned user check
+from config import COMMAND_PREFIX, BAN_REPLY
+from utils import LOGGER
+from core import banned_users
 
-# Define your privacy policy text
 PRIVACY_POLICY = """
 <b>📜 Privacy Policy for SmartToolsBot 💥</b>
 ━━━━━━━━━━━━━━━━━
@@ -35,9 +35,8 @@ def setup_privacy_handler(app: Client):
     @app.on_message(filters.command(["privacy"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def show_privacy_policy(client, message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         await client.send_message(
