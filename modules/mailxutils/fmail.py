@@ -86,7 +86,7 @@ async def handle_fmail_command(client, message: Message):
     button = InlineKeyboardMarkup([[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]])
 
     if len(emails) > 10:
-        file_name = "ProcessedFile"
+        file_name = "ProcessedFile.txt"
         with open(file_name, 'w', encoding='utf-8') as f:
             f.write("\n".join(emails))
         await temp_msg.delete()
@@ -160,7 +160,7 @@ async def handle_fpass_command(client, message: Message):
     button = InlineKeyboardMarkup([[InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)]])
 
     if len(email_passes) > 10:
-        file_name = "ProcessedFile"
+        file_name = "ProcessedFile.txt"
         with open(file_name, 'w', encoding='utf-8') as f:
             f.write("\n".join(email_passes))
         await temp_msg.delete()
