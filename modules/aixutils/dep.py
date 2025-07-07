@@ -1,4 +1,4 @@
-# Copyright @ISmartDevs
+# Copyright @ISmartCoder
 # Channel t.me/TheSmartDev
 
 import os
