@@ -1,3 +1,6 @@
+# Copyright @ISmartCoder
+# Updates Channel t.me/TheSmartDev
+
 import os
 import re
 import io
@@ -16,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from moviepy import VideoFileClip
 from PIL import Image
 import yt_dlp
-from config import COMMAND_PREFIX, YT_COOKIES_PATH, VIDEO_RESOLUTION, MAX_VIDEO_SIZE
+from config import COMMAND_PREFIX, YT_COOKIES_PATH, VIDEO_RESOLUTION, MAX_VIDEO_SIZE, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
 
@@ -62,7 +65,7 @@ async def get_video_duration(video_path: str) -> float:
 
 def youtube_parser(url: str) -> Optional[str]:
     youtube_patterns = [
-        r"(?:youtube\.com/shorts/)([^\"&?/ ]{11})(\?.*)?",  # Handle Shorts with query params
+        r"(?:youtube\.com/shorts/)([^\"&?/ ]{11})(\?.*)?",
         r"(?:youtube\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)|.*[?&]v=)|youtu\.be/)([^\"&?/ ]{11})",
         r"(?:youtube\.com/watch\?v=)([^\"&?/ ]{11})",
         r"(?:m\.youtube\.com/watch\?v=)([^\"&?/ ]{11})",
@@ -89,14 +92,14 @@ def youtube_parser(url: str) -> Optional[str]:
 def get_ydl_opts(output_path: str, is_audio: bool = False) -> dict:
     width, height = VIDEO_RESOLUTION
     base = {
-        'outtmpl': output_path + '.%(ext)s',  # Always append extension
+        'outtmpl': output_path + '.%(ext)s',
         'cookiefile': YT_COOKIES_PATH,
         'quiet': True,
         'noprogress': True,
         'nocheckcertificate': True,
         'socket_timeout': 60,
         'retries': 3,
-        'merge_output_format': 'mp4',  # Ensure final output is mp4
+        'merge_output_format': 'mp4',
     }
     if is_audio:
         base.update({
@@ -167,10 +170,8 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
         with yt_dlp.YoutubeDL(opts) as ydl:
             await asyncio.get_event_loop().run_in_executor(executor, ydl.download, [parsed_url])
         
-        # Check for file with possible extensions
         file_path = f"{output_path}.mp3" if is_audio else f"{output_path}.mp4"
         if not os.path.exists(file_path) and not is_audio:
-            # Try alternative extensions
             for ext in ['.webm', '.mkv']:
                 alt_path = f"{output_path}{ext}"
                 if os.path.exists(alt_path):
@@ -361,8 +362,8 @@ def setup_yt_handler(app: Client):
     @app.on_message(filters.regex(rf"^{prefix}(yt|video)(\s+.+)?$") & (filters.private | filters.group))
     async def video_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         user_id = message.from_user.id if message.from_user else "unknown"
@@ -390,8 +391,8 @@ def setup_yt_handler(app: Client):
     @app.on_message(filters.regex(rf"^{prefix}song(\s+.+)?$") & (filters.private | filters.group))
     async def song_command(client, message):
         user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+        if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
 
         user_id = message.from_user.id if message.from_user else "unknown"
