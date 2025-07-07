@@ -1,14 +1,14 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
+# Copyright @ISmartCoder
+# Updates Channel: https://t.me/TheSmartDev
 
 import asyncio
 import socket
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from config import COMMAND_PREFIX, PROXY_CHECK_LIMIT
-from utils import LOGGER, notify_admin   # Use LOGGER and notify_admin
-from core import banned_users           # Use banned_users
+from config import COMMAND_PREFIX, PROXY_CHECK_LIMIT, BAN_REPLY
+from utils import LOGGER, notify_admin
+from core import banned_users
 
 PROXY_TIMEOUT = 10
 GEOLOCATION_TIMEOUT = 3
@@ -107,9 +107,8 @@ def setup_px_handler(app):
     @app.on_message(filters.command(["px", "proxy"], prefixes=COMMAND_PREFIX) & (filters.group | filters.private))
     async def px_command_handler(client, message: Message):
         user_id = message.from_user.id if message.from_user else None
-        # Await the banned_users check (Motor async)
         if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, "**✘Sorry You're Banned From Using Me↯**")
+            await client.send_message(message.chat.id, BAN_REPLY)
             return
 
         args = message.text.split()[1:]
@@ -129,13 +128,15 @@ def setup_px_handler(app):
             else:
                 return await client.send_message(
                     message.chat.id,
-                    "<b>❌ Provide at least one proxy for check</b>"
+                    "<b>❌ Provide at least one proxy for check</b>",
+                    parse_mode=ParseMode.HTML
                 )
 
         if len(proxy_args) > PROXY_CHECK_LIMIT:
             return await client.send_message(
                 message.chat.id,
-                "<b> ❌ Sorry Bro Maximum Proxy Check Limit Is 20 </b>"
+                "<b> ❌ Sorry Bro Maximum Proxy Check Limit Is 20 </b>",
+                parse_mode=ParseMode.HTML
             )
 
         proxies_to_check = []
@@ -154,12 +155,14 @@ def setup_px_handler(app):
         if not proxies_to_check:
             return await client.send_message(
                 message.chat.id,
-                "<b>❌ The Proxies Are Not Valid At All</b>"
+                "<b>❌ The Proxies Are Not Valid At All</b>",
+                parse_mode=ParseMode.HTML
             )
 
         processing_msg = await client.send_message(
             chat_id=message.chat.id,
-            text=f"<b> Smart Proxy Checker Checking Proxies 💥</b>"
+            text=f"<b> Smart Proxy Checker Checking Proxies 💥</b>",
+            parse_mode=ParseMode.HTML
         )
 
         try:
@@ -168,7 +171,7 @@ def setup_px_handler(app):
             await send_results(client, message, processing_msg, results)
         except Exception as e:
             LOGGER.error(f"Error during proxy check: {e}")
-            await processing_msg.edit_text("<b>Sorry Bro Proxy Checker API Dead</b>")
+            await processing_msg.edit_text("<b>Sorry Bro Proxy Checker API Dead</b>", parse_mode=ParseMode.HTML)
             await notify_admin(client, "/px", e, message)
 
 async def send_results(client, original_msg, processing_msg, results):
@@ -183,4 +186,4 @@ async def send_results(client, original_msg, processing_msg, results):
         response.append("\n")
 
     full_response = ''.join(response)
-    await processing_msg.edit_text(full_response)
+    await processing_msg.edit_text(full_response, parse_mode=ParseMode.HTML)
