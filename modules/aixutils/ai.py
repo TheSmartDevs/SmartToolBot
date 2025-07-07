@@ -3,7 +3,7 @@
 import os
 import io
 import logging
-import requests
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import COMMAND_PREFIX, BAN_REPLY
@@ -34,9 +34,10 @@ def setup_ai_handler(app: Client):
                 await client.edit_message_text(message.chat.id, loading_message.id, "**Please Provide A Prompt For SmartAi✨ Response**")
                 return
 
-            response = requests.get(API_URL, params={"prompt": prompt})
-            response_data = response.json()
-            response_text = response_data["response"]
+            async with aiohttp.ClientSession() as session:
+                async with session.get(API_URL, params={"prompt": prompt}) as response:
+                    response_data = await response.json()
+                    response_text = response_data["response"]
 
             if len(response_text) > 4000:
                 parts = [response_text[i:i + 4000] for i in range(0, len(response_text), 4000)]
