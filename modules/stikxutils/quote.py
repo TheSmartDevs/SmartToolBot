@@ -178,13 +178,17 @@ async def generate_quote(client: Client, message: Message, session):
         message_entities = []
 
         async with semaphore:
-            if replied_message and len(command_parts) == 1 and replied_message.photo:
-                if replied_message.from_user and replied_message.from_user.id == message.from_user.id:
-                    user = message.from_user
+            if replied_message and len(command_parts) == 1 and (replied_message.text or replied_message.photo):
+                if replied_message.forward_from or replied_message.forward_from_chat:
+                    if replied_message.forward_from:
+                        user = replied_message.forward_from
+                    elif replied_message.forward_from_chat and replied_message.forward_sender_name:
+                        full_name = replied_message.forward_sender_name
+                        user_id = None  
+                    else:
+                        user = message.from_user
                 else:
                     user = replied_message.from_user
-            elif replied_message and len(command_parts) == 1:
-                user = replied_message.from_user
             elif len(command_parts) > 1:
                 user = message.from_user
 
@@ -223,10 +227,10 @@ async def generate_quote(client: Client, message: Message, session):
                 except ValueError:
                     font_size = "small"
 
-            emoji_status_id = await get_emoji_status(client, user_id)
+            emoji_status_id = await get_emoji_status(client, user_id) if user_id else None
             from_payload = {
-                "id": str(user_id),
-                "name": full_name,
+                "id": str(user_id) if user_id else "0",
+                "name": full_name or "Anonymous",
                 "fontSize": font_size
             }
             if avatar_file_path:
