@@ -94,7 +94,7 @@ def parse_input(user_input):
         r"^(\d{6,16}[xX]{0,10}|\d{6,15})"
         r"(?:[|:/](\d{2}))?"
         r"(?:[|:/](\d{2,4}))?"
-        r"(?:[|:/]([0-9]{3,4}|xxx|rnd))?"
+        r"(?:[|:/]([0-9]{3,4}|xxx|rnd)?)?"
         r"(?:\s+(\d{1,4}))?$",
         user_input.strip(), re.IGNORECASE
     )
@@ -112,7 +112,7 @@ def parse_input(user_input):
             expected_cvv_length = 4 if is_amex else 3
             if len(cvv) != expected_cvv_length:
                 return None, None, None, None, None
-        if cvv and cvv.lower() in ['xxx', 'rnd']:
+        if cvv and cvv.lower() in ['xxx', 'rnd'] or cvv is None:
             cvv = None  # Set cvv to None to generate random CVV
         if year and len(year) == 2:
             year = f"20{year}"
@@ -198,7 +198,7 @@ def setup_gen_handler(app: Client):
                 return
 
         if amount > CC_GEN_LIMIT:
-            await client.send_message(message.chat.id, "**You can only generate up to 2000 credit cards ❌**")
+            await client.send_message(message.chat.id, f"**You can only generate up to {CC_GEN_LIMIT} credit cards ❌**")
             return
 
         bin_info = await get_bin_info(bin[:6], client, message)
@@ -281,7 +281,7 @@ def setup_gen_handler(app: Client):
                 return
 
         if amount > CC_GEN_LIMIT:
-            await callback_query.answer("You can only generate up to 2000 credit cards ❌", show_alert=True)
+            await callback_query.answer(f"You can only generate up to {CC_GEN_LIMIT} credit cards ❌", show_alert=True)
             return
 
         bin_info = await get_bin_info(bin[:6], client, callback_query.message)
