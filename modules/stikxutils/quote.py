@@ -184,7 +184,7 @@ async def generate_quote(client: Client, message: Message, session):
                         user = replied_message.forward_from
                     elif replied_message.forward_from_chat and replied_message.forward_sender_name:
                         full_name = replied_message.forward_sender_name
-                        user_id = None  
+                        user_id = None 
                     else:
                         user = message.from_user
                 else:
@@ -220,12 +220,6 @@ async def generate_quote(client: Client, message: Message, session):
                     avatar_base64 = base64.b64encode(avatar_data).decode()
 
             font_size = "small"
-            if message.chat.type in [ChatType.SUPERGROUP, ChatType.GROUP] and user:
-                try:
-                    user_settings = await client.get_chat_member(message.chat.id, user_id)
-                    font_size = getattr(user_settings, 'font_size', "small") if user_settings else "small"
-                except ValueError:
-                    font_size = "small"
 
             emoji_status_id = await get_emoji_status(client, user_id) if user_id else None
             from_payload = {
