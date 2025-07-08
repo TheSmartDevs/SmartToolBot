@@ -6,6 +6,7 @@ import os
 import random
 import aiohttp
 import asyncio
+import pycountry
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
@@ -93,9 +94,9 @@ def parse_input(user_input):
         r"^(\d{6,16}[xX]{0,10}|\d{6,15})"
         r"(?:[|:/](\d{2}))?"
         r"(?:[|:/](\d{2,4}))?"
-        r"(?:[|:/](\d{3,4}))?"
+        r"(?:[|:/]([0-9]{3,4}|xxx|rnd))?"
         r"(?:\s+(\d{1,4}))?$",
-        user_input.strip()
+        user_input.strip(), re.IGNORECASE
     )
     if match:
         bin, month, year, cvv, amount = match.groups()
@@ -106,11 +107,13 @@ def parse_input(user_input):
                 return None, None, None, None, None
             if not has_x and (bin_length < 6 or bin_length > 15):
                 return None, None, None, None, None
-        if cvv:
+        if cvv and cvv.lower() not in ['xxx', 'rnd']:
             is_amex = is_amex_bin(bin) if bin else False
             expected_cvv_length = 4 if is_amex else 3
             if len(cvv) != expected_cvv_length:
                 return None, None, None, None, None
+        if cvv and cvv.lower() in ['xxx', 'rnd']:
+            cvv = None  # Set cvv to None to generate random CVV
         if year and len(year) == 2:
             year = f"20{year}"
         amount = int(amount) if amount else 10
@@ -139,20 +142,31 @@ def generate_custom_cards(bin, amount, month=None, year=None, cvv=None):
                 break
     return cards
 
-def get_flag(country_code):
-    country = pycountry.countries.get(alpha_2=country_code)
-    if not country:
-        raise ValueError("Invalid country code")
-    country_name = country.name
-    flag_emoji = chr(0x1F1E6 + ord(country_code[0]) - ord('A')) + chr(0x1F1E6 + ord(country_code[1]) - ord('A'))
-    return country_name, flag_emoji
+def get_flag(country_code, client=None, message=None):
+    try:
+        country = pycountry.countries.get(alpha_2=country_code)
+        if not country:
+            raise ValueError("Invalid country code")
+        country_name = country.name
+        flag_emoji = chr(0x1F1E6 + ord(country_code[0]) - ord('A')) + chr(0x1F1E6 + ord(country_code[1]) - ord('A'))
+        return country_name, flag_emoji
+    except Exception as e:
+        error_msg = f"Error in get_flag: {str(e)}"
+        LOGGER.error(error_msg)
+        if client and message:
+            asyncio.create_task(notify_admin(client, "/gen", e, message))
+        raise
 
-def get_country_code_from_name(country_name):
+def get_country_code_from_name(country_name, client=None, message=None):
     try:
         country = pycountry.countries.lookup(country_name)
         return country.alpha_2
-    except LookupError:
-        raise ValueError("Invalid country name")
+    except Exception as e:
+        error_msg = f"Error in get_country_code_from_name: {str(e)}"
+        LOGGER.error(error_msg)
+        if client and message:
+            asyncio.create_task(notify_admin(client, "/gen", e, message))
+        raise
 
 def setup_gen_handler(app: Client):
     @app.on_message(filters.command(["gen"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
@@ -198,7 +212,7 @@ def setup_gen_handler(app: Client):
         bank_text = bank.upper() if bank else "Unknown"
 
         country_code = bin_info["Country"]["A2"]
-        country_name, flag_emoji = get_flag(country_code)
+        country_name, flag_emoji = get_flag(country_code, client, message)
         bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
 
         progress_message = await client.send_message(message.chat.id, "**Generating Credit Cards...**")
@@ -281,7 +295,7 @@ def setup_gen_handler(app: Client):
         bank_text = bank.upper() if bank else "Unknown"
 
         country_code = bin_info["Country"]["A2"]
-        country_name, flag_emoji = get_flag(country_code)
+        country_name, flag_emoji = get_flag(country_code, client, callback_query.message)
         bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
 
         cards = generate_custom_cards(bin, amount, month, year, cvv) if 'x' in bin.lower() else generate_credit_card(bin, amount, month, year, cvv)
