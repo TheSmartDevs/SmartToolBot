@@ -1,7 +1,5 @@
 # Copyright @ISmartCoder
 # Updates Channel t.me/TheSmartDev
-# This Script Mainly Based On https://github.com/abirxdhackz/SmartPayBot
-
 import uuid
 import hashlib
 import time
@@ -35,19 +33,19 @@ logger = LOGGER
 
 # Shared Strings and Emojis
 DONATION_OPTIONS_TEXT = """
-💥 **Why support Smart Tools?** 💥
-**✘ ━━━━━━━━━━━━━━━━━━ ✘**
-🌟 **Love the service?** 🌟
-Your support helps keep **SmartTools** fast, reliable, and free for everyone. ✨
+**Why support Smart Tools?** 
+**━━━━━━━━━━━━━━━━━━**
+🌟 **Love the service?** 
+Your support helps keep **SmartTools** fast, reliable, and free for everyone. 
 Even a small **Gift or Donation** makes a big difference! 💖
 
-👇 **Choose an amount to contribute:** 👀
+👇 **Choose an amount to contribute:** 
 
-❄️ **Why contribute?** ❄️
-More support = more motivation 🌐
-More motivation = better tools 💫
-Better tools = more productivity 🔥
-More productivity = less wasted time 🇧🇩
+**Why contribute?** 
+More support = more motivation 
+More motivation = better tools 
+Better tools = more productivity 
+More productivity = less wasted time 
 Less wasted time = more done with **Smart Tools** 💡
 **More Muhahaha… 🤓🔥**
 """
@@ -66,7 +64,7 @@ ADMIN_NOTIFICATION_TEXT = """
 ✨ **From:** {0} 💫
 ⁉️ **User ID:** `{1}`
 🌐 **Username:** {2}
-💥 **Amount:** {3} Stars 🌟
+💥 **Amount:** {3} Stars ⭐️
 📝 **Transaction ID:** `{4}`
 """
 
@@ -83,12 +81,12 @@ def setup_donate_handler(app):
     def get_donation_buttons(amount: int = 5):
         if amount == 5:
             return InlineKeyboardMarkup([
-                [InlineKeyboardButton(f"{amount} 🌟", callback_data=f"gift_{amount}"),
+                [InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"gift_{amount}"),
                  InlineKeyboardButton("+5", callback_data=f"increment_gift_{amount}")]
             ])
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("-5", callback_data=f"decrement_gift_{amount}"),
-             InlineKeyboardButton(f"{amount} 🌟", callback_data=f"gift_{amount}"),
+             InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"gift_{amount}"),
              InlineKeyboardButton("+5", callback_data=f"increment_gift_{amount}")]
         ])
 
@@ -119,7 +117,7 @@ def setup_donate_handler(app):
 
             invoice = Invoice(
                 currency=currency,
-                prices=[LabeledPrice(label=f"⭐ {amount} Stars", amount=amount)],
+                prices=[LabeledPrice(label=f"⭐️ {amount} Stars", amount=amount)],
                 max_tip_amount=0,
                 suggested_tip_amounts=[],
                 recurring=False,
@@ -223,7 +221,7 @@ def setup_donate_handler(app):
         if data.startswith("gift_"):
             quantity = int(data.split("_")[1])
             await generate_invoice(client, chat_id, user_id, quantity)
-            await callback_query.answer("✅ Invoice Generated! Pay Now! 🌟")
+            await callback_query.answer("✅ Invoice Generated! Pay Now! ⭐️")
         elif data.startswith("increment_gift_"):
             current_amount = int(data.split("_")[2])
             new_amount = current_amount + 5
