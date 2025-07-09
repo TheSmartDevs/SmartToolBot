@@ -4,6 +4,7 @@
 import os
 import aiohttp
 import time
+import aiofiles
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
