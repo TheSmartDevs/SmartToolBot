@@ -27,27 +27,36 @@ def normalize_url(url: str) -> str:
     else:
         return f"https://{url}"
 
-async def fetch_screenshot(url: str):
+async def fetch_screenshot(url: str, retries=3, backoff_factor=1.0):
     api_url = f"{SCREENSHOT_API_URL}?access_key={ACCESS_KEY}&url={quote(url)}&format=jpg&block_ads=true&block_cookie_banners=true&block_banners_by_heuristics=false&block_trackers=true&delay=0&timeout=60&response_type=by_format&image_quality=80"
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url) as response:
-                response.raise_for_status()
+    for attempt in range(retries):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url) as response:
+                    response.raise_for_status()
 
-                content_type = response.headers.get('Content-Type', '')
-                if 'image' not in content_type:
-                    raise ValueError(f"Unexpected content type: {content_type}")
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'image' not in content_type:
+                        raise ValueError(f"Unexpected content type: {content_type}")
 
-                content_length = int(response.headers.get('Content-Length', 0))
-                if content_length > MAX_FILE_SIZE:
-                    raise ValueError(f"Screenshot too large ({content_length / 1024 / 1024:.1f}MB)")
+                    content_length = int(response.headers.get('Content-Length', 0))
+                    if content_length > MAX_FILE_SIZE:
+                        raise ValueError(f"Screenshot too large ({content_length / 1024 / 1024:.1f}MB)")
 
-                return response
+                    return response
 
-    except aiohttp.ClientError as e:
-        LOGGER.error(f"Failed to fetch screenshot: {e}")
-        return None
+        except aiohttp.ClientConnectionError as e:
+            if attempt < retries - 1:
+                sleep_time = backoff_factor * (2 ** attempt)
+                LOGGER.warning(f"Connection error on attempt {attempt + 1}: {e}. Retrying in {sleep_time}s...")
+                await asyncio.sleep(sleep_time)
+                continue
+            LOGGER.error(f"Failed to fetch screenshot after {retries} attempts: {e}")
+            return None
+        except aiohttp.ClientError as e:
+            LOGGER.error(f"Failed to fetch screenshot: {e}")
+            return None
 
 def setup_ss_handler(app: Client):
     @app.on_message(filters.command(["ss", "sshot", "screenshot", "snap"], prefixes=COMMAND_PREFIX) & 
