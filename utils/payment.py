@@ -33,19 +33,19 @@ logger = logging.getLogger(__name__)
 
 # Shared Strings and Emojis
 DONATION_OPTIONS_TEXT = """
-💥 **Why should you donate to Smart Tools?** 💥
-**✘ ━━━━━━━━━━━━━━━━━━ ✘**
-🌟 **Love the service?** 🌟
-Your support helps keep **SmartTools** fast, reliable, and free for everyone. ✨
+**Why should you donate to Smart Tools?** 
+**━━━━━━━━━━━━━━━━━━**
+🌟 **Love the service?** 
+Your support helps keep **SmartTools** fast, reliable, and free for everyone. 
 Even a small **Donation** makes a big difference! 💖
 
-👇 **Choose an amount to donate:** 👀
+👇 **Choose an amount to donate:** 
 
-❄️ **Why donate?** ❄️
-More donation = more motivation 🌐
-More motivation = better tools 💫
-Better tools = more productivity 🔥
-More productivity = less wasted time 🇧🇩
+**Why donate?** 
+More donation = more motivation 
+More motivation = better tools 
+Better tools = more productivity 
+More productivity = less wasted time 
 Less wasted time = more done with **Smart Tools** 💡
 **More Muhahaha… 🤓🔥**
 """
@@ -89,13 +89,13 @@ def get_donation_buttons(amount: int = 5):
     buttons = []
     if amount == 5:
         buttons.append([
-            InlineKeyboardButton(f"{amount} 🌟", callback_data=f"donate_{amount}"),
+            InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
             InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")
         ])
     else:
         buttons.append([
             InlineKeyboardButton("-5", callback_data=f"decrement_donate_{amount}"),
-            InlineKeyboardButton(f"{amount} 🌟", callback_data=f"donate_{amount}"),
+            InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
             InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")
         ])
     buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="about_me")])
@@ -128,7 +128,7 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
         # Create Invoice object
         invoice = Invoice(
             currency=currency,
-            prices=[LabeledPrice(label=f"⭐ {quantity} Stars", amount=quantity)],
+            prices=[LabeledPrice(label=f"⭐️ {quantity} Stars", amount=quantity)],
             max_tip_amount=0,
             suggested_tip_amounts=[],
             recurring=False,
@@ -185,7 +185,7 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=back_button
             )
-            await callback_query.answer("✅ Invoice Generated! Pay Now! 🌟")
+            await callback_query.answer("✅ Invoice Generated! Pay Now! ⭐️")
         else:
             await loading_message.edit_text(
                 INVOICE_CONFIRMATION_TEXT.format(quantity),
