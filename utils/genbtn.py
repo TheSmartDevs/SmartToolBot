@@ -512,19 +512,19 @@ responses = {
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
     "about_me": (
-        f"<b>Name:</b> Smart Tool\n"
-        f"<b>Version:</b> v14.0 (Beta) 🛠\n\n"
-        f"<b>Development Team:</b>\n"
-        f"- <b>Creator:</b> <a href='https://tg://user?id=7303810912'>Abir Arafat Chawdhury 👨‍💻</a>\n"
-        f"- <b>Contributor:</b> <a href='https://tg://user?id=1273841502'>Nyein Ko Ko Aung 🤝</a>\n"
-        f"- <b>Helper:</b> <a href='https://tg://user?id=6249257243'>Saddam Hossain 👥</a>\n"
-        f"<b>Technical Stacks:</b>\n"
-        f"- <b>Language:</b> Python 🐍\n"
-        f"- <b>Framework:</b> Fully Written In Pyrogram And Telethon 📚\n"
-        f"- <b>Database:</b> MongoDB Database 🗄\n"
-        f"- <b>Hosting:</b> Digital Ocean VPS\n\n"
-        f"<b>About:</b> The all-in-one Telegram toolkit for seamless education, AI, downloads, and more!\n\n",
-        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+        "**Name:** Smart Tool\n"
+        "**Version:** v14.0 (Beta) 🛠\n\n"
+        "**Development Team:**\n"
+        "- **Creator:** [Abir Arafat Chawdhury 👨‍💻](https://tg://user?id=7303810912)\n"
+        "- **Contributor:** [Nyein Ko Ko Aung 🤝](https://tg://user?id=1273841502)\n"
+        "- **Helper:** [Saddam Hossain 👥](https://tg://user?id=6249257243)\n"
+        "**Technical Stacks:**\n"
+        "- **Language:** Python 🐍\n"
+        "- **Framework:** Fully Written In Pyrogram And Telethon 📚\n"
+        "- **Database:** MongoDB Database 🗄\n"
+        "- **Hosting:** Digital Ocean VPS\n\n"
+        "**About:** The all-in-one Telegram toolkit for seamless education, AI, downloads, and more!\n\n",
+        {'parse_mode': ParseMode.MARKDOWN, 'disable_web_page_preview': True}
     ),
     "admin": (
         "<b>🚫 GroupHelpBot Utils ⚙️</b>\n"
