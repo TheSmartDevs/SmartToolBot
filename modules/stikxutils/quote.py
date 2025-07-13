@@ -83,6 +83,18 @@ async def convert_photo_to_sticker(photo_path):
         logger.error(f"Failed to convert photo to sticker: {e}")
         return None
 
+async def convert_sticker_to_image(sticker_path):
+    async with semaphore:
+        try:
+            with Image.open(sticker_path) as img:
+                img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+                photo_path = f"converted_{os.urandom(4).hex()}.jpg"
+                img.convert('RGB').save(photo_path, "JPEG")
+            return photo_path
+        except Exception as e:
+            logger.error(f"Failed to convert sticker: {e}")
+            return None
+
 async def get_emoji_status(client, user_id):
     try:
         async with semaphore:
@@ -175,10 +187,11 @@ async def generate_quote(client: Client, message: Message, session):
         full_name = None
         avatar_file_path = None
         photo_path = None
+        sticker_path = None
         message_entities = []
 
         async with semaphore:
-            if replied_message and len(command_parts) == 1 and (replied_message.text or replied_message.photo):
+            if replied_message and len(command_parts) == 1 and (replied_message.text or replied_message.photo or replied_message.sticker):
                 if replied_message.forward_from or replied_message.forward_from_chat:
                     if replied_message.forward_from:
                         user = replied_message.forward_from
@@ -232,24 +245,47 @@ async def generate_quote(client: Client, message: Message, session):
             if emoji_status_id:
                 from_payload["emoji_status"] = emoji_status_id
 
-            if replied_message and len(command_parts) == 1 and replied_message.photo:
+            if replied_message and len(command_parts) == 1 and (replied_message.photo or replied_message.sticker):
+                is_sticker = replied_message.sticker is not None
                 try:
-                    async with semaphore:
+                    if is_sticker:
+                        if replied_message.sticker.is_animated or replied_message.sticker.is_video:
+                            if not replied_message.sticker.thumbs:
+                                await client.send_message(message.chat.id, "**❌ Sticker has no thumbnail.**", parse_mode=ParseMode.MARKDOWN)
+                                return
+                            thumb = replied_message.sticker.thumbs[-1]
+                            sticker_path = await client.download_media(thumb.file_id)
+                        else:
+                            sticker_path = await client.download_media(replied_message.sticker.file_id)
+                        photo_path = await convert_sticker_to_image(sticker_path)
+                        if not photo_path:
+                            logger.error("Failed to convert sticker to image")
+                            await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+                            return
+                    else:
                         photo_path = await client.download_media(replied_message.photo.file_id)
                         if not photo_path:
                             logger.error("Failed to download replied photo")
-                            await client.send_message(message.chat.id, "**❌Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+                            await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
                             return
 
                     hosted_url = await upload_to_imgbb(photo_path, session)
                     if not hosted_url:
                         async with semaphore:
                             with open(photo_path, "rb") as file:
-                                photo_data = await asyncio.to_thread(file.read)
-                            photo_base64 = base64.b64encode(photo_data).decode()
+                                content = await asyncio.to_thread(file.read)
+                            photo_base64 = base64.b64encode(content).decode()
                             hosted_url = f"data:image/jpeg;base64,{photo_base64}"
 
                     text = replied_message.caption if replied_message.caption else ""
+
+                    message_entities = await extract_message_entities(replied_message)
+                    premium_emojis = await extract_premium_emojis(replied_message)
+                    if premium_emojis:
+                        existing_offsets = [e['offset'] for e in message_entities if e.get("type") == "custom_emoji"]
+                        for emoji in premium_emojis:
+                            if emoji['offset'] not in existing_offsets:
+                                message_entities.append(emoji)
 
                     json_data = {
                         "type": "quote",
@@ -260,7 +296,7 @@ async def generate_quote(client: Client, message: Message, session):
                         "scale": 2,
                         "messages": [
                             {
-                                "entities": [],
+                                "entities": message_entities,
                                 "avatar": bool(avatar_file_path),
                                 "from": from_payload,
                                 "media": {"type": "photo", "url": hosted_url},
@@ -295,14 +331,16 @@ async def generate_quote(client: Client, message: Message, session):
                             logger.error(f"Failed to send sticker: {e}", exc_info=True)
                             raise
                 except Exception as e:
-                    logger.error(f"Error creating sticker from photo: {e}", exc_info=True)
-                    await client.send_message(message.chat.id, "**❌Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+                    logger.error(f"Error creating sticker from media: {e}", exc_info=True)
+                    await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
                 finally:
                     async with semaphore:
                         if avatar_file_path and os.path.exists(avatar_file_path):
                             os.remove(avatar_file_path)
                         if photo_path and os.path.exists(photo_path):
                             os.remove(photo_path)
+                        if sticker_path and os.path.exists(sticker_path):
+                            os.remove(sticker_path)
                         if os.path.exists('Quotly.webp'):
                             os.remove('Quotly.webp')
                 return
@@ -383,13 +421,15 @@ async def generate_quote(client: Client, message: Message, session):
                     raise
     except Exception as e:
         logger.error(f"Error generating quote: {e}", exc_info=True)
-        await client.send_message(message.chat.id, "**❌Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+        await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
     finally:
         async with semaphore:
             if avatar_file_path and os.path.exists(avatar_file_path):
                 os.remove(avatar_file_path)
             if photo_path and os.path.exists(photo_path):
                 os.remove(photo_path)
+            if sticker_path and os.path.exists(sticker_path):
+                os.remove(sticker_path)
             if os.path.exists('Quotly.webp'):
                 os.remove('Quotly.webp')
 
@@ -406,4 +446,4 @@ def setup_q_handler(app: Client):
                 await generate_quote(client, message, session)
             except Exception as e:
                 logger.error(f"Unhandled exception in q_command: {e}", exc_info=True)
-                await client.send_message(message.chat.id, "**❌Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+                await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
