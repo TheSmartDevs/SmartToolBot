@@ -191,7 +191,7 @@ async def generate_quote(client: Client, message: Message, session):
         message_entities = []
 
         async with semaphore:
-            if replied_message and len(command_parts) == 1 and (replied_message.text or replied_message.photo or replied_message.sticker):
+            if replied_message and len(command_parts) == 1 and (replied_message.text or replied_message.photo or replied_message.sticker or replied_message.video or replied_message.animation):
                 if replied_message.forward_from or replied_message.forward_from_chat:
                     if replied_message.forward_from:
                         user = replied_message.forward_from
@@ -234,7 +234,7 @@ async def generate_quote(client: Client, message: Message, session):
 
             font_size = "small"
 
-            emoji_status_id = await get_emoji_status(client, user_id) if user_id else None
+            emoji_status_id = await get_emoji_status(client, user_id) if user_id and user_id > 0 else None
             from_payload = {
                 "id": str(user_id) if user_id else "0",
                 "name": full_name or "Anonymous",
@@ -245,10 +245,19 @@ async def generate_quote(client: Client, message: Message, session):
             if emoji_status_id:
                 from_payload["emoji_status"] = emoji_status_id
 
-            if replied_message and len(command_parts) == 1 and (replied_message.photo or replied_message.sticker):
+            if replied_message and len(command_parts) == 1 and (replied_message.photo or replied_message.sticker or replied_message.video or replied_message.animation):
+                is_photo = replied_message.photo is not None
                 is_sticker = replied_message.sticker is not None
+                is_video = replied_message.video is not None
+                is_animation = replied_message.animation is not None
                 try:
-                    if is_sticker:
+                    if is_photo:
+                        photo_path = await client.download_media(replied_message.photo.file_id)
+                        if not photo_path:
+                            logger.error("Failed to download replied photo")
+                            await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
+                            return
+                    elif is_sticker:
                         if replied_message.sticker.is_animated or replied_message.sticker.is_video:
                             if not replied_message.sticker.thumbs:
                                 await client.send_message(message.chat.id, "**❌ Sticker has no thumbnail.**", parse_mode=ParseMode.MARKDOWN)
@@ -262,10 +271,15 @@ async def generate_quote(client: Client, message: Message, session):
                             logger.error("Failed to convert sticker to image")
                             await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
                             return
-                    else:
-                        photo_path = await client.download_media(replied_message.photo.file_id)
+                    elif is_video or is_animation:
+                        media = replied_message.video if is_video else replied_message.animation
+                        if not media.thumbs:
+                            await client.send_message(message.chat.id, "**❌ Media has no thumbnail.**", parse_mode=ParseMode.MARKDOWN)
+                            return
+                        thumb = media.thumbs[-1]
+                        photo_path = await client.download_media(thumb.file_id)
                         if not photo_path:
-                            logger.error("Failed to download replied photo")
+                            logger.error("Failed to download media thumbnail")
                             await client.send_message(message.chat.id, "**❌ Failed To Generate Sticker**", parse_mode=ParseMode.MARKDOWN)
                             return
 
@@ -356,7 +370,7 @@ async def generate_quote(client: Client, message: Message, session):
                             if emoji['offset'] not in existing_offsets:
                                 message_entities.append(emoji)
                 else:
-                    await client.send_message(message.chat.id, "**Please send text, a sticker, or a photo to create your sticker.**", parse_mode=ParseMode.MARKDOWN)
+                    await client.send_message(message.chat.id, "**Please send text, a sticker, a photo, a video, or a GIF to create your sticker.**", parse_mode=ParseMode.MARKDOWN)
                     return
             elif len(command_parts) > 1:
                 text = " ".join(command_parts[1:])
@@ -368,7 +382,7 @@ async def generate_quote(client: Client, message: Message, session):
                         if emoji['offset'] not in existing_offsets:
                             message_entities.append(emoji)
             else:
-                await client.send_message(message.chat.id, "**Please send text, a sticker, or a photo to create your sticker.**", parse_mode=ParseMode.MARKDOWN)
+                await client.send_message(message.chat.id, "**Please send text, a sticker, a photo, a video, or a GIF to create your sticker.**", parse_mode=ParseMode.MARKDOWN)
                 return
 
             if message_entities:
