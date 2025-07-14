@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from pyrogram import filters, Client
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram.enums import ParseMode, ChatType, UserStatus
+from pyrogram.enums import ParseMode, ChatType
 from pyrogram.errors import PeerIdInvalid, UsernameNotOccupied, ChannelInvalid
-from config import COMMAND_PREFIX, BAN_REPLY
+from config import COMMAND_PREFIX, BAN_REPLY, UPDATE_CHANNEL_URL
 from utils import LOGGER, get_dc_locations
 from core import banned_users
 
@@ -64,40 +64,23 @@ def setup_info_handler(app):
                     
                     verified_status = "Verified" if getattr(user, 'is_verified', False) else "Not Verified"
                     
-                    status = "⚪️ Unknown"
-                    if user.status:
-                        if user.status == UserStatus.ONLINE:
-                            status = "Online"
-                        elif user.status == UserStatus.OFFLINE:
-                            status = "Offline"
-                        elif user.status == UserStatus.RECENTLY:
-                            status = "Recently online"
-                        elif user.status == UserStatus.LAST_WEEK:
-                            status = "Last seen within week"
-                        elif user.status == UserStatus.LAST_MONTH:
-                            status = "Last seen within month"
-                    
                     chat_id_display = chat.id if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else user.id
                     response = (
-                        "**Smart User Info Extract Completed ✅**\n"
-                        "**━━━━━━━━━━━━━━━━━**\n"
-                        f"**⊗ Full Name:** {user.first_name} {user.last_name or ''}\n"
-                        f"**⊗ UserID:** `{user.id}`\n"
-                        f"**⊗ Username:** @{user.username if user.username else 'None'}\n"
-                        f"**⊗ ChatID:** `{chat_id_display}`\n"
-                        f"**⊗ Data Center:** {user.dc_id} ({dc_location})\n"
-                        f"**⊗ Premium:** {premium_status}\n"
-                        f"**⊗ Flags:** {'Scam' if getattr(user, 'is_scam', False) else 'Fake' if getattr(user, 'is_fake', False) else '✓ Clean'}\n"
-                        f"**⊗ Verification:** {verified_status}\n"
-                        f"**⊗ Status:** {status}\n"
-                        f"**⊗ Account Created On:** {account_created_str}\n"
-                        f"**⊗ Account Age:** {account_age}\n"
-                        "**━━━━━━━━━━━━━━━━━**\n"
-                        "**Use Below Buttons For Profile View ✅**"
+                        "**🔍 Showing User's Profile Info 📋**\n"
+                        "**━━━━━━━━━━━━━━━━**\n"
+                        f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                        f"**• Username:** @{user.username if user.username else 'None'}\n"
+                        f"**• User ID:** `{user.id}`\n"
+                        f"**• Chat ID:** `{chat_id_display}`\n"
+                        f"**• Premium User:** **{premium_status}**\n"
+                        f"**• Data Center:** **{dc_location}**\n"
+                        f"**• Created On:** **{account_created_str}**\n"
+                        f"**• Account Age:** **{account_age}**\n"
+                        "**━━━━━━━━━━━━━━━━**\n"
+                        "**👁 Thank You for Using Our Tool ✅**"
                     )
                     buttons = [
-                        [InlineKeyboardButton("Android Link", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("IOS Link", url=f"tg://user?id={user.id}")],
-                        [InlineKeyboardButton("Permanent Link", user_id=user.id)],
+                        [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
                     ]
                     await client.edit_message_text(
                         chat_id=message.chat.id,
@@ -119,56 +102,34 @@ def setup_info_handler(app):
                     
                     verified_status = "Verified" if getattr(user, 'is_verified', False) else "Not Verified"
                     
-                    status = "⚪️ Unknown"
-                    if user.status:
-                        if user.status == UserStatus.ONLINE:
-                            status = "Online"
-                        elif user.status == UserStatus.OFFLINE:
-                            status = "Offline"
-                        elif user.status == UserStatus.RECENTLY:
-                            status = "Recently online"
-                        elif user.status == UserStatus.LAST_WEEK:
-                            status = "Last seen within week"
-                        elif user.status == UserStatus.LAST_MONTH:
-                            status = "Last seen within month"
-                    
                     chat_id_display = chat.id if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else user.id
                     response = (
-                        "**Smart User Info Extract Completed ✅**\n"
-                        "**━━━━━━━━━━━━━━━━━**\n"
-                        f"**⊗ Full Name:** {user.first_name} {user.last_name or ''}\n"
-                        f"**⊗ UserID:** `{user.id}`\n"
-                        f"**⊗ Username:** @{user.username if user.username else 'None'}\n"
-                        f"**⊗ ChatID:** `{chat_id_display}`\n"
-                        f"**⊗ Data Center:** {user.dc_id} ({dc_location})\n"
-                        f"**⊗ Premium:** {premium_status}\n"
-                        f"**⊗ Flags:** {'Scam' if getattr(user, 'is_scam', False) else 'Fake' if getattr(user, 'is_fake', False) else '✓ Clean'}\n"
-                        f"**⊗ Verification:** {verified_status}\n"
-                        f"**⊗ Status:** {status}\n"
-                        f"**⊗ Account Created On:** {account_created_str}\n"
-                        f"**⊗ Account Age:** {account_age}\n"
-                        "**━━━━━━━━━━━━━━━━━**\n"
-                        "**Use Below Buttons For Profile View ✅**"
+                        "**🔍 Showing User's Profile Info 📋**\n"
+                        "**━━━━━━━━━━━━━━━━**\n"
+                        f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                        f"**• Username:** @{user.username if user.username else 'None'}\n"
+                        f"**• User ID:** `{user.id}`\n"
+                        f"**• Chat ID:** `{chat_id_display}`\n"
+                        f"**• Premium User:** **{premium_status}**\n"
+                        f"**• Data Center:** **{dc_location}**\n"
+                        f"**• Created On:** **{account_created_str}**\n"
+                        f"**• Account Age:** **{account_age}**\n"
+                        "**━━━━━━━━━━━━━━━━**\n"
+                        "**👁 Thank You for Using Our Tool ✅**"
                     )
                     if user.is_bot:
                         response = (
-                            "**Smart Bot Info Extract Completed ✅**\n"
-                            "**━━━━━━━━━━━━━━━━━**\n"
-                            f"**⊗ Bot Name:** {user.first_name} {user.last_name or ''}\n"
-                            f"**⊗ BotID:** `{user.id}`\n"
-                            f"**⊗ Username:** @{user.username if user.username else 'None'}\n"
-                            f"**⊗ ChatID:** `{chat_id_display}`\n"
-                            f"**⊗ Data Center:** {user.dc_id} ({dc_location})\n"
-                            f"**⊗ Premium:** {premium_status}\n"
-                            f"**⊗ Flags:** {'Scam' if getattr(user, 'is_scam', False) else 'Fake' if getattr(user, 'is_fake', False) else '✓ Clean'}\n"
-                            f"**⊗ Verification:** {verified_status}\n"
-                            f"**⊗ Status:** {status}\n"
-                            "**━━━━━━━━━━━━━━━━━**\n"
-                            "**Use Below Buttons For Profile View ✅**"
+                            "**🔍 Showing Bot's Profile Info 📋**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            f"**• Bot Name:** **{user.first_name} {user.last_name or ''}**\n"
+                            f"**• Username:** @{user.username if user.username else 'None'}\n"
+                            f"**• User ID:** `{user.id}`\n"
+                            f"**• Data Center:** **{dc_location}**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            "**👁 Thank You for Using Our Tool ✅**"
                         )
                     buttons = [
-                        [InlineKeyboardButton("Android Link", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("IOS Link", url=f"tg://user?id={user.id}")],
-                        [InlineKeyboardButton("Permanent Link", user_id=user.id)],
+                        [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
                     ]
                     await client.edit_message_text(
                         chat_id=message.chat.id,
@@ -193,55 +154,33 @@ def setup_info_handler(app):
                         
                         verified_status = "Verified" if user.is_verified else "Not Verified"
                         
-                        status = "⚪️ Unknown"
-                        if user.status:
-                            if user.status == UserStatus.ONLINE:
-                                status = "Online"
-                            elif user.status == UserStatus.OFFLINE:
-                                status = "Offline"
-                            elif user.status == UserStatus.RECENTLY:
-                                status = "Recently online"
-                            elif user.status == UserStatus.LAST_WEEK:
-                                status = "Last seen within week"
-                            elif user.status == UserStatus.LAST_MONTH:
-                                status = "Last seen within month"
-                        
                         response = (
-                            "**Smart User Info Extract Completed ✅**\n"
-                            "**━━━━━━━━━━━━━━━━━**\n"
-                            f"**⊗ Full Name:** {user.first_name} {user.last_name or ''}\n"
-                            f"**⊗ UserID:** `{user.id}`\n"
-                            f"**⊗ Username:** @{user.username if user.username else 'None'}\n"
-                            f"**⊗ ChatID:** `{user.id}`\n"
-                            f"**⊗ Data Center:** {user.dc_id} ({dc_location})\n"
-                            f"**⊗ Premium:** {premium_status}\n"
-                            f"**⊗ Flags:** {'Scam' if getattr(user, 'is_scam', False) else 'Fake' if getattr(user, 'is_fake', False) else '✓ Clean'}\n"
-                            f"**⊗ Verification:** {verified_status}\n"
-                            f"**⊗ Status:** {status}\n"
-                            f"**⊗ Account Created On:** {account_created_str}\n"
-                            f"**⊗ Account Age:** {account_age}\n"
-                            "**━━━━━━━━━━━━━━━━━**\n"
-                            "**Use Below Buttons For Profile View ✅**"
+                            "**🔍 Showing User's Profile Info 📋**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                            f"**• Username:** @{user.username if user.username else 'None'}\n"
+                            f"**• User ID:** `{user.id}`\n"
+                            f"**• Chat ID:** `{user.id}`\n"
+                            f"**• Premium User:** **{premium_status}**\n"
+                            f"**• Data Center:** **{dc_location}**\n"
+                            f"**• Created On:** **{account_created_str}**\n"
+                            f"**• Account Age:** **{account_age}**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            "**👁 Thank You for Using Our Tool ✅**"
                         )
                         if user.is_bot:
                             response = (
-                                "**Smart Bot Info Extract Completed ✅**\n"
-                                "**━━━━━━━━━━━━━━━━━**\n"
-                                f"**⊗ Bot Name:** {user.first_name} {user.last_name or ''}\n"
-                                f"**⊗ BotID:** `{user.id}`\n"
-                                f"**⊗ Username:** @{user.username if user.username else 'None'}\n"
-                                f"**⊗ ChatID:** `{user.id}`\n"
-                                f"**⊗ Data Center:** {user.dc_id} ({dc_location})\n"
-                                f"**⊗ Premium:** {premium_status}\n"
-                                f"**⊗ Flags:** {'Scam' if getattr(user, 'is_scam', False) else 'Fake' if getattr(user, 'is_fake', False) else '✓ Clean'}\n"
-                                f"**⊗ Verification:** {verified_status}\n"
-                                f"**⊗ Status:** {status}\n"
-                                "**━━━━━━━━━━━━━━━━━**\n"
-                                "**Use Below Buttons For Profile View ✅**"
+                                "**🔍 Showing Bot's Profile Info 📋**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                f"**• Bot Name:** **{user.first_name} {user.last_name or ''}**\n"
+                                f"**• Username:** @{user.username if user.username else 'None'}\n"
+                                f"**• User ID:** `{user.id}`\n"
+                                f"**• Data Center:** **{dc_location}**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                "**👁 Thank You for Using Our Tool ✅**"
                             )
                         buttons = [
-                            [InlineKeyboardButton("Android Link", url=f"tg://openmessage?user_id={user.id}"), InlineKeyboardButton("IOS Link", url=f"tg://user?id={user.id}")],
-                            [InlineKeyboardButton("Permanent Link", user_id=user.id)],
+                            [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
                         ]
                         await client.edit_message_text(
                             chat_id=message.chat.id,
@@ -256,19 +195,19 @@ def setup_info_handler(app):
                         try:
                             chat = await client.get_chat(username)
                             dc_location = DC_LOCATIONS.get(chat.dc_id, "Unknown")
-                            chat_type = "Channel" if chat.type == ChatType.CHANNEL else "Supergroup" if chat.type == ChatType.SUPERGROUP else "Group"
+                            chat_type = "Channel" if chat.type == ChatType.CHANNEL else "Group" if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else "Unknown"
                             response = (
-                                f"**Smart {chat_type} Info Extract Completed ✅**\n"
-                                "**━━━━━━━━━━━━━━━━━**\n"
-                                f"**⊗ Name:** {chat.title}\n"
-                                f"**⊗ ChatID:** `{chat.id}`\n"
-                                f"**⊗ Type:** {chat_type}\n"
-                                f"**⊗ Total Members:** {chat.members_count if chat.members_count else 'Unknown'}\n"
-                                "**━━━━━━━━━━━━━━━━━**\n"
-                                "**Use Below Buttons For Visiting Chat ✅**"
+                                f"**🔍 Showing {chat_type}'s Profile Info 📋**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                f"**• Full Name:** **{chat.title}**\n"
+                                f"**• Username:** @{chat.username if chat.username else 'None'}\n"
+                                f"**• Chat ID:** `{chat.id}`\n"
+                                f"**• Total Members:** **{chat.members_count if chat.members_count else 'Unknown'}**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                "**👁 Thank You for Using Our Tool ✅**"
                             )
                             buttons = [
-                                [InlineKeyboardButton(f"Join This {chat_type}", url=f"t.me/c/{str(chat.id).replace('-100', '')}/100"), InlineKeyboardButton("Permanent Link", url=f"t.me/c/{str(chat.id).replace('-100', '')}/100")],
+                                [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
                             ]
                             await client.edit_message_text(
                                 chat_id=message.chat.id,
