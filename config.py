@@ -29,6 +29,10 @@ DB_URL = get_env_or_default("DB_URL", "Your_DB_URL_Here")
 
 OPENAI_API_KEY = get_env_or_default("OPENAI_API_KEY", "Your_OPENAI_API_KEY_Here")
 REPLICATE_API_TOKEN = get_env_or_default("REPLICATE_API_TOKEN", "Your_REPLICATE_API_TOKEN_Here")
+GOOGLE_API_KEY = get_env_or_default("GOOGLE_API_KEY", "Your_GOOGLE_API_KEY_Here")
+OCR_API_KEY = get_env_or_default("OCR_API_KEY", "Your_OCR_API_KEY_Here")
+TRANS_API_KEY = get_env_or_default("TRANS_API_KEY", "Your_TRANS_API_KEY_Here")
+MODEL_NAME = get_env_or_default("MODEL_NAME", "gemini-2.0-flash")
 
 CC_SCRAPPER_LIMIT = get_env_or_default("CC_SCRAPPER_LIMIT", 5000, int)
 SUDO_CCSCR_LIMIT = get_env_or_default("SUDO_CCSCR_LIMIT", 10000, int)
@@ -57,10 +61,6 @@ LOG_CHANNEL_ID = get_env_or_default("LOG_CHANNEL_ID", "-100432424242")
 IMGAI_SIZE_LIMIT = get_env_or_default("IMGAI_SIZE_LIMIT", 5242880, int)
 MAX_TXT_SIZE = get_env_or_default("MAX_TXT_SIZE", 15728640, int)
 MAX_VIDEO_SIZE = get_env_or_default("MAX_VIDEO_SIZE", 2147483648, int)
-
-OCR_WORKER_URL = get_env_or_default("OCR_WORKER_URL", "Your_OCR_WORKER_URL_Here")
-TEXT_API_URL = get_env_or_default("TEXT_API_URL", "Your_TEXT_API_URL_Here")
-IMAGE_API_URL = get_env_or_default("IMAGE_API_URL", "Your_IMAGE_API_URL_Here")
 
 YT_COOKIES_PATH = get_env_or_default("YT_COOKIES_PATH", "./cookies/ItsSmartToolBot.txt")
 
