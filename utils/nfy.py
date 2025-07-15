@@ -4,7 +4,7 @@ from typing import Optional, Union
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatMemberStatus, ParseMode
-from config import OWNER_ID, DEVELOPER_USER_ID, LOG_CHANNEL_ID
+from config import OWNER_ID, DEVELOPER_USER_ID, LOG_CHANNEL_ID, UPDATE_CHANNEL_URL
 from .logging_setup import LOGGER
 from app import app
 
@@ -12,19 +12,27 @@ TRACEBACK_DATA = {}
 
 async def check_channel_membership(client: Client, user_id: int) -> tuple[bool, str, Optional[int]]:
     try:
-        # Use LOG_CHANNEL_ID directly - works with both private and public channels
-        from config import LOG_CHANNEL_ID
+        if not LOG_CHANNEL_ID:
+            return False, "LOG_CHANNEL_ID is not configured", None
         
-        # Validate LOG_CHANNEL_ID format
-        if not isinstance(LOG_CHANNEL_ID, int):
-            try:
-                channel_id = int(LOG_CHANNEL_ID)
-            except (ValueError, TypeError):
-                return False, f"Invalid LOG_CHANNEL_ID format: {LOG_CHANNEL_ID}. Must be a valid integer.", None
-        else:
-            channel_id = LOG_CHANNEL_ID
+        channel_id = LOG_CHANNEL_ID
         
-        # Check if bot is member of the channel
+        if isinstance(channel_id, str):
+            if channel_id.startswith('@'):
+                pass
+            else:
+                try:
+                    channel_id = int(channel_id)
+                except (ValueError, TypeError):
+                    return False, f"Invalid LOG_CHANNEL_ID format: {LOG_CHANNEL_ID}. Must be a valid integer or username.", None
+        
+        if isinstance(channel_id, int):
+            if channel_id > 0:
+                channel_id = -channel_id
+            
+            if not str(abs(channel_id)).startswith('100'):
+                channel_id = int(f"-100{abs(channel_id)}")
+        
         member = await client.get_chat_member(channel_id, user_id)
         
         if member.status in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
@@ -33,12 +41,11 @@ async def check_channel_membership(client: Client, user_id: int) -> tuple[bool, 
             return False, f"User {user_id} is not a member of the channel", channel_id
             
     except Exception as e:
-        # Handle common errors gracefully
         error_msg = str(e).lower()
         if "user not found" in error_msg:
             return False, f"User {user_id} not found in channel", None
-        elif "chat not found" in error_msg:
-            return False, f"Channel {LOG_CHANNEL_ID} not found or bot is not a member", None
+        elif "chat not found" in error_msg or "channel_invalid" in error_msg:
+            return False, f"Channel {LOG_CHANNEL_ID} not found or invalid", None
         elif "peer_id_invalid" in error_msg:
             return False, f"Invalid channel ID: {LOG_CHANNEL_ID}", None
         elif "forbidden" in error_msg:
@@ -53,28 +60,12 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             LOGGER.error(error_msg)
         user_info = {'id': "N/A", 'mention': "Unknown User", 'username': "N/A", 'full_name': "N/A"}
         chat_id_user = "N/A"
-        message_content = "N/A"
-        message_type = "N/A"
-        if message:
-            if message.from_user:
-                user = message.from_user
-                full_name = f"{user.first_name} {user.last_name or ''}".strip()
-                user_info = {'id': user.id, 'mention': f"<a href='tg://user?id={user.id}'>{full_name}</a>", 'username': f"@{user.username}" if user.username else "N/A", 'full_name': full_name}
+        if message and message.from_user:
+            user = message.from_user
+            full_name = f"{user.first_name} {user.last_name or ''}".strip()
+            user_info = {'id': user.id, 'mention': f"<a href='tg://user?id={user.id}'>{full_name}</a>", 'username': f"@{user.username}" if user.username else "N/A", 'full_name': full_name}
             chat_id_user = getattr(message.chat, 'id', "N/A")
-            if message.text:
-                message_content = message.text[:200]
-                message_type = "Text"
-            elif message.caption:
-                message_content = message.caption[:200]
-                message_type = "Caption"
-            elif message.photo:
-                message_type = "Photo"
-            elif message.document:
-                message_type = "Document"
-            elif message.video:
-                message_type = "Video"
-            else:
-                message_type = str(message.media) if message.media else "Unknown"
+        
         if isinstance(error, str):
             error_type = "StringError"
             error_message = error
@@ -85,45 +76,75 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             error_message = str(error)
             traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__)) if error.__traceback__ else "N/A"
             error_level = ("WARNING" if isinstance(error, (ValueError, UserWarning)) else "ERROR" if isinstance(error, RuntimeError) else "CRITICAL")
+        
         now = datetime.now()
         full_timestamp = now.strftime('%d-%m-%Y %H:%M:%S %p')
         formatted_date = now.strftime('%d-%m-%Y')
-        formatted_time = now.strftime('%H:%M:%S %p')
+        formatted_time = now.strftime('%H:%M:%S')
         error_id = f"{int(now.timestamp() * 1000000)}"
-        TRACEBACK_DATA[error_id] = {'error_type': error_type, 'error_level': error_level, 'message_content': message_content, 'message_type': message_type, 'traceback_text': traceback_text, 'full_timestamp': full_timestamp, 'command': command, 'error_message': error_message, 'user_info': user_info, 'chat_id': chat_id_user, 'formatted_date': formatted_date, 'formatted_time': formatted_time}
+        TRACEBACK_DATA[error_id] = {
+            'error_type': error_type,
+            'error_level': error_level,
+            'traceback_text': traceback_text,
+            'full_timestamp': full_timestamp,
+            'command': command,
+            'error_message': error_message,
+            'user_info': user_info,
+            'chat_id': chat_id_user,
+            'formatted_date': formatted_date,
+            'formatted_time': formatted_time
+        }
+        
         error_report = (
-            "<b>🔍 New Bug Found In Smart Tools 📋</b>\n"
-            "<b>━━━━━━━━━━━━━━━━</b>\n"
-            f"<b>⊗ COMMAND:</b> <code>{command}</code>\n"
-            f"<b>⊗ ISSUE:</b> <code>{error_message[:300]}</code>\n"
-            f"<b>⊗ USER'S NAME:</b> <code>{user_info['full_name']}</code>\n"
-            f"<b>⊗ USERID:</b> <code>{user_info['id']}</code>\n"
-            f"<b>⊗ ChatID:</b> <code>{chat_id_user}</code>\n"
-            f"<b>⊗ TIME:</b> <code>{formatted_time}</code>\n"
-            f"<b>⊗ DATE:</b> <code>{formatted_date}</code>\n"
-            "<b>━━━━━━━━━━━━━━━━</b>\n"
-            "<b>🔍 Always Fix Bug & Keep Bot Pro 📋</b>"
+            "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            f"- <b>Command</b>: {command}\n"
+            f"- <b>User's Name</b>: {user_info['full_name']}\n"
+            f"- <b>User's ID</b>: <code>{user_info['id']}</code>\n"
+            f"- <b>Time</b>: {formatted_time}\n"
+            f"- <b>Date</b>: {formatted_date}\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<b>🧭 Tap below to buttons investigate.</b>"
         )
+        
         keyboard_buttons = []
         if user_info['id'] != "N/A":
-            keyboard_buttons.append([InlineKeyboardButton("User Profile", user_id=user_info['id']), InlineKeyboardButton("Developer", user_id=DEVELOPER_USER_ID)])
-        keyboard_buttons.append([InlineKeyboardButton("View Full Traceback", callback_data=f"viewtrcbc{error_id}$")])
-        await client.send_message(chat_id=OWNER_ID, text=error_report, reply_markup=InlineKeyboardMarkup(keyboard_buttons), disable_web_page_preview=True, disable_notification=(error_level == "WARNING"), parse_mode=ParseMode.HTML)
+            keyboard_buttons.append([
+                InlineKeyboardButton("👤 View Profile", user_id=user_info['id']),
+                InlineKeyboardButton("🛠 Dev", user_id=DEVELOPER_USER_ID)
+            ])
+        keyboard_buttons.append([InlineKeyboardButton("📄 View Traceback", callback_data=f"viewtrcbc{error_id}$")])
+        
+        await client.send_message(
+            chat_id=OWNER_ID,
+            text=error_report,
+            reply_markup=InlineKeyboardMarkup(keyboard_buttons),
+            disable_web_page_preview=True,
+            disable_notification=(error_level == "WARNING"),
+            parse_mode=ParseMode.HTML
+        )
+        
         if is_member and channel_id:
             minimal_report = (
-                "<b>🔍 New Bug Found In Smart Tools 📋</b>\n"
-                "<b>━━━━━━━━━━━━━━━━</b>\n"
-                f"<b>⊗ COMMAND:</b> <code>{command}</code>\n"
-                f"<b>⊗ ISSUE:</b> <code>{error_message[:300]}</code>\n"
-                f"<b>⊗ USER'S NAME:</b> <code>{user_info['full_name']}</code>\n"
-                f"<b>⊗ USERID:</b> <code>{user_info['id']}</code>\n"
-                f"<b>⊗ ChatID:</b> <code>{chat_id_user}</code>\n"
-                f"<b>⊗ TIME:</b> <code>{formatted_time}</code>\n"
-                f"<b>⊗ DATE:</b> <code>{formatted_date}</code>\n"
-                "<b>━━━━━━━━━━━━━━━━</b>\n"
-                "<b>🔍 Always Fix Bug & Keep Bot Pro 📋</b>"
+                "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
+                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+                f"- <b>Command</b>: {command}\n"
+                f"- <b>User's Name</b>: {user_info['full_name']}\n"
+                f"- <b>User's ID</b>: <code>{user_info['id']}</code>\n"
+                f"- <b>Time</b>: {formatted_time}\n"
+                f"- <b>Date</b>: {formatted_date}\n"
+                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+                "<b>🧭 Tap below to buttons investigate.</b>"
             )
-            await client.send_message(chat_id=channel_id, text=minimal_report, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Updates Channel", url="https://t.me/TheSmartDev")]]), disable_web_page_preview=True, disable_notification=(error_level == "WARNING"), parse_mode=ParseMode.HTML)
+            await client.send_message(
+                chat_id=channel_id,
+                text=minimal_report,
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Updates Channel", url=UPDATE_CHANNEL_URL)]]),
+                disable_web_page_preview=True,
+                disable_notification=(error_level == "WARNING"),
+                parse_mode=ParseMode.HTML
+            )
+        
         LOGGER.info(f"Admin notification sent for command: {command} with error_id: {error_id}")
     except Exception as e:
         LOGGER.error(f"Failed to send admin notification: {e}")
@@ -140,6 +161,7 @@ async def handle_traceback_callback(client: Client, callback_query):
             LOGGER.info(f"Available error_ids: {list(TRACEBACK_DATA.keys())}")
             await callback_query.answer("❌ Traceback data not found or expired!", show_alert=True)
             return
+        
         data = TRACEBACK_DATA[error_id]
         LOGGER.info(f"Found traceback data for error_id: {error_id}")
         traceback_text = data['traceback_text']
@@ -147,23 +169,25 @@ async def handle_traceback_callback(client: Client, callback_query):
             traceback_text = traceback_text[:2000] + "\n... (truncated)"
         traceback_escaped = traceback_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         issue_escaped = data['error_message'][:200].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        content_escaped = data['message_content'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        
         traceback_message = (
-            "<b>🔍 Full Traceback Error Here 📋</b>\n"
-            "<b>━━━━━━━━━━━━━━━</b>\n"
-            f"<b>⊗ Command:</b> <code>{data['command']}</code>\n"
-            f"<b>⊗ Error Type:</b> <code>{data['error_type']}</code>\n"
-            f"<b>⊗ Severity:</b> <code>{data['error_level']}</code>\n"
-            f"<b>⊗ Issue:</b>\n<blockquote expandable=True>{issue_escaped}</blockquote>\n"
-            f"<b>⊗ Content:</b>\n<blockquote expandable=True>{content_escaped}</blockquote>\n"
-            f"<b>⊗ Content Type:</b> <code>{data['message_type']}</code>\n"
-            f"<b>⊗ Time:</b> <code>{data['full_timestamp']}</code>\n"
-            f"<b>⊗ Traceback:</b>\n<blockquote expandable=True>{traceback_escaped}</blockquote>"
-            "<b>━━━━━━━━━━━━━━━</b>\n"
-            "<b>🔍 Must Take Action Soon 📋</b>"
+            "<b>🚨 Sure Here Is The Full Issue</b>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            f"- <b>Command</b>: {data['command']}\n"
+            f"- <b>Error Type</b>: {data['error_type']}\n"
+            f"- <b>Issue</b>: {issue_escaped}\n"
+            f"- <b>Traceback</b>: <blockquote expandable=True>{traceback_escaped}</blockquote>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<b>🧭 Tap below to button Back To Main.</b>"
         )
-        back_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔙Back", callback_data=f"backtosummary{error_id}$")]])
-        await callback_query.edit_message_text(text=traceback_message, reply_markup=back_button, disable_web_page_preview=True, parse_mode=ParseMode.HTML)
+        
+        back_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back To Main", callback_data=f"backtosummary{error_id}$")]])
+        await callback_query.edit_message_text(
+            text=traceback_message,
+            reply_markup=back_button,
+            disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
+        )
         await callback_query.answer("Here Is The Full Traceback ✅")
         LOGGER.info(f"Traceback displayed successfully for error_id: {error_id}")
     except Exception as e:
@@ -182,25 +206,34 @@ async def handle_back_callback(client: Client, callback_query):
         if error_id not in TRACEBACK_DATA:
             await callback_query.answer("Failed To Show Traceback ❌", show_alert=True)
             return
+        
         data = TRACEBACK_DATA[error_id]
         error_report = (
-            "<b>🔍 New Bug Found In Smart Tools 📋</b>\n"
-            "<b>━━━━━━━━━━━━━━━━</b>\n"
-            f"<b>⊗ COMMAND:</b> <code>{data['command']}</code>\n"
-            f"<b>⊗ ISSUE:</b> <code>{data['error_message'][:300]}</code>\n"
-            f"<b>⊗ USER'S NAME:</b> <code>{data['user_info']['full_name']}</code>\n"
-            f"<b>⊗ USERID:</b> <code>{data['user_info']['id']}</code>\n"
-            f"<b>⊗ ChatID:</b> <code>{data['chat_id']}</code>\n"
-            f"<b>⊗ TIME:</b> <code>{data['formatted_time']}</code>\n"
-            f"<b>⊗ DATE:</b> <code>{data['formatted_date']}</code>\n"
-            "<b>━━━━━━━━━━━━━━━━</b>\n"
-            "<b>🔍 Always Fix Bug & Keep Bot Pro 📋</b>"
+            "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            f"- <b>Command</b>: {data['command']}\n"
+            f"- <b>User's Name</b>: {data['user_info']['full_name']}\n"
+            f"- <b>User's ID</b>: <code>{data['user_info']['id']}</code>\n"
+            f"- <b>Time</b>: {data['formatted_time']}\n"
+            f"- <b>Date</b>: {data['formatted_date']}\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<b>🧭 Tap below to buttons investigate.</b>"
         )
+        
         keyboard_buttons = []
         if data['user_info']['id'] != "N/A":
-            keyboard_buttons.append([InlineKeyboardButton("User Profile", user_id=data['user_info']['id']), InlineKeyboardButton("Developer", user_id=DEVELOPER_USER_ID)])
-        keyboard_buttons.append([InlineKeyboardButton("View Full Traceback", callback_data=f"viewtrcbc{error_id}$")])
-        await callback_query.edit_message_text(text=error_report, reply_markup=InlineKeyboardMarkup(keyboard_buttons), disable_web_page_preview=True, parse_mode=ParseMode.HTML)
+            keyboard_buttons.append([
+                InlineKeyboardButton("👤 View Profile", user_id=data['user_info']['id']),
+                InlineKeyboardButton("🛠 Dev", user_id=DEVELOPER_USER_ID)
+            ])
+        keyboard_buttons.append([InlineKeyboardButton("📄 View Traceback", callback_data=f"viewtrcbc{error_id}$")])
+        
+        await callback_query.edit_message_text(
+            text=error_report,
+            reply_markup=InlineKeyboardMarkup(keyboard_buttons),
+            disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
+        )
         await callback_query.answer("Summary Loaded Successful ✅!")
         LOGGER.info(f"Back to summary successful for error_id: {error_id}")
     except Exception as e:
