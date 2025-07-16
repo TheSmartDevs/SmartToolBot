@@ -1,6 +1,6 @@
 pyrofork
 tgcrypto
-requests
+google-generativeai
 aiohttp
 telethon
 asyncio
