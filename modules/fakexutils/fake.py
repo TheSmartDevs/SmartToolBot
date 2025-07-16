@@ -9,6 +9,7 @@ from pyrogram.enums import ParseMode
 from config import COMMAND_PREFIX, BAN_REPLY
 from core import banned_users
 import pycountry
+from utils import LOGGER
 
 def get_flag(country_code, client=None, message=None):
     try:
