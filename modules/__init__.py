@@ -37,8 +37,6 @@ from .eduxutils.syn import setup_syn_handler
 from .eduxutils.tr import setup_tr_handler
 from .fakexutils.fake import setup_fake_handler
 from .ghxutils.git import setup_git_handler
-from .grpxutils.ban import setup_ban_handlers
-from .grpxutils.setting import setup_setting_handlers
 from .grpxutils.wlc import setup_wlc_handler
 from .hlpxutils.help import setup_help_handler
 from .infoxutils.info import setup_info_handler
@@ -105,8 +103,6 @@ def setup_modules_handlers(app):
     setup_tr_handler(app)
     setup_fake_handler(app)
     setup_git_handler(app)
-    setup_ban_handlers(app)
-    setup_setting_handlers(app)
     setup_wlc_handler(app)
     setup_help_handler(app)
     setup_info_handler(app)
