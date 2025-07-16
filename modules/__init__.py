@@ -122,7 +122,7 @@ def setup_modules_handlers(app):
     setup_scr_handler(app)
     setup_mailscr_handler(app)
     setup_string_handler(app)
-    setup_kang_handler(app, bot_token)
+    setup_kang_handler(app)
     setup_q_handler(app)
     setup_time_handler(app)
     setup_rs_handler(app)
