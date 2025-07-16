@@ -1,6 +1,5 @@
 # Copyright @ISmartDevs
 # Channel t.me/TheSmartDev
-from config import BOT_TOKEN
 from .aixutils.ai import setup_ai_handler
 from .aixutils.dep import setup_dep_handler
 from .aixutils.gemi import setup_gem_handler
@@ -66,8 +65,6 @@ from .ytxutils.ytag import setup_ytag_handlers
 from .ytxutils.yth import setup_yth_handler
 
 def setup_modules_handlers(app):
-    bot_token = BOT_TOKEN
-    # Register all imported handlers
     setup_ai_handler(app)
     setup_dep_handler(app)
     setup_vnote_handler(app)
