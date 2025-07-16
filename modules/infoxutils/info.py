@@ -7,7 +7,7 @@ from pyrogram import filters, Client
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ParseMode, ChatType
 from pyrogram.errors import PeerIdInvalid, UsernameNotOccupied, ChannelInvalid
-from config import COMMAND_PREFIX, BAN_REPLY, UPDATE_CHANNEL_URL
+from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, get_dc_locations
 from core import banned_users
 
@@ -50,7 +50,7 @@ def setup_info_handler(app):
         try:
             DC_LOCATIONS = get_dc_locations()
             
-            progress_message = await client.send_message(message.chat.id, "**✨ Smart Tools Fetching Info From Database 💥**")
+            progress_message = await client.send_message(message.chat.id, "`Processing User Info`")
             try:
                 if not message.command or (len(message.command) == 1 and not message.reply_to_message):
                     logger.info("Fetching current user info")
@@ -65,10 +65,11 @@ def setup_info_handler(app):
                     verified_status = "Verified" if getattr(user, 'is_verified', False) else "Not Verified"
                     
                     chat_id_display = chat.id if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else user.id
+                    full_name = f"{user.first_name} {user.last_name or ''}".strip()
                     response = (
                         "**🔍 Showing User's Profile Info 📋**\n"
                         "**━━━━━━━━━━━━━━━━**\n"
-                        f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                        f"**• Full Name:** **{full_name}**\n"
                         f"**• Username:** @{user.username if user.username else 'None'}\n"
                         f"**• User ID:** `{user.id}`\n"
                         f"**• Chat ID:** `{chat_id_display}`\n"
@@ -80,7 +81,7 @@ def setup_info_handler(app):
                         "**👁 Thank You for Using Our Tool ✅**"
                     )
                     buttons = [
-                        [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
+                        [InlineKeyboardButton(full_name, copy_text=str(user.id))],
                     ]
                     await client.edit_message_text(
                         chat_id=message.chat.id,
@@ -103,10 +104,11 @@ def setup_info_handler(app):
                     verified_status = "Verified" if getattr(user, 'is_verified', False) else "Not Verified"
                     
                     chat_id_display = chat.id if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else user.id
+                    full_name = f"{user.first_name} {user.last_name or ''}".strip()
                     response = (
                         "**🔍 Showing User's Profile Info 📋**\n"
                         "**━━━━━━━━━━━━━━━━**\n"
-                        f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                        f"**• Full Name:** **{full_name}**\n"
                         f"**• Username:** @{user.username if user.username else 'None'}\n"
                         f"**• User ID:** `{user.id}`\n"
                         f"**• Chat ID:** `{chat_id_display}`\n"
@@ -121,7 +123,7 @@ def setup_info_handler(app):
                         response = (
                             "**🔍 Showing Bot's Profile Info 📋**\n"
                             "**━━━━━━━━━━━━━━━━**\n"
-                            f"**• Bot Name:** **{user.first_name} {user.last_name or ''}**\n"
+                            f"**• Bot Name:** **{full_name}**\n"
                             f"**• Username:** @{user.username if user.username else 'None'}\n"
                             f"**• User ID:** `{user.id}`\n"
                             f"**• Data Center:** **{dc_location}**\n"
@@ -129,7 +131,7 @@ def setup_info_handler(app):
                             "**👁 Thank You for Using Our Tool ✅**"
                         )
                     buttons = [
-                        [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
+                        [InlineKeyboardButton(full_name, copy_text=str(user.id))],
                     ]
                     await client.edit_message_text(
                         chat_id=message.chat.id,
@@ -154,10 +156,11 @@ def setup_info_handler(app):
                         
                         verified_status = "Verified" if user.is_verified else "Not Verified"
                         
+                        full_name = f"{user.first_name} {user.last_name or ''}".strip()
                         response = (
                             "**🔍 Showing User's Profile Info 📋**\n"
                             "**━━━━━━━━━━━━━━━━**\n"
-                            f"**• Full Name:** **{user.first_name} {user.last_name or ''}**\n"
+                            f"**• Full Name:** **{full_name}**\n"
                             f"**• Username:** @{user.username if user.username else 'None'}\n"
                             f"**• User ID:** `{user.id}`\n"
                             f"**• Chat ID:** `{user.id}`\n"
@@ -172,7 +175,7 @@ def setup_info_handler(app):
                             response = (
                                 "**🔍 Showing Bot's Profile Info 📋**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
-                                f"**• Bot Name:** **{user.first_name} {user.last_name or ''}**\n"
+                                f"**• Bot Name:** **{full_name}**\n"
                                 f"**• Username:** @{user.username if user.username else 'None'}\n"
                                 f"**• User ID:** `{user.id}`\n"
                                 f"**• Data Center:** **{dc_location}**\n"
@@ -180,7 +183,7 @@ def setup_info_handler(app):
                                 "**👁 Thank You for Using Our Tool ✅**"
                             )
                         buttons = [
-                            [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
+                            [InlineKeyboardButton(full_name, copy_text=str(user.id))],
                         ]
                         await client.edit_message_text(
                             chat_id=message.chat.id,
@@ -196,10 +199,11 @@ def setup_info_handler(app):
                             chat = await client.get_chat(username)
                             dc_location = DC_LOCATIONS.get(chat.dc_id, "Unknown")
                             chat_type = "Channel" if chat.type == ChatType.CHANNEL else "Group" if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else "Unknown"
+                            full_name = chat.title
                             response = (
                                 f"**🔍 Showing {chat_type}'s Profile Info 📋**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
-                                f"**• Full Name:** **{chat.title}**\n"
+                                f"**• Full Name:** **{full_name}**\n"
                                 f"**• Username:** @{chat.username if chat.username else 'None'}\n"
                                 f"**• Chat ID:** `{chat.id}`\n"
                                 f"**• Total Members:** **{chat.members_count if chat.members_count else 'Unknown'}**\n"
@@ -207,7 +211,7 @@ def setup_info_handler(app):
                                 "**👁 Thank You for Using Our Tool ✅**"
                             )
                             buttons = [
-                                [InlineKeyboardButton("Join For Updates", url=UPDATE_CHANNEL_URL)],
+                                [InlineKeyboardButton(full_name, copy_text=str(chat.id))],
                             ]
                             await client.edit_message_text(
                                 chat_id=message.chat.id,
