@@ -10,6 +10,19 @@ from config import COMMAND_PREFIX, BAN_REPLY
 from core import banned_users
 import pycountry
 
+def get_flag(country_code, client=None, message=None):
+    try:
+        country = pycountry.countries.get(alpha_2=country_code)
+        if not country:
+            raise ValueError("Invalid country code")
+        country_name = country.name
+        flag_emoji = chr(0x1F1E6 + ord(country_code[0]) - ord('A')) + chr(0x1F1E6 + ord(country_code[1]) - ord('A'))
+        return country_name, flag_emoji
+    except Exception as e:
+        error_msg = f"Error in get_flag: {str(e)}"
+        LOGGER.error(error_msg)
+        return None, "👁"
+
 def setup_fake_handler(app: Client):
     @app.on_message(filters.command(["fake", "rnd"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def fake_handler(client: Client, message: Message):
@@ -41,11 +54,12 @@ def setup_fake_handler(app: Client):
                 async with session.get(api_url) as response:
                     response.raise_for_status()
                     data = await response.json()
+                    _, flag_emoji = get_flag(country.alpha_2, client, message)
                     keyboard = InlineKeyboardMarkup([
                         [InlineKeyboardButton("Copy Postal Code", copy_text=data['postal_code'])]
                     ])
                     await generating_message.edit_text(
-                        f"**Address for {data['country']} 👁**\n"
+                        f"**Address for {data['country']} {flag_emoji}**\n"
                         f"**━━━━━━━━━━━━━**\n"
                         f"**- Street :** {data['street_address']}\n"
                         f"**- Building Number :** {data['building_number']}\n"
