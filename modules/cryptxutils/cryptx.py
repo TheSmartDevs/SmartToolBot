@@ -54,15 +54,15 @@ async def get_conversion_data(base_coin: str, target_coin: str, amount: float):
 
 def format_response(data: dict) -> str:
     return (
-        "Smart Binance Convert Successful ✅\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⊗ Base Coin:        {data['base_coin']}\n"
-        f"⊗ Target Coin:      {data['target_coin']}\n"
-        f"⊗ Amount:           {data['amount']:.4f} {data['base_coin']}\n"
-        f"⊗ Total In USDT:    {data['total_in_usdt']:.4f} USDT\n"
-        f"⊗ Converted Amount: {data['converted_amount']:.4f} {data['target_coin']}\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Smooth Coin Converter → Activated ✅"
+        "**Smart Binance Convert Successful ✅**\n"
+        "**━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n"
+        f"**- Base Coin: **       {data['base_coin']}\n"
+        f"**- Target Coin: **    {data['target_coin']}\n"
+        f"**- Amount:**           {data['amount']:.4f} {data['base_coin']}\n"
+        f"**- Total In USDT:**  {data['total_in_usdt']:.4f} USDT\n"
+        f"**- Converted Amount:** {data['converted_amount']:.4f} {data['target_coin']}\n"
+        "**━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n"
+        "**Smooth Coin Converter → Activated ✅**"
     )
 
 def setup_coin_handler(app: Client):
