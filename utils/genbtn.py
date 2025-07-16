@@ -513,11 +513,11 @@ responses = {
     ),
     "about_me": (
         "**Name:** Smart Tool\n"
-        "**Version:** v14.0 (Beta) 🛠\n\n"
+        "**Version:** v16.0 (Beta) 🛠\n\n"
         "**Development Team:**\n"
-        "- **Creator:** [Abir Arafat Chawdhury 👨‍💻](https://tg://user?id=7303810912)\n"
-        "- **Contributor:** [Nyein Ko Ko Aung 🤝](https://tg://user?id=1273841502)\n"
-        "- **Helper:** [Saddam Hossain 👥](https://tg://user?id=6249257243)\n"
+        "- **Creator:** [Abir Arafat Chawdhury 👨‍💻](https://t.me/ISmartCoder)\n"
+        "- **Contributor:** [Nyein Ko Ko Aung 🤝](https://t.me/nkka404)\n"
+        "- **Helper:** [Saddam Hossain 👥](https://t.me/Saddam_XD)\n"
         "**Technical Stacks:**\n"
         "- **Language:** Python 🐍\n"
         "- **Framework:** Fully Written In Pyrogram And Telethon 📚\n"
