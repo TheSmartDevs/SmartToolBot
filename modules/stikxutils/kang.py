@@ -1,112 +1,45 @@
-# Copyright @ISmartCoder
-# Updates Channel t.me/TheSmartDev
-
+import asyncio
 import os
+import re
+import shutil
+import tempfile
+import uuid
+from PIL import Image
+from pyrogram import Client, emoji, enums, filters
+from pyrogram.errors import BadRequest, PeerIdInvalid, StickersetInvalid
+from pyrogram.file_id import FileId
+from pyrogram.raw.functions.messages import GetStickerSet, SendMedia
+from pyrogram.raw.functions.stickers import AddStickerToSet, CreateStickerSet
+from pyrogram.raw.types import DocumentAttributeFilename, InputDocument, InputMediaUploadedDocument, InputStickerSetItem, InputStickerSetShortName
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from config import BOT_TOKEN, COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER
 from core import banned_users
-from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from config import BOT_TOKEN, COMMAND_PREFIX, BAN_REPLY
-import uuid
-import asyncio
-import aiohttp
-from PIL import Image
-import subprocess
 
-async def get_sticker_set(bot_token: str, name: str):
-    url = f"https://api.telegram.org/bot{bot_token}/getStickerSet"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params={"name": name}) as response:
-            if response.status != 200:
-                LOGGER.error(f"Failed to get sticker set: {await response.json()}")
-                return None
-            return (await response.json()).get("result")
+def get_emoji_regex():
+    e_list = [getattr(emoji, e).encode("unicode-escape").decode("ASCII") for e in dir(emoji) if not e.startswith("_")]
+    e_sort = sorted([x for x in e_list if not x.startswith("*")], reverse=True)
+    pattern_ = f"({'|'.join(e_sort)})"
+    return re.compile(pattern_)
 
-async def add_sticker_to_set(bot_token: str, user_id: int, name: str, png_sticker: str, emojis: str):
-    url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
-    async with aiohttp.ClientSession() as session:
-        with open(png_sticker, "rb") as sticker_file:
-            form = aiohttp.FormData()
-            form.add_field("png_sticker", sticker_file)
-            form.add_field("user_id", str(user_id))
-            form.add_field("name", name)
-            form.add_field("emojis", emojis)
-            async with session.post(url, data=form) as response:
-                if response.status != 200:
-                    error = await response.json()
-                    LOGGER.error(f"Failed to add PNG sticker: {error}")
-                    raise Exception(error["description"])
-                return await response.json()
-
-async def add_video_sticker_to_set(bot_token: str, user_id: int, name: str, webm_sticker: str, emojis: str):
-    url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
-    async with aiohttp.ClientSession() as session:
-        with open(webm_sticker, "rb") as sticker_file:
-            form = aiohttp.FormData()
-            form.add_field("webm_sticker", sticker_file)
-            form.add_field("user_id", str(user_id))
-            form.add_field("name", name)
-            form.add_field("emojis", emojis)
-            async with session.post(url, data=form) as response:
-                if response.status != 200:
-                    error = await response.json()
-                    LOGGER.error(f"Failed to add video sticker: {error}")
-                    raise Exception(error["description"])
-                return await response.json()
-
-async def add_animated_sticker_to_set(bot_token: str, user_id: int, name: str, tgs_sticker: str, emojis: str):
-    url = f"https://api.telegram.org/bot{bot_token}/addStickerToSet"
-    async with aiohttp.ClientSession() as session:
-        with open(tgs_sticker, "rb") as sticker_file:
-            form = aiohttp.FormData()
-            form.add_field("tgs_sticker", sticker_file)
-            form.add_field("user_id", str(user_id))
-            form.add_field("name", name)
-            form.add_field("emojis", emojis)
-            async with session.post(url, data=form) as response:
-                if response.status != 200:
-                    error = await response.json()
-                    LOGGER.error(f"Failed to add animated sticker: {error}")
-                    raise Exception(error["description"])
-                return await response.json()
-
-async def create_sticker_set(bot_token: str, user_id: int, name: str, title: str, sticker_file: str, emojis: str, sticker_type: str):
-    url = f"https://api.telegram.org/bot{bot_token}/createNewStickerSet"
-    file_param = "png_sticker" if sticker_type == "png" else "tgs_sticker" if sticker_type == "tgs" else "webm_sticker"
-    async with aiohttp.ClientSession() as session:
-        with open(sticker_file, "rb") as sticker_file:
-            form = aiohttp.FormData()
-            form.add_field(file_param, sticker_file)
-            form.add_field("user_id", str(user_id))
-            form.add_field("name", name)
-            form.add_field("title", title)
-            form.add_field("emojis", emojis)
-            async with session.post(url, data=form) as response:
-                if response.status != 200:
-                    error = await response.json()
-                    LOGGER.error(f"Failed to create sticker set: {error}")
-                    raise Exception(error["description"])
-                return await response.json()
+EMOJI_PATTERN = get_emoji_regex()
 
 async def resize_png_for_sticker(input_file: str, output_file: str):
     try:
-        async with asyncio.Lock():
-            with Image.open(input_file) as im:
-                width, height = im.size
-                if width == 512 or height == 512:
-                    im.save(output_file, "PNG", optimize=True)
-                    return output_file
-                
-                if width > height:
-                    new_width = 512
-                    new_height = int((512 / width) * height)
-                else:
-                    new_height = 512
-                    new_width = int((512 / height) * width)
-                
-                im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        with Image.open(input_file) as im:
+            width, height = im.size
+            if width == 512 or height == 512:
                 im.save(output_file, "PNG", optimize=True)
                 return output_file
+            if width > height:
+                new_width = 512
+                new_height = int((512 / width) * height)
+            else:
+                new_height = 512
+                new_width = int((512 / height) * width)
+            im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            im.save(output_file, "PNG", optimize=True)
+            return output_file
     except Exception as e:
         LOGGER.error(f"Error resizing PNG: {str(e)}")
         return None
@@ -169,13 +102,12 @@ async def process_gif_to_webm(input_file: str, output_file: str):
         LOGGER.error(f"Error processing GIF: {str(e)}")
         return None
 
-def setup_kang_handler(app: Client, bot_token: str):
-    
+def setup_kang_handler(app: Client):
     @app.on_message(filters.command(["kang"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def kang(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
-            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(message.chat.id, BAN_REPLY, parse_mode=enums.ParseMode.MARKDOWN)
             return
 
         user = message.from_user
@@ -186,13 +118,15 @@ def setup_kang_handler(app: Client, bot_token: str):
 
         temp_message = await client.send_message(chat_id=message.chat.id, text="<b>Kanging this Sticker...✨</b>")
 
-        # Optimized sticker set check
-        while packnum <= 100:  # Prevent infinite loop
-            sticker_set = await get_sticker_set(bot_token, packname)
-            if not sticker_set or len(sticker_set["stickers"]) < max_stickers:
+        while packnum <= 100:
+            try:
+                stickerset = await client.invoke(GetStickerSet(stickerset=InputStickerSetShortName(short_name=packname), hash=0))
+                if stickerset.set.count < max_stickers:
+                    break
+                packnum += 1
+                packname = f"a{packnum}_{user.id}_by_{client.me.username}"
+            except StickersetInvalid:
                 break
-            packnum += 1
-            packname = f"a{packnum}_{user.id}_by_{client.me.username}"
 
         if not message.reply_to_message:
             await temp_message.edit_text("<b>Please reply to a sticker, image, or document to kang it!</b>")
@@ -244,11 +178,11 @@ def setup_kang_handler(app: Client, bot_token: str):
 
         sticker_emoji = "🌟"
         if len(message.command) > 1:
-            sticker_emoji = message.command[1]
+            emoji_matches = "".join(set(EMOJI_PATTERN.findall("".join(message.command[1:]))))
+            sticker_emoji = emoji_matches or sticker_emoji
         elif reply.sticker and reply.sticker.emoji:
             sticker_emoji = reply.sticker.emoji
 
-        # Construct full name for display title
         full_name = user.first_name
         if user.last_name:
             full_name += f" {user.last_name}"
@@ -283,18 +217,54 @@ def setup_kang_handler(app: Client, bot_token: str):
                 kang_file = output_file
                 temp_files.append(kang_file)
 
-        except Exception as e:
-            LOGGER.error(f"Processing error: {str(e)}")
-            await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
-            return
+            file = await client.save_file(kang_file)
+            media = await client.invoke(
+                SendMedia(
+                    peer=(await client.resolve_peer(message.chat.id)),
+                    media=InputMediaUploadedDocument(
+                        file=file,
+                        mime_type=client.guess_mime_type(kang_file),
+                        attributes=[DocumentAttributeFilename(file_name=os.path.basename(kang_file))],
+                    ),
+                    message=f"#Sticker kang by UserID -> {user.id}",
+                    random_id=client.rnd_id(),
+                )
+            )
+            msg_ = media.updates[-1].message
+            stkr_file = msg_.media.document
 
-        try:
-            if sticker_format == "tgs":
-                await add_animated_sticker_to_set(bot_token, user.id, packname, kang_file, sticker_emoji)
-            elif sticker_format == "webm":
-                await add_video_sticker_to_set(bot_token, user.id, packname, kang_file, sticker_emoji)
-            else:
-                await add_sticker_to_set(bot_token, user.id, packname, kang_file, sticker_emoji)
+            try:
+                await client.invoke(
+                    AddStickerToSet(
+                        stickerset=InputStickerSetShortName(short_name=packname),
+                        sticker=InputStickerSetItem(
+                            document=InputDocument(
+                                id=stkr_file.id,
+                                access_hash=stkr_file.access_hash,
+                                file_reference=stkr_file.file_reference,
+                            ),
+                            emoji=sticker_emoji,
+                        ),
+                    )
+                )
+            except StickersetInvalid:
+                await client.invoke(
+                    CreateStickerSet(
+                        user_id=await client.resolve_peer(user.id),
+                        title=pack_title,
+                        short_name=packname,
+                        stickers=[
+                            InputStickerSetItem(
+                                document=InputDocument(
+                                    id=stkr_file.id,
+                                    access_hash=stkr_file.access_hash,
+                                    file_reference=stkr_file.file_reference,
+                                ),
+                                emoji=sticker_emoji,
+                            )
+                        ],
+                    )
+                )
 
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("View Sticker Pack", url=f"t.me/addstickers/{packname}")]])
             await temp_message.edit_text(
@@ -302,24 +272,13 @@ def setup_kang_handler(app: Client, bot_token: str):
                 reply_markup=keyboard
             )
 
+            await client.delete_messages(chat_id=message.chat.id, message_ids=msg_.id, revoke=True)
+
         except Exception as e:
-            if "STICKERSET_INVALID" in str(e):
-                try:
-                    await create_sticker_set(bot_token, user.id, packname, pack_title, kang_file, sticker_emoji, sticker_format)
-                    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("View Sticker Pack", url=f"t.me/addstickers/{packname}")]])
-                    await temp_message.edit_text(
-                        f"**Sticker Kanged Successful! ✅**\n**Sticker Emoji: {sticker_emoji}**\n**Sticker Pack Name: {pack_title}**",
-                        reply_markup=keyboard
-                    )
-                except Exception as ce:
-                    LOGGER.error(f"Create sticker set error: {str(ce)}")
-                    await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
-            else:
-                LOGGER.error(f"Add sticker error: {str(e)}")
-                await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+            LOGGER.error(f"Error adding sticker: {str(e)}")
+            await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
         
         finally:
-            # Optimized cleanup
             for file in temp_files:
                 try:
                     os.remove(file)
