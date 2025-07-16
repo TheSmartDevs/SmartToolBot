@@ -23,26 +23,28 @@ def get_emoji_regex():
     return re.compile(pattern_)
 
 EMOJI_PATTERN = get_emoji_regex()
+FILE_LOCK = asyncio.Lock()
 
 async def resize_png_for_sticker(input_file: str, output_file: str):
-    try:
-        with Image.open(input_file) as im:
-            width, height = im.size
-            if width == 512 or height == 512:
+    async with FILE_LOCK:
+        try:
+            with Image.open(input_file) as im:
+                width, height = im.size
+                if width == 512 or height == 512:
+                    im.save(output_file, "PNG", optimize=True)
+                    return output_file
+                if width > height:
+                    new_width = 512
+                    new_height = int((512 / width) * height)
+                else:
+                    new_height = 512
+                    new_width = int((512 / height) * width)
+                im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
                 im.save(output_file, "PNG", optimize=True)
                 return output_file
-            if width > height:
-                new_width = 512
-                new_height = int((512 / width) * height)
-            else:
-                new_height = 512
-                new_width = int((512 / height) * width)
-            im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            im.save(output_file, "PNG", optimize=True)
-            return output_file
-    except Exception as e:
-        LOGGER.error(f"Error resizing PNG: {str(e)}")
-        return None
+        except Exception as e:
+            LOGGER.error(f"Error resizing PNG: {str(e)}")
+            return None
 
 async def process_video_sticker(input_file: str, output_file: str):
     try:
@@ -59,15 +61,16 @@ async def process_video_sticker(input_file: str, output_file: str):
         if process.returncode != 0:
             LOGGER.error(f"FFmpeg error: {stderr.decode()}")
             return None
-        if os.path.exists(output_file) and os.path.getsize(output_file) > 256 * 1024:
-            LOGGER.warning("File size exceeds 256KB, re-encoding with lower quality")
-            command[-3] = "-b:v"
-            command[-2] = "100k"
-            process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                LOGGER.error(f"FFmpeg error: {stderr.decode()}")
-                return None
+        async with FILE_LOCK:
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 256 * 1024:
+                LOGGER.warning("File size exceeds 256KB, re-encoding with lower quality")
+                command[-3] = "-b:v"
+                command[-2] = "100k"
+                process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                stdout, stderr = await process.communicate()
+                if process.returncode != 0:
+                    LOGGER.error(f"FFmpeg error: {stderr.decode()}")
+                    return None
         return output_file
     except Exception as e:
         LOGGER.error(f"Error processing video: {str(e)}")
@@ -88,19 +91,29 @@ async def process_gif_to_webm(input_file: str, output_file: str):
         if process.returncode != 0:
             LOGGER.error(f"FFmpeg error: {stderr.decode()}")
             return None
-        if os.path.exists(output_file) and os.path.getsize(output_file) > 256 * 1024:
-            LOGGER.warning("File size exceeds 256KB, re-encoding with lower quality")
-            command[-3] = "-b:v"
-            command[-2] = "100k"
-            process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                LOGGER.error(f"FFmpeg error: {stderr.decode()}")
-                return None
+        async with FILE_LOCK:
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 256 * 1024:
+                LOGGER.warning("File size exceeds 256KB, re-encoding with lower quality")
+                command[-3] = "-b:v"
+                command[-2] = "100k"
+                process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                stdout, stderr = await process.communicate()
+                if process.returncode != 0:
+                    LOGGER.error(f"FFmpeg error: {stderr.decode()}")
+                    return None
         return output_file
     except Exception as e:
         LOGGER.error(f"Error processing GIF: {str(e)}")
         return None
+
+async def cleanup_files(temp_files):
+    async def remove_file(file):
+        try:
+            async with FILE_LOCK:
+                os.remove(file)
+        except:
+            LOGGER.warning(f"Failed to remove temporary file: {file}")
+    await asyncio.gather(*[remove_file(file) for file in temp_files])
 
 def setup_kang_handler(app: Client):
     @app.on_message(filters.command(["kang"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
@@ -118,15 +131,23 @@ def setup_kang_handler(app: Client):
 
         temp_message = await client.send_message(chat_id=message.chat.id, text="<b>Kanging this Sticker...✨</b>")
 
-        while packnum <= 100:
-            try:
-                stickerset = await client.invoke(GetStickerSet(stickerset=InputStickerSetShortName(short_name=packname), hash=0))
-                if stickerset.set.count < max_stickers:
-                    break
-                packnum += 1
-                packname = f"a{packnum}_{user.id}_by_{client.me.username}"
-            except StickersetInvalid:
-                break
+        async def check_sticker_set():
+            nonlocal packnum, packname
+            while packnum <= 100:
+                try:
+                    stickerset = await client.invoke(GetStickerSet(stickerset=InputStickerSetShortName(short_name=packname), hash=0))
+                    if stickerset.set.count < max_stickers:
+                        return True
+                    packnum += 1
+                    packname = f"a{packnum}_{user.id}_by_{client.me.username}"
+                except StickersetInvalid:
+                    return False
+            return False
+
+        packname_found = await check_sticker_set()
+        if not packname_found and packnum > 100:
+            await temp_message.edit_text("<b>❌ Maximum sticker packs reached!</b>")
+            return
 
         if not message.reply_to_message:
             await temp_message.edit_text("<b>Please reply to a sticker, image, or document to kang it!</b>")
@@ -167,6 +188,7 @@ def setup_kang_handler(app: Client):
             
             if not kang_file:
                 await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+                await cleanup_files(temp_files)
                 return
             
             temp_files.append(kang_file)
@@ -174,6 +196,7 @@ def setup_kang_handler(app: Client):
         except Exception as e:
             LOGGER.error(f"Download error: {str(e)}")
             await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+            await cleanup_files(temp_files)
             return
 
         sticker_emoji = "🌟"
@@ -194,6 +217,7 @@ def setup_kang_handler(app: Client):
                 processed_file = await resize_png_for_sticker(kang_file, output_file)
                 if not processed_file:
                     await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+                    await cleanup_files(temp_files)
                     return
                 kang_file = processed_file
                 temp_files.append(kang_file)
@@ -203,6 +227,7 @@ def setup_kang_handler(app: Client):
                 processed_file = await process_gif_to_webm(kang_file, output_file)
                 if not processed_file:
                     await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+                    await cleanup_files(temp_files)
                     return
                 kang_file = output_file
                 sticker_format = "webm"
@@ -213,74 +238,83 @@ def setup_kang_handler(app: Client):
                 processed_file = await process_video_sticker(kang_file, output_file)
                 if not processed_file:
                     await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
+                    await cleanup_files(temp_files)
                     return
                 kang_file = output_file
                 temp_files.append(kang_file)
 
-            file = await client.save_file(kang_file)
-            media = await client.invoke(
-                SendMedia(
-                    peer=(await client.resolve_peer(message.chat.id)),
-                    media=InputMediaUploadedDocument(
-                        file=file,
-                        mime_type=client.guess_mime_type(kang_file),
-                        attributes=[DocumentAttributeFilename(file_name=os.path.basename(kang_file))],
-                    ),
-                    message=f"#Sticker kang by UserID -> {user.id}",
-                    random_id=client.rnd_id(),
-                )
-            )
-            msg_ = media.updates[-1].message
-            stkr_file = msg_.media.document
-
-            try:
-                await client.invoke(
-                    AddStickerToSet(
-                        stickerset=InputStickerSetShortName(short_name=packname),
-                        sticker=InputStickerSetItem(
-                            document=InputDocument(
-                                id=stkr_file.id,
-                                access_hash=stkr_file.access_hash,
-                                file_reference=stkr_file.file_reference,
-                            ),
-                            emoji=sticker_emoji,
+            async def upload_and_add_sticker():
+                file = await client.save_file(kang_file)
+                media = await client.invoke(
+                    SendMedia(
+                        peer=(await client.resolve_peer(message.chat.id)),
+                        media=InputMediaUploadedDocument(
+                            file=file,
+                            mime_type=client.guess_mime_type(kang_file),
+                            attributes=[DocumentAttributeFilename(file_name=os.path.basename(kang_file))],
                         ),
+                        message=f"#Sticker kang by UserID -> {user.id}",
+                        random_id=client.rnd_id(),
                     )
                 )
-            except StickersetInvalid:
-                await client.invoke(
-                    CreateStickerSet(
-                        user_id=await client.resolve_peer(user.id),
-                        title=pack_title,
-                        short_name=packname,
-                        stickers=[
-                            InputStickerSetItem(
+                return media.updates[-1].message
+
+            async def add_to_sticker_set(stkr_file):
+                try:
+                    await client.invoke(
+                        AddStickerToSet(
+                            stickerset=InputStickerSetShortName(short_name=packname),
+                            sticker=InputStickerSetItem(
                                 document=InputDocument(
                                     id=stkr_file.id,
                                     access_hash=stkr_file.access_hash,
                                     file_reference=stkr_file.file_reference,
                                 ),
                                 emoji=sticker_emoji,
-                            )
-                        ],
+                            ),
+                        )
                     )
+                    return True
+                except StickersetInvalid:
+                    await client.invoke(
+                        CreateStickerSet(
+                            user_id=await client.resolve_peer(user.id),
+                            title=pack_title,
+                            short_name=packname,
+                            stickers=[
+                                InputStickerSetItem(
+                                    document=InputDocument(
+                                        id=stkr_file.id,
+                                        access_hash=stkr_file.access_hash,
+                                        file_reference=stkr_file.file_reference,
+                                    ),
+                                    emoji=sticker_emoji,
+                                )
+                            ],
+                        )
+                    )
+                    return True
+                except Exception as e:
+                    LOGGER.error(f"Error adding sticker: {str(e)}")
+                    return False
+
+            msg_ = await upload_and_add_sticker()
+            stkr_file = msg_.media.document
+            success = await add_to_sticker_set(stkr_file)
+
+            if success:
+                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("View Sticker Pack", url=f"t.me/addstickers/{packname}")]])
+                await temp_message.edit_text(
+                    f"**Sticker Kanged! **\n**Emoji: {sticker_emoji}**\n**Pack: {pack_title}**",
+                    reply_markup=keyboard
                 )
-
-            keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("View Sticker Pack", url=f"t.me/addstickers/{packname}")]])
-            await temp_message.edit_text(
-                f"**Sticker Kanged Successful! ✅**\n**Sticker Emoji: {sticker_emoji}**\n**Sticker Pack Name: {pack_title}**",
-                reply_markup=keyboard
-            )
-
-            await client.delete_messages(chat_id=message.chat.id, message_ids=msg_.id, revoke=True)
+                await client.delete_messages(chat_id=message.chat.id, message_ids=msg_.id, revoke=True)
+            else:
+                await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
 
         except Exception as e:
-            LOGGER.error(f"Error adding sticker: {str(e)}")
+            LOGGER.error(f"Processing error: {str(e)}")
             await temp_message.edit_text("<b>❌ Failed To Kang The Sticker</b>")
         
         finally:
-            for file in temp_files:
-                try:
-                    os.remove(file)
-                except:
-                    LOGGER.warning(f"Failed to remove temporary file: {file}")
+            await cleanup_files(temp_files)
