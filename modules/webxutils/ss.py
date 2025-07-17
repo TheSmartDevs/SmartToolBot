@@ -1,6 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel: https://t.me/TheSmartDev
-
 import os
 import aiohttp
 import time
@@ -15,133 +12,107 @@ from utils import LOGGER, notify_admin
 from core import banned_users
 
 SCREENSHOT_API_URL = "https://api.screenshotone.com/take"
-ACCESS_KEY = "Z8LQ6Z0DsTQV_A"
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 def validate_url(url: str) -> bool:
     return '.' in url and len(url) < 2048
 
 def normalize_url(url: str) -> str:
-    if url.startswith(('http://', 'https://')):
-        return url
-    else:
-        return f"https://{url}"
+    return url if url.startswith(('http://', 'https://')) else f"https://{url}"
 
-async def fetch_screenshot(url: str, retries=3, backoff_factor=1.0):
-    api_url = f"{SCREENSHOT_API_URL}?access_key={ACCESS_KEY}&url={quote(url)}&format=jpg&block_ads=true&block_cookie_banners=true&block_banners_by_heuristics=false&block_trackers=true&delay=0&timeout=60&response_type=by_format&image_quality=80"
+async def fetch_screenshot(url: str) -> bytes:
+    api_url = f"{SCREENSHOT_API_URL}?url={quote(url)}"
+    timeout = aiohttp.ClientTimeout(total=10) 
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(api_url) as response:
+                response.raise_for_status()
+                content_type = response.headers.get('Content-Type', '')
+                if 'image' not in content_type:
+                    raise ValueError(f"Unexpected content type: {content_type}")
+                content_length = int(response.headers.get('Content-Length', 0))
+                if content_length > MAX_FILE_SIZE:
+                    raise ValueError(f"Screenshot too large ({content_length / 1024 / 1024:.1f}MB)")
+                return await response.read()
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        LOGGER.error(f"Failed to fetch screenshot for {url}: {e}")
+        return None
 
-    for attempt in range(retries):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url) as response:
-                    response.raise_for_status()
+async def save_screenshot(url: str, timestamp: int) -> str:
+    screenshot_bytes = await fetch_screenshot(url)
+    if not screenshot_bytes:
+        return None
+    temp_file = f"screenshot_{timestamp}_{hash(url)}.jpg"
+    async with aiofiles.open(temp_file, 'wb') as file:
+        await file.write(screenshot_bytes)
+    file_size = os.path.getsize(temp_file)
+    if file_size > MAX_FILE_SIZE:
+        os.remove(temp_file)
+        return None
+    return temp_file
 
-                    content_type = response.headers.get('Content-Type', '')
-                    if 'image' not in content_type:
-                        raise ValueError(f"Unexpected content type: {content_type}")
+async def capture_screenshots(client, message: Message, urls: list) -> None:
+    user_id = message.from_user.id if message.from_user else None
+    if user_id and await banned_users.find_one({"user_id": user_id}):
+        await client.send_message(chat_id=message.chat.id, text=BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
+        return
 
-                    content_length = int(response.headers.get('Content-Length', 0))
-                    if content_length > MAX_FILE_SIZE:
-                        raise ValueError(f"Screenshot too large ({content_length / 1024 / 1024:.1f}MB)")
+    if not urls:
+        await client.send_message(
+            chat_id=message.chat.id,
+            text="**❌ Please provide at least one URL after the command**",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
 
-                    return response
+    for url in urls:
+        if not validate_url(url):
+            await client.send_message(
+                chat_id=message.chat.id,
+                text=f"**❌ Invalid URL format: {url}**",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
 
-        except aiohttp.ClientConnectionError as e:
-            if attempt < retries - 1:
-                sleep_time = backoff_factor * (2 ** attempt)
-                LOGGER.warning(f"Connection error on attempt {attempt + 1}: {e}. Retrying in {sleep_time}s...")
-                await asyncio.sleep(sleep_time)
+    processing_msg = await client.send_message(
+        chat_id=message.chat.id,
+        text="**Capturing ScreenShots Please Wait**",
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+    timestamp = int(time.time())
+    tasks = [save_screenshot(normalize_url(url), timestamp) for url in urls]
+    temp_files = await asyncio.gather(*tasks, return_exceptions=True)
+
+    try:
+        for i, temp_file in enumerate(temp_files):
+            if isinstance(temp_file, Exception):
+                LOGGER.error(f"Error processing {urls[i]}: {temp_file}")
                 continue
-            LOGGER.error(f"Failed to fetch screenshot after {retries} attempts: {e}")
-            return None
-        except aiohttp.ClientError as e:
-            LOGGER.error(f"Failed to fetch screenshot: {e}")
-            return None
+            if temp_file:
+                await client.send_photo(chat_id=message.chat.id, photo=temp_file)
+                os.remove(temp_file)
+
+        await client.delete_messages(chat_id=processing_msg.chat.id, message_ids=processing_msg.id)
+
+    except Exception as e:
+        error_msg = "**Sorry Bro SS Capture API Dead**"
+        try:
+            await client.edit_message_text(
+                chat_id=processing_msg.chat.id,
+                message_id=processing_msg.id,
+                text=error_msg,
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as edit_error:
+            LOGGER.warning(f"Failed to edit processing message: {edit_error}")
+        LOGGER.error(f"Error in capture_screenshots: {e}")
+        await notify_admin(client, "/ss", e, message)
 
 def setup_ss_handler(app: Client):
     @app.on_message(filters.command(["ss", "sshot", "screenshot", "snap"], prefixes=COMMAND_PREFIX) & 
                    (filters.private | filters.group))
-    async def capture_screenshot(client, message: Message):
-        user_id = message.from_user.id if message.from_user else None
-        if user_id and await banned_users.find_one({"user_id": user_id}):
-            await client.send_message(
-                chat_id=message.chat.id,
-                text=BAN_REPLY,
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
+    async def handler(client, message: Message):
+        urls = message.command[1:]  
+        await capture_screenshots(client, message, urls)
 
-        if len(message.command) < 2:
-            await client.send_message(
-                chat_id=message.chat.id,
-                text="**❌ Please provide a URL after the command**",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-
-        url = message.command[1].strip()
-
-        if not validate_url(url):
-            await client.send_message(
-                chat_id=message.chat.id,
-                text="**❌ Invalid URL format**",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-
-        processing_msg = await client.send_message(
-            chat_id=message.chat.id,
-            text="**Capturing ScreenShot Please Wait**",
-            parse_mode=ParseMode.MARKDOWN
-        )
-
-        temp_file = None
-        try:
-            url = normalize_url(url)
-
-            start_time = time.time()
-            response = await fetch_screenshot(url)
-
-            if not response:
-                raise ValueError("Failed to capture screenshot.")
-
-            timestamp = int(time.time())
-            temp_file = f"screenshot_{timestamp}.jpg"
-
-            async with aiofiles.open(temp_file, 'wb') as file:
-                async for chunk in response.content.iter_chunked(8192):
-                    await file.write(chunk)
-
-            file_size = os.path.getsize(temp_file)
-            if file_size > MAX_FILE_SIZE:
-                raise ValueError(f"Resulting file too large ({file_size/1024/1024:.1f}MB)")
-
-            await client.send_photo(
-                chat_id=message.chat.id,
-                photo=temp_file
-            )
-
-            await client.delete_messages(
-                chat_id=processing_msg.chat.id,
-                message_ids=processing_msg.id
-            )
-
-        except Exception as e:
-            error_msg = "**Sorry Bro SS Capture API Dead**"
-            try:
-                await client.edit_message_text(
-                    chat_id=processing_msg.chat.id,
-                    message_id=processing_msg.id,
-                    text=error_msg,
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            except Exception as edit_error:
-                LOGGER.warning(f"Failed to edit processing message: {edit_error}")
-            LOGGER.error(f"Error in capture_screenshot: {e}")
-            await notify_admin(client, "/ss", e, message)
-        finally:
-            if temp_file and os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except Exception as cleanup_error:
-                    LOGGER.warning(f"Failed to remove temp file: {cleanup_error}")
