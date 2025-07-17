@@ -15,7 +15,6 @@ try:
 
     mongo_client = AsyncIOMotorClient(DATABASE_URL)
     db = mongo_client.get_database(db_name)
-    group_settings = db["group_settings"]
     auth_admins = db["auth_admins"]
     banned_users = db["banned_users"]
 
