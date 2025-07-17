@@ -257,7 +257,7 @@ def setup_gen_handler(app:Client):
                 if os.path.exists(file_name):
                     os.remove(file_name)
 
-    @app.on_message(filters.reply&(filters.private|filters.group))
+    @app.on_message(filters.reply & filters.regex(r'^(?:BIN|bin)[:\s]*(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:\.gen|/gen)\s+(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:^|\s)(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)(?:\s|$)|(\d{6,16}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?))') & (filters.private|filters.group))
     async def auto_generate_handler(client:Client,message:Message):
         user_id=message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id":user_id}):
