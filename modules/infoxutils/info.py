@@ -70,7 +70,10 @@ def setup_info_handler(app):
                         "**🔍 Showing User's Profile Info 📋**\n"
                         "**━━━━━━━━━━━━━━━━**\n"
                         f"**• Full Name:** **{full_name}**\n"
-                        f"**• Username:** @{user.username if user.username else 'None'}\n"
+                    )
+                    if user.username:
+                        response += f"**• Username:** @{user.username}\n"
+                    response += (
                         f"**• User ID:** `{user.id}`\n"
                         f"**• Chat ID:** `{chat_id_display}`\n"
                         f"**• Premium User:** **{premium_status}**\n"
@@ -105,28 +108,35 @@ def setup_info_handler(app):
                     
                     chat_id_display = chat.id if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] else user.id
                     full_name = f"{user.first_name} {user.last_name or ''}".strip()
-                    response = (
-                        "**🔍 Showing User's Profile Info 📋**\n"
-                        "**━━━━━━━━━━━━━━━━**\n"
-                        f"**• Full Name:** **{full_name}**\n"
-                        f"**• Username:** @{user.username if user.username else 'None'}\n"
-                        f"**• User ID:** `{user.id}`\n"
-                        f"**• Chat ID:** `{chat_id_display}`\n"
-                        f"**• Premium User:** **{premium_status}**\n"
-                        f"**• Data Center:** **{dc_location}**\n"
-                        f"**• Created On:** **{account_created_str}**\n"
-                        f"**• Account Age:** **{account_age}**\n"
-                        "**━━━━━━━━━━━━━━━━**\n"
-                        "**👁 Thank You for Using Our Tool ✅**"
-                    )
                     if user.is_bot:
                         response = (
                             "**🔍 Showing Bot's Profile Info 📋**\n"
                             "**━━━━━━━━━━━━━━━━**\n"
                             f"**• Bot Name:** **{full_name}**\n"
-                            f"**• Username:** @{user.username if user.username else 'None'}\n"
+                        )
+                        if user.username:
+                            response += f"**• Username:** @{user.username}\n"
+                        response += (
                             f"**• User ID:** `{user.id}`\n"
                             f"**• Data Center:** **{dc_location}**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            "**👁 Thank You for Using Our Tool ✅**"
+                        )
+                    else:
+                        response = (
+                            "**🔍 Showing User's Profile Info 📋**\n"
+                            "**━━━━━━━━━━━━━━━━**\n"
+                            f"**• Full Name:** **{full_name}**\n"
+                        )
+                        if user.username:
+                            response += f"**• Username:** @{user.username}\n"
+                        response += (
+                            f"**• User ID:** `{user.id}`\n"
+                            f"**• Chat ID:** `{chat_id_display}`\n"
+                            f"**• Premium User:** **{premium_status}**\n"
+                            f"**• Data Center:** **{dc_location}**\n"
+                            f"**• Created On:** **{account_created_str}**\n"
+                            f"**• Account Age:** **{account_age}**\n"
                             "**━━━━━━━━━━━━━━━━**\n"
                             "**👁 Thank You for Using Our Tool ✅**"
                         )
@@ -157,28 +167,35 @@ def setup_info_handler(app):
                         verified_status = "Verified" if user.is_verified else "Not Verified"
                         
                         full_name = f"{user.first_name} {user.last_name or ''}".strip()
-                        response = (
-                            "**🔍 Showing User's Profile Info 📋**\n"
-                            "**━━━━━━━━━━━━━━━━**\n"
-                            f"**• Full Name:** **{full_name}**\n"
-                            f"**• Username:** @{user.username if user.username else 'None'}\n"
-                            f"**• User ID:** `{user.id}`\n"
-                            f"**• Chat ID:** `{user.id}`\n"
-                            f"**• Premium User:** **{premium_status}**\n"
-                            f"**• Data Center:** **{dc_location}**\n"
-                            f"**• Created On:** **{account_created_str}**\n"
-                            f"**• Account Age:** **{account_age}**\n"
-                            "**━━━━━━━━━━━━━━━━**\n"
-                            "**👁 Thank You for Using Our Tool ✅**"
-                        )
                         if user.is_bot:
                             response = (
                                 "**🔍 Showing Bot's Profile Info 📋**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
                                 f"**• Bot Name:** **{full_name}**\n"
-                                f"**• Username:** @{user.username if user.username else 'None'}\n"
+                            )
+                            if user.username:
+                                response += f"**• Username:** @{user.username}\n"
+                            response += (
                                 f"**• User ID:** `{user.id}`\n"
                                 f"**• Data Center:** **{dc_location}**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                "**👁 Thank You for Using Our Tool ✅**"
+                            )
+                        else:
+                            response = (
+                                "**🔍 Showing User's Profile Info 📋**\n"
+                                "**━━━━━━━━━━━━━━━━**\n"
+                                f"**• Full Name:** **{full_name}**\n"
+                            )
+                            if user.username:
+                                response += f"**• Username:** @{user.username}\n"
+                            response += (
+                                f"**• User ID:** `{user.id}`\n"
+                                f"**• Chat ID:** `{user.id}`\n"
+                                f"**• Premium User:** **{premium_status}**\n"
+                                f"**• Data Center:** **{dc_location}**\n"
+                                f"**• Created On:** **{account_created_str}**\n"
+                                f"**• Account Age:** **{account_age}**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
                                 "**👁 Thank You for Using Our Tool ✅**"
                             )
@@ -204,7 +221,10 @@ def setup_info_handler(app):
                                 f"**🔍 Showing {chat_type}'s Profile Info 📋**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
                                 f"**• Full Name:** **{full_name}**\n"
-                                f"**• Username:** @{chat.username if chat.username else 'None'}\n"
+                            )
+                            if chat.username:
+                                response += f"**• Username:** @{chat.username}\n"
+                            response += (
                                 f"**• Chat ID:** `{chat.id}`\n"
                                 f"**• Total Members:** **{chat.members_count if chat.members_count else 'Unknown'}**\n"
                                 "**━━━━━━━━━━━━━━━━**\n"
