@@ -13,58 +13,44 @@ from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, notify_admin
 from core import banned_users
 
-url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
-headers = {
-    "Content-Type": "application/json",
-    "clienttype": "web",
-    "lang": "en"
-}
+url = "https://smartbinancep2p-production-af69.up.railway.app/api/v1/p2p"
 
-async def fetch_page(session, asset, fiat, trade_type, pay_type, page, rows=20, client=None, message=None):
-    payload = {
+async def fetch_sellers(asset, fiat, trade_type, pay_type, client=None, message=None):
+    params = {
         "asset": asset,
-        "fiat": fiat,
-        "tradeType": trade_type,
-        "page": page,
-        "rows": rows,
-        "payTypes": [pay_type],
-        "publisherType": None
+        "pay_type": pay_type,
+        "trade_type": trade_type,
+        "limit": 100
     }
     try:
-        async with session.post(url, headers=headers, json=payload) as response:
-            if response.status != 200:
-                LOGGER.error(f"Error fetching page {page}: {response.status}")
-                raise Exception(f"API request failed with status {response.status}")
-            data = await response.json()
-            LOGGER.info(f"Successfully fetched page {page} for {asset} in {fiat}")
-            return data['data']
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                if response.status != 200:
+                    LOGGER.error(f"Error fetching data: {response.status}")
+                    raise Exception(f"API request failed with status {response.status}")
+                data = await response.json()
+                if not data.get("success", False):
+                    LOGGER.error(f"API returned success: false")
+                    raise Exception("API returned success: false")
+                LOGGER.info(f"Successfully fetched {len(data['data'])} sellers for {asset} in {fiat}")
+                return data['data']
     except Exception as e:
-        LOGGER.error(f"Exception occurred while fetching page {page}: {e}")
+        LOGGER.error(f"Exception occurred while fetching data: {e}")
         if client and message:
             await notify_admin(client, "/p2p", e, message)
         return []
 
-async def fetch_sellers(asset, fiat, trade_type, pay_type, client=None, message=None):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_page(session, asset, fiat, trade_type, pay_type, page, client=client, message=message) for page in range(1, 8)]
-        results = await asyncio.gather(*tasks)
-        all_sellers = [seller for result in results for seller in result if result]
-        LOGGER.info(f"Fetched {len(all_sellers)} sellers for {asset} in {fiat}")
-        return all_sellers[:131]
-
-def process_sellers_to_json(sellers):
+def process_sellers_to_json(sellers, fiat):
     processed = []
-    for ad in sellers:
-        adv = ad['adv']
-        advertiser = ad['advertiser']
+    for seller in sellers:
         processed.append({
-            "seller": advertiser.get("nickName", "Unknown"),
-            "price": f"{adv['price']} {adv['fiatUnit']}",
-            "available_usdt": adv['surplusAmount'],
-            "min_amount": f"{adv['minSingleTransAmount']} {adv['fiatUnit']}",
-            "max_amount": f"{adv['maxSingleTransAmount']} {adv['fiatUnit']}",
-            "completion_rate": f"{advertiser.get('monthFinishRate', 0) * 100:.2f}%",
-            "trade_method": adv['tradeMethods'][0]['tradeMethodName'] if adv['tradeMethods'] else "Unknown"
+            "seller": seller.get("seller_name", "Unknown"),
+            "price": f"{seller['price']} {fiat}",
+            "available_usdt": f"{seller['available_amount']} USDT",
+            "min_amount": f"{seller['min_order_amount']} {fiat}",
+            "max_amount": f"{seller['max_order_amount']} {fiat}",
+            "completion_rate": f"{seller['completion_rate']}%",
+            "trade_method": ", ".join(seller['payment_methods']) if seller['payment_methods'] else "Unknown"
         })
     return processed
 
@@ -102,29 +88,19 @@ async def delete_file_after_delay(file_path, delay):
         os.remove(file_path)
         LOGGER.info(f"Deleted file {file_path} after delay")
 
-def generate_message(sellers, page):
-    start = (page - 1) * 5
-    end = start + 5
+def generate_message(sellers, page, fiat):
+    start = (page - 1) * 10
+    end = start + 10
     selected_sellers = sellers[start:end]
 
-    message = ""
-    for i, seller in enumerate(selected_sellers, start=1):
-        message += (f"**🧑‍💼 Seller:** `{seller['seller']}`\n"
-                    f"**💵 Price:** `{seller['price']}`\n"
-                    f"**💰 Available:** `{seller['available_usdt']} USDT`\n"
-                    f"**📉 Min Amount:** `{seller['min_amount']}`\n"
-                    f"**📈 Max Amount:** `{seller['max_amount']}`\n"
-                    f"**✅ Completion Rate:** `{seller['completion_rate']}`\n"
-                    f"**💳 Payment Method:** `{seller['trade_method']}`\n"
-                    f"{'-'*40}\n")
+    message = f"💱 **Latest P2P USDT Trades for {fiat}** 👇\n\n"
+    for i, seller in enumerate(selected_sellers, start=start + 1):
+        message += (f"**{i}. Name:** {seller['seller']}\n"
+                    f"**Price:** {seller['price']}\n"
+                    f"**Payment Method:** {seller['trade_method']}\n"
+                    f"**Crypto Amount:** {seller['available_usdt']}\n"
+                    f"**Limit:** {seller['min_amount']} - {seller['max_amount']}\n\n")
     return message
-
-def get_pay_type(fiat):
-    pay_types = {
-        "BDT": "bKash",
-        "INR": "UPI"
-    }
-    return pay_types.get(fiat.upper(), "Unknown")
 
 async def p2p_handler(client, message):
     user_id = message.from_user.id if message.from_user else None
@@ -135,14 +111,14 @@ async def p2p_handler(client, message):
 
     try:
         if len(message.command) != 2:
-            await client.send_message(message.chat.id, "**Please provide a currency. e.g. /p2p BDT or /p2p INR**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(message.chat.id, "**Please provide a currency. e.g. /p2p BDT or /p2p SAR**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"Invalid command format: {message.text}")
             return
 
         fiat = message.command[1].upper()
         asset = "USDT"
         trade_type = "SELL"
-        pay_type = get_pay_type(fiat)
+        pay_type = fiat  # Use fiat directly as pay_type since API accepts any currency
         filename = f"p2p_{asset}_{fiat}.json"
 
         LOGGER.info(f"Fetching P2P trades for {asset} in {fiat} using {pay_type}")
@@ -155,9 +131,9 @@ async def p2p_handler(client, message):
             LOGGER.warning(f"No sellers found for {asset} in {fiat}")
             return
 
-        processed_sellers = process_sellers_to_json(sellers)
+        processed_sellers = process_sellers_to_json(sellers, fiat)
         save_to_json_file(processed_sellers, filename, client=client, message=message)
-        message_text = generate_message(processed_sellers, 1)
+        message_text = generate_message(processed_sellers, 1, fiat)
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("▶️ Next", callback_data=f"nextone_1_{filename}")]
@@ -182,14 +158,15 @@ async def next_page(client, callback_query):
         filename = callback_query.data.split('_', 2)[2]
 
         sellers = load_from_json_file(filename, client=client, message=callback_query.message)
+        fiat = filename.split('_')[2].split('.')[0]  # Extract fiat from filename
 
         next_page = current_page + 1
-        if (next_page - 1) * 5 >= len(sellers):
+        if (next_page - 1) * 10 >= len(sellers):
             await callback_query.answer("❌ Data Expired Please Request Again To Get Latest Database")
             LOGGER.info(f"Data expired for next page {next_page} in chat {callback_query.message.chat.id}")
             return
 
-        message_text = generate_message(sellers, next_page)
+        message_text = generate_message(sellers, next_page, fiat)
         prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{next_page}_{filename}")
         next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{next_page}_{filename}")
         keyboard = InlineKeyboardMarkup([[prev_button, next_button]])
@@ -214,6 +191,7 @@ async def prev_page(client, callback_query):
         filename = callback_query.data.split('_', 2)[2]
 
         sellers = load_from_json_file(filename, client=client, message=callback_query.message)
+        fiat = filename.split('_')[2].split('.')[0]  # Extract fiat from filename
 
         prev_page = current_page - 1
         if prev_page < 1:
@@ -221,7 +199,7 @@ async def prev_page(client, callback_query):
             LOGGER.info(f"Data expired for previous page {prev_page} in chat {callback_query.message.chat.id}")
             return
 
-        message_text = generate_message(sellers, prev_page)
+        message_text = generate_message(sellers, prev_page, fiat)
         prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{prev_page}_{filename}")
         next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{prev_page}_{filename}")
         keyboard = InlineKeyboardMarkup([[prev_button, next_button]])
