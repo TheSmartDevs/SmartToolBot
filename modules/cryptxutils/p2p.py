@@ -109,6 +109,10 @@ async def p2p_handler(client, message):
         LOGGER.info(f"Banned user {user_id} attempted to use /p2p")
         return
 
+    user_full_name = message.from_user.first_name
+    if message.from_user.last_name:
+        user_full_name += f" {message.from_user.last_name}"
+
     try:
         if len(message.command) != 2:
             await client.send_message(message.chat.id, "**Please provide a currency. e.g. /p2p BDT or /p2p SAR**", parse_mode=ParseMode.MARKDOWN)
@@ -118,7 +122,7 @@ async def p2p_handler(client, message):
         fiat = message.command[1].upper()
         asset = "USDT"
         trade_type = "SELL"
-        pay_type = fiat  # Use fiat directly as pay_type since API accepts any currency
+        pay_type = fiat
         filename = f"p2p_{asset}_{fiat}.json"
 
         LOGGER.info(f"Fetching P2P trades for {asset} in {fiat} using {pay_type}")
@@ -136,7 +140,7 @@ async def p2p_handler(client, message):
         message_text = generate_message(processed_sellers, 1, fiat)
 
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("▶️ Next", callback_data=f"nextone_1_{filename}")]
+            [InlineKeyboardButton("▶️ Next", callback_data=f"nextone_1_{filename}_{user_id}")]
         ])
 
         await client.edit_message_text(message.chat.id, loading_message.id, message_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -153,22 +157,36 @@ async def next_page(client, callback_query):
         LOGGER.info(f"Banned user {user_id} attempted to use next page for {callback_query.data}")
         return
 
-    try:
-        current_page = int(callback_query.data.split('_', 2)[1])
-        filename = callback_query.data.split('_', 2)[2]
+    callback_data_parts = callback_query.data.split('_', 3)
+    current_page = int(callback_data_parts[1])
+    filename = callback_data_parts[2]
+    original_user_id = int(callback_data_parts[3])
 
+    user_full_name = callback_query.from_user.first_name
+    if callback_query.from_user.last_name:
+        user_full_name += f" {callback_query.from_user.last_name}"
+
+    if user_id != original_user_id:
+        original_user = await client.get_users(original_user_id)
+        original_user_name = original_user.first_name
+        if original_user.last_name:
+            original_user_name += f" {original_user.last_name}"
+        await callback_query.answer(f"Action Disallowed. This Button Only For {original_user_name}", show_alert=True)
+        return
+
+    try:
         sellers = load_from_json_file(filename, client=client, message=callback_query.message)
-        fiat = filename.split('_')[2].split('.')[0]  # Extract fiat from filename
+        fiat = filename.split('_')[2].split('.')[0]
 
         next_page = current_page + 1
         if (next_page - 1) * 10 >= len(sellers):
-            await callback_query.answer("❌ Data Expired Please Request Again To Get Latest Database")
+            await callback_query.answer("Data Expired. Please Request Again To Get Latest Database")
             LOGGER.info(f"Data expired for next page {next_page} in chat {callback_query.message.chat.id}")
             return
 
         message_text = generate_message(sellers, next_page, fiat)
-        prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{next_page}_{filename}")
-        next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{next_page}_{filename}")
+        prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{next_page}_{filename}_{user_id}")
+        next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{next_page}_{filename}_{user_id}")
         keyboard = InlineKeyboardMarkup([[prev_button, next_button]])
 
         await callback_query.message.edit_text(message_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -186,22 +204,36 @@ async def prev_page(client, callback_query):
         LOGGER.info(f"Banned user {user_id} attempted to use previous page for {callback_query.data}")
         return
 
-    try:
-        current_page = int(callback_query.data.split('_', 2)[1])
-        filename = callback_query.data.split('_', 2)[2]
+    callback_data_parts = callback_query.data.split('_', 3)
+    current_page = int(callback_data_parts[1])
+    filename = callback_data_parts[2]
+    original_user_id = int(callback_data_parts[3])
 
+    user_full_name = callback_query.from_user.first_name
+    if callback_query.from_user.last_name:
+        user_full_name += f" {callback_query.from_user.last_name}"
+
+    if user_id != original_user_id:
+        original_user = await client.get_users(original_user_id)
+        original_user_name = original_user.first_name
+        if original_user.last_name:
+            original_user_name += f" {original_user.last_name}"
+        await callback_query.answer(f"Action Disallowed. This Button Only For {original_user_name}", show_alert=True)
+        return
+
+    try:
         sellers = load_from_json_file(filename, client=client, message=callback_query.message)
-        fiat = filename.split('_')[2].split('.')[0]  # Extract fiat from filename
+        fiat = filename.split('_')[2].split('.')[0]
 
         prev_page = current_page - 1
         if prev_page < 1:
-            await callback_query.answer("❌ Data Expired Please Request Again To Get Latest Database")
+            await callback_query.answer("Data Expired. Please Request Again To Get Latest Database")
             LOGGER.info(f"Data expired for previous page {prev_page} in chat {callback_query.message.chat.id}")
             return
 
         message_text = generate_message(sellers, prev_page, fiat)
-        prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{prev_page}_{filename}")
-        next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{prev_page}_{filename}")
+        prev_button = InlineKeyboardButton("◀️ Previous", callback_data=f"prevone_{prev_page}_{filename}_{user_id}")
+        next_button = InlineKeyboardButton("▶️ Next", callback_data=f"nextone_{prev_page}_{filename}_{user_id}")
         keyboard = InlineKeyboardMarkup([[prev_button, next_button]])
 
         await callback_query.message.edit_text(message_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -214,5 +246,5 @@ async def prev_page(client, callback_query):
 
 def setup_p2p_handler(app: Client):
     app.add_handler(MessageHandler(p2p_handler, (filters.private | filters.group) & filters.command("p2p", prefixes=COMMAND_PREFIX)))
-    app.add_handler(CallbackQueryHandler(next_page, filters.regex(r"nextone_\d+_(.+\.json)")))
-    app.add_handler(CallbackQueryHandler(prev_page, filters.regex(r"prevone_\d+_(.+\.json)")))
+    app.add_handler(CallbackQueryHandler(next_page, filters.regex(r"nextone_\d+_(.+\.json)_\d+")))
+    app.add_handler(CallbackQueryHandler(prev_page, filters.regex(r"prevone_\d+_(.+\.json)_\d+")))
