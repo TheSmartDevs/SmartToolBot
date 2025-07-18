@@ -69,6 +69,10 @@ def setup_extp_handler(app):
             await client.send_message(message.chat.id, BAN_REPLY)
             return
 
+        user_full_name = message.from_user.first_name
+        if message.from_user.last_name:
+            user_full_name += f" {message.from_user.last_name}"
+
         command_parts = message.text.split()
         if len(command_parts) != 2 or not command_parts[1].isdigit() or len(command_parts[1]) != 6:
             await client.send_message(message.chat.id, "**❌Please provide a valid BIN**", parse_mode=ParseMode.MARKDOWN)
@@ -98,20 +102,35 @@ def setup_extp_handler(app):
         )
 
         markup = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Re-Generate", callback_data=f"regenerate_{bin}")]]
+            [[InlineKeyboardButton("Re-Generate", callback_data=f"regenerate_{bin}_{user_id}")]]
         )
 
         await progress_message.delete()
         await client.send_message(message.chat.id, result_message, parse_mode=ParseMode.MARKDOWN, reply_markup=markup)
 
-    @app.on_callback_query(filters.regex(r"^regenerate_\d{6}$"))
+    @app.on_callback_query(filters.regex(r"^regenerate_\d{6}_\d+$"))
     async def regenerate_callback(client, callback_query):
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, BAN_REPLY)
             return
 
-        bin = callback_query.data.split("_")[1]
+        callback_data_parts = callback_query.data.split("_")
+        bin = callback_data_parts[1]
+        original_user_id = int(callback_data_parts[2])
+
+        user_full_name = callback_query.from_user.first_name
+        if callback_query.from_user.last_name:
+            user_full_name += f" {callback_query.from_user.last_name}"
+
+        if user_id != original_user_id:
+            original_user = await client.get_users(original_user_id)
+            original_user_name = original_user.first_name
+            if original_user.last_name:
+                original_user_name += f" {original_user.last_name}"
+            await callback_query.answer(f"Action Disallowed. This Button Only For {original_user_name}", show_alert=True)
+            return
+
         bin_info = await get_bin_info(bin, client, callback_query.message)
         if not bin_info or bin_info.get('Status') != 'SUCCESS':
             await callback_query.message.edit_text("**❌Invalid BIN provided**", parse_mode=ParseMode.MARKDOWN)
@@ -130,8 +149,12 @@ def setup_extp_handler(app):
             + "\n".join(formatted_numbers) + "\n\n"
             f"**Bank :** {bin_info.get('Issuer', 'None')}\n"
             f"**Country:** {country_name} {flag_emoji}\n"
-            f"** Bin Info:** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
+            f"**Bin Info:** {bin_info.get('CardTier', 'None')} - {bin_info.get('Type', 'None')} - {bin_info.get('Scheme', 'None')}"
+        )
+
+        markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Re-Generate", callback_data=f"regenerate_{bin}_{user_id}")]]
         )
 
         if callback_query.message.text != regenerated_message:
-            await callback_query.message.edit_text(regenerated_message, parse_mode=ParseMode.MARKDOWN, reply_markup=callback_query.message.reply_markup)
+            await callback_query.message.edit_text(regenerated_message, parse_mode=ParseMode.MARKDOWN, reply_markup=markup)
