@@ -45,6 +45,10 @@ def setup_crypto_handler(app: PyroClient):
             LOGGER.info(f"Banned user {user_id} attempted to use /price")
             return
 
+        user_full_name = message.from_user.first_name
+        if message.from_user.last_name:
+            user_full_name += f" {message.from_user.last_name}"
+
         if len(message.command) < 2:
             await client.send_message(message.chat.id, "❌ <b>Please provide a token symbol</b>", parse_mode=ParseMode.HTML)
             LOGGER.warning(f"Invalid command format: {message.text}")
@@ -60,7 +64,7 @@ def setup_crypto_handler(app: PyroClient):
             
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("📊 Data Insight", url=f"https://www.binance.com/en/trading_insight/glass?id=44&token={token}"), 
-                 InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_{token}")]
+                 InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_{token}_{user_id}")]
             ])
             await fetching_message.edit(response_message, parse_mode=ParseMode.HTML, reply_markup=keyboard)
             LOGGER.info(f"Sent price info for {token} to chat {message.chat.id}")
@@ -70,7 +74,7 @@ def setup_crypto_handler(app: PyroClient):
             await notify_admin(client, "/price", e, message)
             await fetching_message.edit(f"❌ <b>Nothing Detected From Binance Database</b>", parse_mode=ParseMode.HTML)
 
-    @app.on_callback_query(filters.regex(r"refresh_(.*)"))
+    @app.on_callback_query(filters.regex(r"refresh_(.*?)_(\d+)$"))
     async def handle_refresh_callback(client: PyroClient, callback_query: CallbackQuery):
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
@@ -78,7 +82,22 @@ def setup_crypto_handler(app: PyroClient):
             LOGGER.info(f"Banned user {user_id} attempted to use refresh for {callback_query.data}")
             return
 
-        token = callback_query.data.split("_")[1]
+        callback_data_parts = callback_query.data.split("_")
+        token = callback_data_parts[1]
+        original_user_id = int(callback_data_parts[2])
+
+        user_full_name = callback_query.from_user.first_name
+        if callback_query.from_user.last_name:
+            user_full_name += f" {callback_query.from_user.last_name}"
+
+        if user_id != original_user_id:
+            original_user = await client.get_users(original_user_id)
+            original_user_name = original_user.first_name
+            if original_user.last_name:
+                original_user_name += f" {original_user.last_name}"
+            await callback_query.answer(f"Action Disallowed. This Button Only For {original_user_name}", show_alert=True)
+            return
+
         try:
             data = await fetch_crypto_data(token)
             old_message = callback_query.message
@@ -86,19 +105,19 @@ def setup_crypto_handler(app: PyroClient):
             old_formatted_info = old_message.text.split("\n\n", 1)[1]
 
             if new_formatted_info.strip() == old_formatted_info.strip():
-                await callback_query.answer("❌ No Changes Detected From Binance Database", show_alert=True)
+                await callback_query.answer("No changes detected from Binance Database")
                 LOGGER.info(f"No changes detected for {token} in chat {callback_query.message.chat.id}")
             else:
                 response_message = f"📈 <b>Price Info for {token}:</b>\n\n{new_formatted_info}"
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton("📊 Data Insight", url=f"https://www.binance.com/en/trading_insight/glass?id=44&token={token}"), 
-                     InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_{token}")]
+                     InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_{token}_{user_id}")]
                 ])
                 await old_message.edit_text(response_message, parse_mode=ParseMode.HTML, reply_markup=keyboard)
-                await callback_query.answer("Token Price Updated✨", show_alert=True)
+                await callback_query.answer("Token Price Updated✨")
                 LOGGER.info(f"Updated price info for {token} in chat {callback_query.message.chat.id}")
 
         except Exception as e:
             LOGGER.error(f"Error in refresh for {token}: {e}")
             await notify_admin(client, "/price refresh", e, callback_query.message)
-            await callback_query.answer("❌ No Changes Detected From Binance Database", show_alert=True)
+            await callback_query.answer("❌ Nothing Detected From Binance Database", show_alert=True)
