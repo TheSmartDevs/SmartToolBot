@@ -114,7 +114,7 @@ def setup_crypto_handler(app: PyroClient):
                      InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_{token}_{user_id}")]
                 ])
                 await old_message.edit_text(response_message, parse_mode=ParseMode.HTML, reply_markup=keyboard)
-                await callback_query.answer("Token Price Updated✨")
+                await callback_query.answer("Price Updated Successfully!")
                 LOGGER.info(f"Updated price info for {token} in chat {callback_query.message.chat.id}")
 
         except Exception as e:
