@@ -25,12 +25,10 @@ async def fetch_crypto_data():
         raise
 
 def get_top_gainers(data, top_n=5):
-    sorted_data = sorted(data, key=lambda x: float(x['priceChangePercent']), reverse=True)
-    return sorted_data[:top_n]
+    return sorted(data, key=lambda x: float(x['priceChangePercent']), reverse=True)[:top_n]
 
 def get_top_losers(data, top_n=5):
-    sorted_data = sorted(data, key=lambda x: float(x['priceChangePercent']))
-    return sorted_data[:top_n]
+    return sorted(data, key=lambda x: float(x['priceChangePercent']))[:top_n]
 
 def format_crypto_info(data, start_index=0):
     result = ""
@@ -55,12 +53,8 @@ def setup_binance_handler(app: Client):
             LOGGER.info(f"Banned user {user_id} attempted to use /{message.command[0]}")
             return
 
-        user_full_name = message.from_user.first_name
-        if message.from_user.last_name:
-            user_full_name += f" {message.from_user.last_name}"
-
         command = message.command[0]
-        fetching_message = await client.send_message(message.chat.id, f"<b>Fetching Top {command}...⚡️</b>", parse_mode=ParseMode.HTML)
+        fetching_message = await client.send_message(message.chat.id, f"Fetching {command}...", parse_mode=ParseMode.HTML)
         
         try:
             data = await fetch_crypto_data()
@@ -74,21 +68,21 @@ def setup_binance_handler(app: Client):
 
             formatted_info = format_crypto_info(top_cryptos)
             await fetching_message.delete()
-            response_message = f"📈 List Of Top {title}:\n\n{formatted_info}"
+            response_message = f"List Of Top {title}:\n\n{formatted_info}"
             
             keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Next", callback_data=f"{command}_1_{user_id}")]
+                [InlineKeyboardButton("Next", callback_data=f"{command}_1")]
             ])
             await client.send_message(message.chat.id, response_message, parse_mode=ParseMode.HTML, reply_markup=keyboard)
             LOGGER.info(f"Sent top {title.lower()} to chat {message.chat.id}")
 
         except Exception as e:
             await fetching_message.delete()
-            await client.send_message(message.chat.id, f"<b>❌ Sorry Binance API Dead</b>", parse_mode=ParseMode.HTML)
+            await client.send_message(message.chat.id, "Error: Unable to fetch data from Binance API", parse_mode=ParseMode.HTML)
             LOGGER.error(f"Error processing /{command}: {e}")
             await notify_admin(client, f"/{command}", e, message)
 
-    @app.on_callback_query(filters.regex(r"^(gainers|losers)_\d+_(\d+)$"))
+    @app.on_callback_query(filters.regex(r"^(gainers|losers)_\d+"))
     async def handle_pagination(client: Client, callback_query: CallbackQuery):
         user_id = callback_query.from_user.id if callback_query.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
@@ -96,21 +90,8 @@ def setup_binance_handler(app: Client):
             LOGGER.info(f"Banned user {user_id} attempted to use pagination for {callback_query.data}")
             return
 
-        callback_data_parts = callback_query.data.split('_')
-        command, page, original_user_id = callback_data_parts[0], int(callback_data_parts[1]), int(callback_data_parts[2])
-
-        user_full_name = callback_query.from_user.first_name
-        if callback_query.from_user.last_name:
-            user_full_name += f" {callback_query.from_user.last_name}"
-
-        if user_id != original_user_id:
-            original_user = await client.get_users(original_user_id)
-            original_user_name = original_user.first_name
-            if original_user.last_name:
-                original_user_name += f" {original_user.last_name}"
-            await callback_query.answer(f"Action Disallowed. This Button Only For {original_user_name}", show_alert=True)
-            return
-
+        command, page = callback_query.data.split('_')
+        page = int(page)
         next_page = page + 1
         prev_page = page - 1
 
@@ -118,31 +99,26 @@ def setup_binance_handler(app: Client):
             data = await fetch_crypto_data()
             top_n = 5
             if command == "gainers":
-                top_cryptos = get_top_gainers(data, top_n * next_page)[(page)*top_n:(page+1)*top_n]
+                top_cryptos = get_top_gainers(data, top_n * next_page)[(page-1)*top_n:page*top_n]
                 title = "Gainers"
             else:
-                top_cryptos = get_top_losers(data, top_n * next_page)[(page)*top_n:(page+1)*top_n]
+                top_cryptos = get_top_losers(data, top_n * next_page)[(page-1)*top_n:page*top_n]
                 title = "Losers"
 
-            if not top_cryptos:
-                await callback_query.answer("No more data available")
-                LOGGER.info(f"No more data for {command} (page {page}) in chat {callback_query.message.chat.id}")
-                return
-
-            formatted_info = format_crypto_info(top_cryptos, start_index=page*top_n)
-            response_message = f"📈 List Of Top {title}:\n\n{formatted_info}"
+            formatted_info = format_crypto_info(top_cryptos, start_index=(page-1)*top_n)
+            response_message = f"List Of Top {title}:\n\n{formatted_info}"
 
             keyboard_buttons = []
             if prev_page > 0:
-                keyboard_buttons.append(InlineKeyboardButton("Previous", callback_data=f"{command}_{prev_page}_{user_id}"))
+                keyboard_buttons.append(InlineKeyboardButton("Previous", callback_data=f"{command}_{prev_page}"))
             if len(top_cryptos) == top_n:
-                keyboard_buttons.append(InlineKeyboardButton("Next", callback_data=f"{command}_{next_page}_{user_id}"))
+                keyboard_buttons.append(InlineKeyboardButton("Next", callback_data=f"{command}_{next_page}"))
 
             keyboard = InlineKeyboardMarkup([keyboard_buttons])
             await callback_query.message.edit_text(response_message, parse_mode=ParseMode.HTML, reply_markup=keyboard)
             LOGGER.info(f"Updated pagination for {command} (page {page}) in chat {callback_query.message.chat.id}")
 
         except Exception as e:
-            await callback_query.message.edit_text(f"<b>❌ Sorry Bro Binance API Dead</b>", parse_mode=ParseMode.HTML)
+            await callback_query.message.edit_text("Error: Unable to fetch data from Binance API", parse_mode=ParseMode.HTML)
             LOGGER.error(f"Error in pagination for {command} (page {page}): {e}")
             await notify_admin(client, f"/{command} pagination", e, callback_query.message)
