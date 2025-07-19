@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates t.me/TheSmartDev
 import re
 import os
 import random
@@ -23,12 +25,13 @@ def extract_bin_from_text(text):
         r'(?:\.gen|/gen)\s+(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)',
         r'(?:^|\s)(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)(?:\s|$)',
         r'(\d{6,16}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?))',
+        r'(\d{0,12}[xX]{0,10}\d{0,12})',
     ]
     for pattern in patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
             clean_match = re.sub(r'[^0-9xX|:/]', '', match)
-            base_digits = clean_match.replace('x', '').replace('X', '').replace('|', '').replace(':', '').replace('/', '')
+            base_digits = clean_match.replace('x', '').replace('X', '').replace('|', '').replace(':', '').replace('/')
             if 6 <= len(base_digits) <= 16:
                 LOGGER.info(f"Extracted BIN: {clean_match} from text using pattern: {pattern}")
                 return clean_match
@@ -89,7 +92,7 @@ def generate_credit_card(bin, amount, month=None, year=None, cvv=None):
             card_number = card_body + str(check_digit)
             if luhn_algorithm(card_number):
                 card_month = month or f"{random.randint(1, 12):02}"
-                card_year = year or random.randint(2024, 2029)
+                card_year = year or random.randint(2025, 2035)
                 card_cvv = cvv or ''.join([str(random.randint(0, 9)) for _ in range(cvv_length)])
                 cards.append(f"{card_number}|{card_month}|{card_year}|{card_cvv}")
                 break
@@ -102,7 +105,7 @@ def parse_input(user_input):
     cvv = None
     amount = 10
     match = re.match(
-        r"^(\d{6,16}[xX]{0,10}|\d{6,15})"
+        r"^(\d{0,12}[xX]{0,10}\d{0,12}|\d{6,15})"
         r"(?:[|:/](\d{2}))?"
         r"(?:[|:/](\d{2,4}))?"
         r"(?:[|:/]([0-9]{3,4}|xxx|rnd)?)?"
@@ -112,12 +115,11 @@ def parse_input(user_input):
     if match:
         bin, month, year, cvv, amount = match.groups()
         if bin:
-            has_x = 'x' in bin.lower()
-            bin_length = len(bin)
-            if has_x and bin_length > 16:
+            clean_bin = bin.replace('x', '').replace('X', '')
+            bin_length = len(clean_bin)
+            if bin_length < 6 or bin_length > 15:
                 return None, None, None, None, None
-            if not has_x and (bin_length < 6 or bin_length > 15):
-                return None, None, None, None, None
+            bin = clean_bin
         if cvv and cvv.lower() not in ['xxx', 'rnd']:
             is_amex = is_amex_bin(bin) if bin else False
             expected_cvv_length = 4 if is_amex else 3
@@ -137,14 +139,14 @@ def generate_custom_cards(bin, amount, month=None, year=None, cvv=None):
     cvv_length = 4 if is_amex else 3
     for _ in range(amount):
         while True:
-            card_body = bin.replace('x', '').replace('X', '')
+            card_body = ''.join([str(random.randint(0, 9)) if char.lower() == 'x' else char for char in bin])
             remaining_digits = target_length - len(card_body)
             card_body += ''.join([str(random.randint(0, 9)) for _ in range(remaining_digits)])
             check_digit = calculate_luhn_check_digit(card_body)
             card_number = card_body + str(check_digit)
             if luhn_algorithm(card_number):
                 card_month = month or f"{random.randint(1, 12):02}"
-                card_year = year or random.randint(2024, 2029)
+                card_year = year or random.randint(2025, 2035)
                 card_cvv = cvv or ''.join([str(random.randint(0, 9)) for _ in range(cvv_length)])
                 cards.append(f"{card_number}|{card_month}|{card_year}|{card_cvv}")
                 break
@@ -206,14 +208,14 @@ def setup_gen_handler(app: Client):
         else:
             user_input = message.text.split(maxsplit=1)
             if len(user_input) == 1:
-                await client.send_message(message.chat.id, "**Provide a valid BIN or reply to a message with a valid BIN ❌**")
+                await client.send_message(message.chat.id, "**Please Provide a valid BIN ❌**")
                 return
             user_input = user_input[1]
 
         bin, month, year, cvv, amount = parse_input(user_input)
         if not bin:
             LOGGER.error(f"Invalid BIN: {user_input}")
-            await client.send_message(message.chat.id, "**Sorry Bin Must Be 6-15 Digits or Up to 16 Digits with 'x' ❌**")
+            await client.send_message(message.chat.id, "**Sorry Bin Must Be 6-15 Digits❌**")
             return
         if cvv is not None:
             is_amex = is_amex_bin(bin)
@@ -266,7 +268,7 @@ def setup_gen_handler(app: Client):
                 if os.path.exists(file_name):
                     os.remove(file_name)
 
-    @app.on_message(filters.reply & filters.regex(r'^(?:BIN|bin)[:\s]*(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:\.gen|/gen)\s+(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:^|\s)(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)(?:\s|$)|(\d{6,16}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?))') & (filters.private | filters.group))
+    @app.on_message(filters.reply & filters.regex(r'^(?:BIN|bin)[:\s]*(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:\.gen|/gen)\s+(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:^|\s)(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)(?:\s|$)|(\d{6,16}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?))|(\d{0,12}[xX]{0,10}\d{0,12})') & (filters.private | filters.group))
     async def auto_generate_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
@@ -285,59 +287,59 @@ def setup_gen_handler(app: Client):
                 LOGGER.info(f"Extracting from media caption")
             if reply_text:
                 extracted_bin = extract_bin_from_text(reply_text)
-            if extracted_bin:
-                user_input = extracted_bin
-                LOGGER.info(f"Auto-extracted BIN from reply: {extracted_bin}")
-                bin, month, year, cvv, amount = parse_input(user_input)
-                if not bin:
-                    return
-                if cvv is not None:
-                    is_amex = is_amex_bin(bin)
-                    expected_cvv_length = 4 if is_amex else 3
-                    if len(cvv) != expected_cvv_length:
+                if extracted_bin:
+                    user_input = extracted_bin
+                    LOGGER.info(f"Auto-extracted BIN from reply: {extracted_bin}")
+                    bin, month, year, cvv, amount = parse_input(user_input)
+                    if not bin:
                         return
-                if amount > CC_GEN_LIMIT:
-                    return
+                    if cvv is not None:
+                        is_amex = is_amex_bin(bin)
+                        expected_cvv_length = 4 if is_amex else 3
+                        if len(cvv) != expected_cvv_length:
+                            return
+                    if amount > CC_GEN_LIMIT:
+                        return
 
-                bin_info = await get_bin_info(bin[:6], client, message)
-                if not bin_info or bin_info.get("Status") != "SUCCESS" or not isinstance(bin_info.get("Country"), dict):
-                    return
+                    bin_info = await get_bin_info(bin[:6], client, message)
+                    if not bin_info or bin_info.get("Status") != "SUCCESS" or not isinstance(bin_info.get("Country"), dict):
+                        return
 
-                bank = bin_info.get("Issuer")
-                country_name = bin_info["Country"].get("Name", "Unknown")
-                card_type = bin_info.get("Type", "Unknown")
-                card_scheme = bin_info.get("Scheme", "Unknown")
-                bank_text = bank.upper() if bank else "Unknown"
-                country_code = bin_info["Country"]["A2"]
-                country_name, flag_emoji = get_flag(country_code, client, message)
-                bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
+                    bank = bin_info.get("Issuer")
+                    country_name = bin_info["Country"].get("Name", "Unknown")
+                    card_type = bin_info.get("Type", "Unknown")
+                    card_scheme = bin_info.get("Scheme", "Unknown")
+                    bank_text = bank.upper() if bank else "Unknown"
+                    country_code = bin_info["Country"]["A2"]
+                    country_name, flag_emoji = get_flag(country_code, client, message)
+                    bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
 
-                progress_message = await client.send_message(message.chat.id, "**Generating Credit Cards...**")
-                LOGGER.info("Auto-generating Credit Cards...")
-                cards = generate_custom_cards(bin, amount, month, year, cvv) if 'x' in bin.lower() else generate_credit_card(bin, amount, month, year, cvv)
+                    progress_message = await client.send_message(message.chat.id, "**Generating Credit Cards...**")
+                    LOGGER.info("Auto-generating Credit Cards...")
+                    cards = generate_custom_cards(bin, amount, month, year, cvv) if 'x' in bin.lower() else generate_credit_card(bin, amount, month, year, cvv)
 
-                if amount <= 10:
-                    card_text = "\n".join([f"`{card}`" for card in cards])
-                    await progress_message.delete()
-                    response_text = f"**BIN ⇾ {bin}**\n**Amount ⇾ {amount}**\n\n{card_text}\n\n**Bank:** {bank_text}\n**Country:** {country_name} {flag_emoji}\n**BIN Info:** {bin_info_text}"
-                    callback_data = f"regenerate|{user_input.replace(' ', '_')}|{user_id}"
-                    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
-                    await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
-                else:
-                    file_name = f"{bin} x {amount}.txt"
-                    try:
-                        with open(file_name, "w") as file:
-                            file.write("\n".join(cards))
+                    if amount <= 10:
+                        card_text = "\n".join([f"`{card}`" for card in cards])
                         await progress_message.delete()
-                        caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**• BIN:** {bin}\n**• INFO:** {bin_info_text}\n**• BANK:** {bank_text}\n**• COUNTRY:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
-                        await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
-                    except Exception as e:
-                        await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
-                        LOGGER.error(f"Error saving cards to file: {str(e)}")
-                        await notify_admin(client, "/gen", e, message)
-                    finally:
-                        if os.path.exists(file_name):
-                            os.remove(file_name)
+                        response_text = f"**BIN ⇾ {bin}**\n**Amount ⇾ {amount}**\n\n{card_text}\n\n**Bank:** {bank_text}\n**Country:** {country_name} {flag_emoji}\n**BIN Info:** {bin_info_text}"
+                        callback_data = f"regenerate|{user_input.replace(' ', '_')}|{user_id}"
+                        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
+                        await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+                    else:
+                        file_name = f"{bin} x {amount}.txt"
+                        try:
+                            with open(file_name, "w") as file:
+                                file.write("\n".join(cards))
+                            await progress_message.delete()
+                            caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**• BIN:** {bin}\n**• INFO:** {bin_info_text}\n**• BANK:** {bank_text}\n**• COUNTRY:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                            await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                        except Exception as e:
+                            await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
+                            LOGGER.error(f"Error saving cards to file: {str(e)}")
+                            await notify_admin(client, "/gen", e, message)
+                        finally:
+                            if os.path.exists(file_name):
+                                os.remove(file_name)
 
     @app.on_callback_query(filters.regex(r"regenerate\|(.+)\|(\d+)"))
     async def regenerate_callback(client: Client, callback_query):
@@ -362,7 +364,7 @@ def setup_gen_handler(app: Client):
         original_input = callback_query.data.split('|', 2)[1].replace('_', ' ')
         bin, month, year, cvv, amount = parse_input(original_input)
         if not bin:
-            await callback_query.answer("Sorry Bin Must Be 6-15 Digits or Up to 16 Digits with 'x' ❌", show_alert=True)
+            await callback_query.answer("Sorry Bin Must Be 6-15 Digits ❌", show_alert=True)
             return
         if cvv is not None:
             is_amex = is_amex_bin(bin)
