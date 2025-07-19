@@ -30,8 +30,12 @@ def extract_bin_from_text(text):
     for pattern in patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
+            # Fix: Ensure match is a string before processing
+            if not isinstance(match, str):
+                continue
             clean_match = re.sub(r'[^0-9xX|:/]', '', match)
-            base_digits = clean_match.replace('x', '').replace('X', '').replace('|', '').replace(':', '').replace('/')
+            # Fix: Add empty string as second parameter for replace method calls
+            base_digits = clean_match.replace('x', '').replace('X', '').replace('|', '').replace(':', '').replace('/', '')
             if 6 <= len(base_digits) <= 16:
                 LOGGER.info(f"Extracted BIN: {clean_match} from text using pattern: {pattern}")
                 return clean_match
@@ -178,6 +182,16 @@ def get_country_code_from_name(country_name, client=None, message=None):
             asyncio.create_task(notify_admin(client, "/gen", e, message))
         raise
 
+
+def contains_bin_pattern(_, __, message):
+    if not message.text and not message.caption:
+        return False
+    text = message.text or message.caption
+    extracted_bin = extract_bin_from_text(text)
+    return extracted_bin is not None
+
+bin_pattern_filter = filters.create(contains_bin_pattern)
+
 def setup_gen_handler(app: Client):
     @app.on_message(filters.command(["gen"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def generate_handler(client: Client, message: Message):
@@ -268,78 +282,103 @@ def setup_gen_handler(app: Client):
                 if os.path.exists(file_name):
                     os.remove(file_name)
 
-    @app.on_message(filters.reply & filters.regex(r'^(?:BIN|bin)[:\s]*(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:\.gen|/gen)\s+(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)|(?:^|\s)(\d{6,16}[xX]{0,10}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?)?)(?:\s|$)|(\d{6,16}(?:[|:/]\d{2}(?:[|:/]\d{2,4}(?:[|:/]\d{3,4})?)?))|(\d{0,12}[xX]{0,10}\d{0,12})') & (filters.private | filters.group))
+    
+    @app.on_message(filters.reply & bin_pattern_filter & (filters.private | filters.group))
     async def auto_generate_handler(client: Client, message: Message):
+        # Check if the reply is to a message containing gen command with COMMAND_PREFIX
+        if not message.reply_to_message:
+            return
+        
+        reply_text = None
+        if message.reply_to_message.text:
+            reply_text = message.reply_to_message.text
+        elif message.reply_to_message.caption:
+            reply_text = message.reply_to_message.caption
+        
+        
+        if not reply_text:
+            return
+            
+        
+        gen_command_found = False
+        for prefix in COMMAND_PREFIX:
+            if f'{prefix}gen' in reply_text.lower():
+                gen_command_found = True
+                break
+        
+        if not gen_command_found:
+            return
+        
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
             return
+        
         user_full_name = message.from_user.first_name
         if message.from_user.last_name:
             user_full_name += f" {message.from_user.last_name}"
 
-        if message.reply_to_message:
-            reply_text = None
-            if message.reply_to_message.text:
-                reply_text = message.reply_to_message.text
-                LOGGER.info(f"Extracting from text message")
-            elif message.reply_to_message.caption:
-                reply_text = message.reply_to_message.caption
-                LOGGER.info(f"Extracting from media caption")
-            if reply_text:
-                extracted_bin = extract_bin_from_text(reply_text)
-                if extracted_bin:
-                    user_input = extracted_bin
-                    LOGGER.info(f"Auto-extracted BIN from reply: {extracted_bin}")
-                    bin, month, year, cvv, amount = parse_input(user_input)
-                    if not bin:
-                        return
-                    if cvv is not None:
-                        is_amex = is_amex_bin(bin)
-                        expected_cvv_length = 4 if is_amex else 3
-                        if len(cvv) != expected_cvv_length:
-                            return
-                    if amount > CC_GEN_LIMIT:
-                        return
+        
+        current_text = message.text or message.caption
+        if not current_text:
+            return
+            
+        extracted_bin = extract_bin_from_text(current_text)
+        if not extracted_bin:
+            return
+            
+        user_input = extracted_bin
+        LOGGER.info(f"Auto-extracted BIN from reply: {extracted_bin}")
+        
+        bin, month, year, cvv, amount = parse_input(user_input)
+        if not bin:
+            return
+        if cvv is not None:
+            is_amex = is_amex_bin(bin)
+            expected_cvv_length = 4 if is_amex else 3
+            if len(cvv) != expected_cvv_length:
+                return
+        if amount > CC_GEN_LIMIT:
+            return
 
-                    bin_info = await get_bin_info(bin[:6], client, message)
-                    if not bin_info or bin_info.get("Status") != "SUCCESS" or not isinstance(bin_info.get("Country"), dict):
-                        return
+        bin_info = await get_bin_info(bin[:6], client, message)
+        if not bin_info or bin_info.get("Status") != "SUCCESS" or not isinstance(bin_info.get("Country"), dict):
+            return
 
-                    bank = bin_info.get("Issuer")
-                    country_name = bin_info["Country"].get("Name", "Unknown")
-                    card_type = bin_info.get("Type", "Unknown")
-                    card_scheme = bin_info.get("Scheme", "Unknown")
-                    bank_text = bank.upper() if bank else "Unknown"
-                    country_code = bin_info["Country"]["A2"]
-                    country_name, flag_emoji = get_flag(country_code, client, message)
-                    bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
+        bank = bin_info.get("Issuer")
+        country_name = bin_info["Country"].get("Name", "Unknown")
+        card_type = bin_info.get("Type", "Unknown")
+        card_scheme = bin_info.get("Scheme", "Unknown")
+        bank_text = bank.upper() if bank else "Unknown"
+        country_code = bin_info["Country"]["A2"]
+        country_name, flag_emoji = get_flag(country_code, client, message)
+        bin_info_text = f"{card_scheme.upper()} - {card_type.upper()}"
 
-                    progress_message = await client.send_message(message.chat.id, "**Generating Credit Cards...**")
-                    LOGGER.info("Auto-generating Credit Cards...")
-                    cards = generate_custom_cards(bin, amount, month, year, cvv) if 'x' in bin.lower() else generate_credit_card(bin, amount, month, year, cvv)
+        progress_message = await client.send_message(message.chat.id, "**Generating Credit Cards...**")
+        LOGGER.info("Auto-generating Credit Cards...")
+        cards = generate_custom_cards(bin, amount, month, year, cvv) if 'x' in bin.lower() else generate_credit_card(bin, amount, month, year, cvv)
 
-                    if amount <= 10:
-                        card_text = "\n".join([f"`{card}`" for card in cards])
-                        await progress_message.delete()
-                        response_text = f"**BIN ⇾ {bin}**\n**Amount ⇾ {amount}**\n\n{card_text}\n\n**Bank:** {bank_text}\n**Country:** {country_name} {flag_emoji}\n**BIN Info:** {bin_info_text}"
-                        callback_data = f"regenerate|{user_input.replace(' ', '_')}|{user_id}"
-                        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
-                        await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
-                    else:
-                        file_name = f"{bin} x {amount}.txt"
-                        try:
-                            with open(file_name, "w") as file:
-                                file.write("\n".join(cards))
-                            await progress_message.delete()
-                            caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**• BIN:** {bin}\n**• INFO:** {bin_info_text}\n**• BANK:** {bank_text}\n**• COUNTRY:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
-                            await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
-                        except Exception as e:
-                            await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
-                            LOGGER.error(f"Error saving cards to file: {str(e)}")
-                            await notify_admin(client, "/gen", e, message)
-                        finally:
-                            if os.path.exists(file_name):
-                                os.remove(file_name)
+        if amount <= 10:
+            card_text = "\n".join([f"`{card}`" for card in cards])
+            await progress_message.delete()
+            response_text = f"**BIN ⇾ {bin}**\n**Amount ⇾ {amount}**\n\n{card_text}\n\n**Bank:** {bank_text}\n**Country:** {country_name} {flag_emoji}\n**BIN Info:** {bin_info_text}"
+            callback_data = f"regenerate|{user_input.replace(' ', '_')}|{user_id}"
+            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
+            await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+        else:
+            file_name = f"{bin} x {amount}.txt"
+            try:
+                with open(file_name, "w") as file:
+                    file.write("\n".join(cards))
+                await progress_message.delete()
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**• BIN:** {bin}\n**• INFO:** {bin_info_text}\n**• BANK:** {bank_text}\n**• COUNTRY:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
+            except Exception as e:
+                await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
+                LOGGER.error(f"Error saving cards to file: {str(e)}")
+                await notify_admin(client, "/gen", e, message)
+            finally:
+                if os.path.exists(file_name):
+                    os.remove(file_name)
 
     @app.on_callback_query(filters.regex(r"regenerate\|(.+)\|(\d+)"))
     async def regenerate_callback(client: Client, callback_query):
