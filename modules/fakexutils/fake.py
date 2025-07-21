@@ -1,6 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel: https://t.me/TheSmartDev
-
 import aiohttp
 import asyncio
 from pyrogram import Client, filters
@@ -39,6 +36,9 @@ def setup_fake_handler(app: Client):
             return
         
         country_code = message.command[1].upper()
+        if country_code == "UK":
+            country_code = "GB"
+        
         country = pycountry.countries.get(alpha_2=country_code) or pycountry.countries.get(name=country_code)
         
         if not country:
