@@ -287,7 +287,7 @@ def setup_gen_handler(app: Client):
         if amount <= 10:
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
-            response_text = f"**𝗕𝗜𝗡 ⇾ {bin}**\n**𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}**\n\n{card_text}\n\n**𝗕𝗮𝗻𝗸:** {bank_text}\n**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info_text}"
+            response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
             callback_data = f"regenerate|{bin.replace(' ', '_')}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
@@ -297,7 +297,7 @@ def setup_gen_handler(app: Client):
                 with open(file_name, "w") as file:
                     file.write("\n".join(cards))
                 await progress_message.delete()
-                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**𝗕𝗜𝗡:** {bin}\n**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info_text}\n**𝗕𝗮𝗻𝗸:** {bank_text}\n**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
                 await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
                 await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
@@ -370,7 +370,7 @@ def setup_gen_handler(app: Client):
         if amount <= 10:
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
-            response_text = f"**𝗕𝗜𝗡 ⇾ {bin}**\n**𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}**\n\n{card_text}\n\n**𝗕𝗮𝗻𝗸:** {bank_text}\n**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info_text}"
+            response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
             callback_data = f"regenerate|{bin.replace(' ', '_')}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
@@ -380,7 +380,7 @@ def setup_gen_handler(app: Client):
                 with open(file_name, "w") as file:
                     file.write("\n".join(cards))
                 await progress_message.delete()
-                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n**𝗕𝗜𝗡:** {bin}\n**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info_text}\n**𝗕𝗮𝗻𝗸:** {bank_text}\n**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
                 await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
                 await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
@@ -439,6 +439,6 @@ def setup_gen_handler(app: Client):
             await callback_query.answer("Sorry Bin Must Be 6-15 Digits❌", show_alert=True)
             return
         card_text = "\n".join([f"`{card}`" for card in cards[:10]])
-        response_text = f"**𝗕𝗜𝗡 ⇾ {bin}**\n**𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}**\n\n{card_text}\n\n**𝗕𝗮𝗻𝗸:** {bank_text}\n**𝗖𝗼𝘂𝗻𝘁𝗿𝘆:** {country_name} {flag_emoji}\n**𝗕𝗜𝗡 𝗜𝗻𝗳𝗼:** {bin_info_text}"
+        response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=f"regenerate|{bin.replace(' ', '_')}|{user_id}")]])
         await callback_query.message.edit_text(response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
