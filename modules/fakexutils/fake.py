@@ -62,13 +62,13 @@ def setup_fake_handler(app: Client):
                     await generating_message.edit_text(
                         f"**Address for {data['country']} {flag_emoji}**\n"
                         f"**━━━━━━━━━━━━━**\n"
-                        f"**- Street :** {data['street_address']}\n"
-                        f"**- Full Name :** {data['person_name']}\n"
-                        f"**- City/Town/Village :** {data['city']}\n"
-                        f"**- Gender :** {data['gender']}\n"
-                        f"**- Postal Code :** {data['postal_code']}\n"
-                        f"**- Phone Number :** {data['phone_number']}\n"
-                        f"**- Country :** {data['country']}\n"
+                        f"**- Street :** `{data['street_address']}`\n"
+                        f"**- Full Name :** `{data['person_name']}`\n"
+                        f"**- City/Town/Village :** `{data['city']}`\n"
+                        f"**- Gender :** `{data['gender']}`\n"
+                        f"**- Postal Code :** `{data['postal_code']}`\n"
+                        f"**- Phone Number :** `{data['phone_number']}`\n"
+                        f"**- Country :** `{data['country']}`\n"
                         f"**━━━━━━━━━━━━━**\n"
                         f"**Click Below Button For Code 👇**",
                         parse_mode=ParseMode.MARKDOWN,
