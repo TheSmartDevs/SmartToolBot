@@ -7,7 +7,7 @@ from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ParseMode
-from telegraph import Telegraph
+from telegraph import Telegraph 
 from config import OWNER_ID, COMMAND_PREFIX, UPDATE_CHANNEL_URL
 from core import auth_admins
 from utils import LOGGER
@@ -43,7 +43,6 @@ def setup_logs_handler(app: Client):
     async def create_telegraph_page(content: str) -> list:
         try:
             truncated_content = content[:40000]
-            content_bytes = truncated_content.encode('utf-8', errors='ignore')
             max_size_bytes = 20 * 1024
             pages = []
             page_content = ""
@@ -53,29 +52,37 @@ def setup_logs_handler(app: Client):
             for line in lines:
                 line_bytes = line.encode('utf-8', errors='ignore')
                 if current_size + len(line_bytes) > max_size_bytes and page_content:
-                    safe_content = page_content.replace('<', '<').replace('>', '>')
-                    response = telegraph.create_page(
+                   
+                    safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
+                   
+                    html_content = f'<pre>{safe_content}</pre>'
+                    
+                    
+                    page = telegraph.create_page(
                         title="SmartLogs",
-                        html_content=safe_content,
+                        html_content=html_content,
                         author_name="SmartUtilBot",
                         author_url="https://t.me/TheSmartDevs"
                     )
-                    pages.append(f"https://telegra.ph/{response['path']}")
+                    pages.append(page['url']) 
                     page_content = ""
                     current_size = 0
                     await asyncio.sleep(0.5)
+                    
                 page_content += line
                 current_size += len(line_bytes)
 
             if page_content:
-                safe_content = page_content.replace('<', '<').replace('>', '>')
-                response = telegraph.create_page(
+                safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
+                html_content = f'<pre>{safe_content}</pre>'
+                
+                page = telegraph.create_page(
                     title="SmartLogs",
-                    html_content=safe_content,
+                    html_content=html_content,
                     author_name="SmartUtilBot",
                     author_url="https://t.me/TheSmartDevs"
                 )
-                pages.append(f"https://telegra.ph/{response['path']}")
+                pages.append(page['url'])
                 await asyncio.sleep(0.5)
 
             return pages
