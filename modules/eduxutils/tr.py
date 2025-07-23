@@ -1,7 +1,5 @@
-# Copyright @ISmartCoder
-# Updates Channel: https://t.me/TheSmartDev
-
 import os
+import asyncio
 from io import BytesIO
 from PIL import Image
 from pyrogram import Client, filters
@@ -36,7 +34,7 @@ def setup_tr_handler(app: Client):
                 if img.mode != 'RGB':
                     img = img.convert('RGB')
 
-                response = model.generate_content(["Extract text from this image", img])
+                response = model.generate_content(["Extract only the main text from this image, ignoring any labels or additional comments, and return it as plain text", img])
                 text = response.text
                 if not text:
                     LOGGER.warning("No text extracted from image")
@@ -62,6 +60,10 @@ def setup_tr_handler(app: Client):
             LOGGER.error(f"Translation error: {e}")
             raise
 
+    async def format_text(text: str) -> str:
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        return '\n'.join(lines)
+
     async def translate_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
@@ -69,12 +71,13 @@ def setup_tr_handler(app: Client):
             LOGGER.info(f"Banned user {user_id} attempted to use /tr")
             return
 
-        combined_format = len(message.command[0]) > 2 and message.command[0][2:].lower() in LANGUAGES
+        cmd = message.command[0].lower()
+        combined_format = len(cmd) > 2 and cmd[2:] in LANGUAGES
         photo_mode = message.reply_to_message and message.reply_to_message.photo
         text_mode = (message.reply_to_message and message.reply_to_message.text) or (len(message.command) > (1 if combined_format else 2))
 
         if combined_format:
-            target_lang = message.command[0][2:].lower()
+            target_lang = cmd[2:]
             text_to_translate = " ".join(message.command[1:]) if not (photo_mode or (message.reply_to_message and message.reply_to_message.text)) else None
         else:
             if len(message.command) < 2:
@@ -111,7 +114,7 @@ def setup_tr_handler(app: Client):
             if not message.reply_to_message.photo:
                 await client.send_message(
                     chat_id=message.chat.id,
-                    text="**❌ Reply to a valid photo for OCR!**",
+                    text="**❌ Reply to a valid photo for Translation!**",
                     parse_mode=ParseMode.MARKDOWN
                 )
                 LOGGER.warning("No valid photo provided for OCR")
@@ -127,42 +130,41 @@ def setup_tr_handler(app: Client):
 
         loading_message = await client.send_message(
             chat_id=message.chat.id,
-            text="**Translating Your Input...✨**",
+            text=f"**Translating Your {'Image' if photo_mode else 'Text'} Into {LANGUAGES[target_lang].capitalize()}...**",
             parse_mode=ParseMode.MARKDOWN
         )
 
         try:
             if photo_mode:
-                text_to_translate = await ocr_extract_text(client, message)
-                if not text_to_translate:
+                extracted_text = await ocr_extract_text(client, message)
+                if not extracted_text:
                     await loading_message.edit(
-                        text="**No Valid Text Found In The Image**",
+                        text="**No Readable Text Found In The Image**",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     LOGGER.warning("No valid text extracted from image")
                     await notify_admin(client, "/tr ocr", Exception("No valid text extracted from image"), message)
                     return
+                text_to_translate = extracted_text
 
-            try:
-                translated_text = translate_text(text_to_translate, target_lang)
-            except Exception as e:
-                await notify_admin(client, "/tr translate", e, message)
-                raise
+            initial_translation = translate_text(text_to_translate, 'en')
+            translated_text = translate_text(initial_translation, target_lang)
+            formatted_text = await format_text(translated_text)
 
-            if len(translated_text) > 4000:
+            if len(formatted_text) > 4000:
                 await loading_message.delete()
-                parts = [translated_text[i:i+4000] for i in range(0, len(translated_text), 4000)]
+                parts = [formatted_text[i:i+4000] for i in range(0, len(formatted_text), 4000)]
                 for part in parts:
                     await client.send_message(message.chat.id, part, parse_mode=ParseMode.MARKDOWN)
             else:
-                await loading_message.edit(translated_text, parse_mode=ParseMode.MARKDOWN)
+                await loading_message.edit(formatted_text, parse_mode=ParseMode.MARKDOWN)
             LOGGER.info(f"Sent translation to {target_lang} in chat {message.chat.id}")
 
         except Exception as e:
             LOGGER.error(f"Translation handler error: {e}")
             await notify_admin(client, "/tr", e, message)
             await loading_message.edit(
-                text="**❌ Translation API Error**",
+                text="**Sorry Bro Translation API Dead❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
 
