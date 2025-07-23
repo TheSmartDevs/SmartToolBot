@@ -197,13 +197,32 @@ async def generate_quote(client: Client, message: Message, session):
                         user = replied_message.forward_from
                     elif replied_message.forward_from_chat and replied_message.forward_sender_name:
                         full_name = replied_message.forward_sender_name
-                        user_id = None 
+                        user_id = None
+                    elif replied_message.forward_sender_name:
+                        full_name = replied_message.forward_sender_name
+                        user_id = None
                     else:
-                        user = message.from_user
+                        user = replied_message.from_user
                 else:
                     user = replied_message.from_user
+            elif replied_message and len(command_parts) > 1:
+                if replied_message.forward_from or replied_message.forward_from_chat:
+                    if replied_message.forward_from:
+                        user = replied_message.forward_from
+                    elif replied_message.forward_from_chat and replied_message.forward_sender_name:
+                        full_name = replied_message.forward_sender_name
+                        user_id = None
+                    elif replied_message.forward_sender_name:
+                        full_name = replied_message.forward_sender_name
+                        user_id = None
+                    else:
+                        user = replied_message.from_user
+                else:
+                    user = replied_message.from_user
+                text = " ".join(command_parts[1:])
             elif len(command_parts) > 1:
                 user = message.from_user
+                text = " ".join(command_parts[1:])
 
             if user:
                 full_name = user.first_name
@@ -240,9 +259,9 @@ async def generate_quote(client: Client, message: Message, session):
                 "name": full_name or "Anonymous",
                 "fontSize": font_size
             }
-            if avatar_file_path:
+            if avatar_file_path and user_id:  # Only include photo if user_id exists (not for forward privacy)
                 from_payload["photo"] = {"url": f"data:image/jpeg;base64,{avatar_base64}"}
-            if emoji_status_id:
+            if emoji_status_id and user_id:  # Only include emoji status if user_id exists
                 from_payload["emoji_status"] = emoji_status_id
 
             if replied_message and len(command_parts) == 1 and (replied_message.photo or replied_message.sticker or replied_message.video or replied_message.animation):
@@ -311,7 +330,7 @@ async def generate_quote(client: Client, message: Message, session):
                         "messages": [
                             {
                                 "entities": message_entities,
-                                "avatar": bool(avatar_file_path),
+                                "avatar": bool(avatar_file_path and user_id),
                                 "from": from_payload,
                                 "media": {"type": "photo", "url": hosted_url},
                                 "text": text,
@@ -373,7 +392,6 @@ async def generate_quote(client: Client, message: Message, session):
                     await client.send_message(message.chat.id, "**Please send text, a sticker, a photo, a video, or a GIF to create your sticker.**", parse_mode=ParseMode.MARKDOWN)
                     return
             elif len(command_parts) > 1:
-                text = " ".join(command_parts[1:])
                 message_entities = await extract_message_entities(message, skip_command_prefix=True, command_prefix_length=len(command_parts[0]) + 1)
                 premium_emojis = await extract_premium_emojis(message, offset_adjust=len(command_parts[0]) + 1)
                 if premium_emojis:
@@ -400,7 +418,7 @@ async def generate_quote(client: Client, message: Message, session):
                 "messages": [
                     {
                         "entities": message_entities,
-                        "avatar": bool(avatar_file_path),
+                        "avatar": bool(avatar_file_path and user_id),
                         "from": from_payload,
                         "text": text or "",
                         "textFontSize": font_size,
