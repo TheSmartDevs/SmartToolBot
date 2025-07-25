@@ -1,5 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel t.me/TheSmartDev
 import uuid
 import hashlib
 import time
@@ -31,7 +29,6 @@ from core import banned_users
 
 logger = LOGGER
 
-# Shared Strings and Emojis
 DONATION_OPTIONS_TEXT = """
 **Why support Smart Tools?** 
 **━━━━━━━━━━━━━━━━━━**
@@ -51,21 +48,24 @@ Less wasted time = more done with **Smart Tools** 💡
 """
 
 PAYMENT_SUCCESS_TEXT = """
-**✅ Contribution Successful!**
+**✅ Donation Successful!**
 
-🎉 Huge thanks **{0}** for contributing **{1} Stars** to support **Smart Tools!**
-Your support helps keep everything running smooth and awesome 🚀
+🎉 Huge thanks **{0}** for donating **{1}** ⭐️ to support **Smart Tool!**
+Your contribution helps keep everything running smooth and awesome 🚀
 
 **🧾 Transaction ID:** `{2}`
 """
 
 ADMIN_NOTIFICATION_TEXT = """
-🌟 **Hey Bruh! New Contribution Received!** 👀
-✨ **From:** {0} 💫
-⁉️ **User ID:** `{1}`
-🌐 **Username:** {2}
-💥 **Amount:** {3} Stars ⭐️
-📝 **Transaction ID:** `{4}`
+**Hey New Donation Received 🤗**
+**━━━━━━━━━━━━━━━**
+**From: ** {0}
+**Username:** {2}
+**UserID:** `{1}`
+**Amount:** {3} ⭐️
+**Transaction ID:** `{4}`
+**━━━━━━━━━━━━━━━**
+**Click Below Button If Need Refund 💸**
 """
 
 INVOICE_CREATION_TEXT = "Generating invoice for {0} Stars...\nPlease wait ⏳"
@@ -74,8 +74,11 @@ DUPLICATE_INVOICE_TEXT = "**🚫 Wait Bro! Contribution Already in Progress!**"
 INVALID_INPUT_TEXT = "**❌ Sorry Bro! Invalid Input! Use a positive number.**"
 INVOICE_FAILED_TEXT = "**❌ Invoice Creation Failed, Bruh! Try Again!**"
 PAYMENT_FAILED_TEXT = "**❌ Sorry Bro! Payment Declined! Contact Support!**"
+REFUND_SUCCESS_TEXT = "**✅ Refund Successfully Completed Bro!**\n\n**{0} Stars** have been refunded to **[{1}](tg://user?id={2})**"
+REFUND_FAILED_TEXT = "**❌ Refund Failed!**\n\nFailed to refund **{0} Stars** to **{1}** (ID: `{2}`)\nError: {3}"
 
 active_invoices = {}
+payment_data = {}
 
 def setup_donate_handler(app):
     def get_donation_buttons(amount: int = 5):
@@ -218,10 +221,11 @@ def setup_donate_handler(app):
             return
 
         logger.info(f"Callback query received: data={data}, user: {user_id}, chat: {chat_id}")
+        
         if data.startswith("gift_"):
             quantity = int(data.split("_")[1])
             await generate_invoice(client, chat_id, user_id, quantity)
-            await callback_query.answer("✅ Invoice Generated! Pay Now! ⭐️")
+            await callback_query.answer("✅ Invoice Generated! Donate Now! ⭐️")
         elif data.startswith("increment_gift_"):
             current_amount = int(data.split("_")[2])
             new_amount = current_amount + 5
@@ -256,6 +260,41 @@ def setup_donate_handler(app):
                 reply_markup=reply_markup
             )
             await callback_query.answer()
+        elif data.startswith("refund_"):
+            admin_ids = OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]
+            if user_id in admin_ids or user_id == DEVELOPER_USER_ID:
+                payment_id = data.replace("refund_", "")
+                
+                user_info = payment_data.get(payment_id)
+                if not user_info:
+                    await callback_query.answer("❌ Payment data not found!", show_alert=True)
+                    return
+                
+                refund_user_id = user_info['user_id']
+                refund_amount = user_info['amount']
+                full_charge_id = user_info['charge_id']
+                full_name = user_info['full_name']
+                
+                try:
+                    result = await client.refund_star_payment(refund_user_id, full_charge_id)
+                    if result:
+                        await callback_query.message.edit_text(
+                            REFUND_SUCCESS_TEXT.format(refund_amount, full_name, refund_user_id),
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                        await callback_query.answer("✅ Refund processed successfully!")
+                        payment_data.pop(payment_id, None)
+                    else:
+                        await callback_query.answer("❌ Refund failed!", show_alert=True)
+                except Exception as e:
+                    logger.error(f"❌ Refund failed for user {refund_user_id}: {str(e)}")
+                    await callback_query.message.edit_text(
+                        REFUND_FAILED_TEXT.format(refund_amount, full_name, refund_user_id, str(e)),
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    await callback_query.answer("❌ Refund failed!", show_alert=True)
+            else:
+                await callback_query.answer("❌ You don't have permission to refund!", show_alert=True)
 
     async def raw_update_handler(client: Client, update, users, chats):
         if isinstance(update, UpdateBotPrecheckoutQuery):
@@ -295,9 +334,13 @@ def setup_donate_handler(app):
                 )
         elif isinstance(update, UpdateNewMessage) and isinstance(update.message, MessageService) and isinstance(update.message.action, MessageActionPaymentSentMe):
             payment = update.message.action
+            user_id = None
+            chat_id = None
+            
             try:
-                user_id = update.message.from_id.user_id if update.message.from_id and hasattr(update.message.from_id, 'user_id') else None
-                if not user_id and users:
+                if update.message.from_id and hasattr(update.message.from_id, 'user_id'):
+                    user_id = update.message.from_id.user_id
+                elif users:
                     possible_user_ids = [uid for uid in users if uid > 0]
                     user_id = possible_user_ids[0] if possible_user_ids else None
 
@@ -319,43 +362,64 @@ def setup_donate_handler(app):
                 elif isinstance(update.message.peer_id, PeerChannel):
                     chat_id = update.message.peer_id.channel_id
                 else:
-                    chat_id = None
-
-                if not chat_id and user_id:
                     chat_id = user_id
 
                 if not chat_id:
                     raise ValueError(f"Invalid chat_id ({chat_id})")
 
-                user = users.get(user_id)
+                user = users.get(user_id) if users else None
                 full_name = f"{user.first_name} {getattr(user, 'last_name', '')}".strip() or "Unknown" if user else "Unknown"
                 username = f"@{user.username}" if user and user.username else "@N/A"
+
+
+                payment_id = str(uuid.uuid4())[:16]
+                payment_data[payment_id] = {
+                    'user_id': user_id,
+                    'full_name': full_name,
+                    'username': username,
+                    'amount': payment.total_amount,
+                    'charge_id': payment.charge.id
+                }
+
+                success_message = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Transaction ID", copy_text=payment.charge.id)]
+                ])
 
                 await client.send_message(
                     chat_id=chat_id,
                     text=PAYMENT_SUCCESS_TEXT.format(full_name, payment.total_amount, payment.charge.id),
-                    parse_mode=ParseMode.MARKDOWN
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=success_message
                 )
 
                 admin_text = ADMIN_NOTIFICATION_TEXT.format(full_name, user_id, username, payment.total_amount, payment.charge.id)
-                for admin_id in OWNER_ID:
+                refund_button = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(f"Refund {payment.total_amount} ⭐️", callback_data=f"refund_{payment_id}")]
+                ])
+
+                admin_ids = OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]
+                if DEVELOPER_USER_ID not in admin_ids:
+                    admin_ids.append(DEVELOPER_USER_ID)
+
+                for admin_id in admin_ids:
                     try:
                         await client.send_message(
                             chat_id=admin_id,
                             text=admin_text,
-                            parse_mode=ParseMode.MARKDOWN
+                            parse_mode=ParseMode.MARKDOWN,
+                            reply_markup=refund_button
                         )
                     except Exception as e:
                         logger.error(f"❌ Failed to notify admin {admin_id}: {str(e)}")
 
             except Exception as e:
                 logger.error(f"❌ Payment processing failed for user {user_id if user_id else 'unknown'}: {str(e)}")
-                if 'chat_id' in locals() and chat_id:
+                if chat_id:
                     await client.send_message(
                         chat_id=chat_id,
                         text=PAYMENT_FAILED_TEXT,
                         parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Support", url=f"tg://user?id={DEVELOPER_USER_ID}")]])
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Contact Support", user_id=DEVELOPER_USER_ID)]])
                     )
 
     app.add_handler(
@@ -368,7 +432,7 @@ def setup_donate_handler(app):
     app.add_handler(
         CallbackQueryHandler(
             handle_donate_callback,
-            filters=filters.regex(r'^(gift_\d+|increment_gift_\d+|decrement_gift_\d+|show_donate_options)$')
+            filters=filters.regex(r'^(gift_\d+|increment_gift_\d+|decrement_gift_\d+|show_donate_options|refund_.+)$')
         ),
         group=2
     )
