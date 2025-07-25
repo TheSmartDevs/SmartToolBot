@@ -1,6 +1,3 @@
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-# This Script Mainly Based On https://github.com/abirxdhackz/SmartPayBot
 import logging
 import uuid
 import hashlib
@@ -28,21 +25,19 @@ from pyrogram.raw.types import (
 from pyrogram.enums import ParseMode
 from config import OWNER_ID, DEVELOPER_USER_ID
 
-# Setup logging
 logger = logging.getLogger(__name__)
 
-# Shared Strings and Emojis
 DONATION_OPTIONS_TEXT = """
-**Why should you donate to Smart Tools?** 
+**Why support Smart Tools?** 
 **━━━━━━━━━━━━━━━━━━**
 🌟 **Love the service?** 
 Your support helps keep **SmartTools** fast, reliable, and free for everyone. 
-Even a small **Donation** makes a big difference! 💖
+Even a small **Gift or Donation** makes a big difference! 💖
 
-👇 **Choose an amount to donate:** 
+👇 **Choose an amount to contribute:** 
 
-**Why donate?** 
-More donation = more motivation 
+**Why contribute?** 
+More support = more motivation 
 More motivation = better tools 
 Better tools = more productivity 
 More productivity = less wasted time 
@@ -53,79 +48,77 @@ Less wasted time = more done with **Smart Tools** 💡
 PAYMENT_SUCCESS_TEXT = """
 **✅ Donation Successful!**
 
-🎉 Huge thanks **{0}** for donating **{1} Stars** to support **Smart Tools!**
+🎉 Huge thanks **{0}** for donating **{1}** ⭐️ to support **Smart Tool!**
 Your contribution helps keep everything running smooth and awesome 🚀
 
 **🧾 Transaction ID:** `{2}`
 """
 
 ADMIN_NOTIFICATION_TEXT = """
-🌟 **Hey Bruh! New Donation Received!** 👀
-✨ **From:** {0} 💫
-⁉️ **User ID:** `{1}`
-🌐 **Username:** {2}
-💥 **Amount:** {3} Stars 🌟
-📝 **Transaction ID:** `{4}`
+**Hey New Donation Received 🤗**
+**━━━━━━━━━━━━━━━**
+**From: ** {0}
+**Username:** {2}
+**UserID:** `{1}`
+**Amount:** {3} ⭐️
+**Transaction ID:** `{4}`
+**━━━━━━━━━━━━━━━**
+**Click Below Button If Need Refund 💸**
 """
 
 INVOICE_CREATION_TEXT = "Generating invoice for {0} Stars...\nPlease wait ⏳"
 INVOICE_CONFIRMATION_TEXT = "**✅ Invoice for {0} Stars has been generated! You can now proceed to pay via the button below.**"
-DUPLICATE_INVOICE_TEXT = "**🚫 Wait Bro! Donation Already in Progress!**"
+DUPLICATE_INVOICE_TEXT = "**🚫 Wait Bro! Contribution Already in Progress!**"
+INVALID_INPUT_TEXT = "**❌ Sorry Bro! Invalid Input! Use a positive number.**"
 INVOICE_FAILED_TEXT = "**❌ Invoice Creation Failed, Bruh! Try Again!**"
 PAYMENT_FAILED_TEXT = "**❌ Sorry Bro! Payment Declined! Contact Support!**"
+REFUND_SUCCESS_TEXT = "**✅ Refund Successfully Completed Bro!**\n\n**{0} Stars** have been refunded to **[{1}](tg://user?id={2})**"
+REFUND_FAILED_TEXT = "**❌ Refund Failed!**\n\nFailed to refund **{0} Stars** to **{1}** (ID: `{2}`)\nError: {3}"
 
-# Store active invoice requests (in-memory, replace with DB for production)
 active_invoices = {}
+payment_data = {}
 
-# Function to format time durations
 def timeof_fmt(seconds):
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
     days, hours = divmod(hours, 24)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
-# Generate Dynamic Donation Buttons
 def get_donation_buttons(amount: int = 5):
-    buttons = []
     if amount == 5:
-        buttons.append([
-            InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
-            InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
+             InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")],
+            [InlineKeyboardButton("🔙 Back", callback_data="about_me")]
         ])
-    else:
-        buttons.append([
-            InlineKeyboardButton("-5", callback_data=f"decrement_donate_{amount}"),
-            InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
-            InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")
-        ])
-    buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="about_me")])
-    return InlineKeyboardMarkup(buttons)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("-5", callback_data=f"decrement_donate_{amount}"),
+         InlineKeyboardButton(f"{amount} ⭐️", callback_data=f"donate_{amount}"),
+         InlineKeyboardButton("+5", callback_data=f"increment_donate_{amount}")],
+        [InlineKeyboardButton("🔙 Back", callback_data="about_me")]
+    ])
 
-# Generate and Send Invoice Function
 async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity: int, is_callback: bool = False, callback_query: CallbackQuery = None):
-    """Generate and send an invoice with minimal message edits for speed."""
     if user_id in active_invoices:
         if is_callback:
-            await callback_query.answer("Donation already in progress!")
+            await callback_query.answer("Contribution already in progress!")
         else:
             await client.send_message(chat_id, DUPLICATE_INVOICE_TEXT, parse_mode=ParseMode.MARKDOWN)
         return
 
     active_invoices[user_id] = True
-    back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
+    back_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="about_me")]])
 
     try:
-        # Generate unique payload
         timestamp = int(time.time())
         unique_id = str(uuid.uuid4())[:8]
-        invoice_payload = f"donation_{user_id}_{quantity}_{timestamp}_{unique_id}"
+        invoice_payload = f"contribution_{user_id}_{quantity}_{timestamp}_{unique_id}"
         random_id = int(hashlib.sha256(invoice_payload.encode()).hexdigest(), 16) % (2**63)
 
         title = "Support Smart Tools"
         description = f"Contribute {quantity} Stars to support ongoing development and keep the tools free, fast, and reliable for everyone 💫 Every star helps us grow!"
         currency = "XTR"
 
-        # Create Invoice object
         invoice = Invoice(
             currency=currency,
             prices=[LabeledPrice(label=f"⭐️ {quantity} Stars", amount=quantity)],
@@ -140,7 +133,6 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
             flexible=False
         )
 
-        # Create InputMediaInvoice
         media = InputMediaInvoice(
             title=title,
             description=description,
@@ -150,15 +142,12 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
             provider_data=DataJSON(data="{}")
         )
 
-        # Create ReplyInlineMarkup with KeyboardButtonBuy
         markup = ReplyInlineMarkup(
-            rows=[KeyboardButtonRow(buttons=[KeyboardButtonBuy(text="💫 Donate via Stars")])]
+            rows=[KeyboardButtonRow(buttons=[KeyboardButtonBuy(text="💫 Donate Via Stars")])]
         )
 
-        # Resolve peer
         peer = await client.resolve_peer(chat_id)
 
-        # Send loading message only if not a callback
         if not is_callback:
             loading_message = await client.send_message(
                 chat_id,
@@ -167,7 +156,6 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
                 reply_markup=back_button
             )
 
-        # Send the invoice
         await client.invoke(
             SendMedia(
                 peer=peer,
@@ -178,14 +166,13 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
             )
         )
 
-        # Update message to confirmation
         if is_callback:
             await callback_query.message.edit_text(
                 INVOICE_CONFIRMATION_TEXT.format(quantity),
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=back_button
             )
-            await callback_query.answer("✅ Invoice Generated! Pay Now! ⭐️")
+            await callback_query.answer("✅ Invoice Generated! Donate Now! ⭐️")
         else:
             await loading_message.edit_text(
                 INVOICE_CONFIRMATION_TEXT.format(quantity),
@@ -193,7 +180,9 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
                 reply_markup=back_button
             )
 
+        logger.info(f"✅ Invoice sent for {quantity} stars to user {user_id} with payload {invoice_payload}")
     except Exception as e:
+        logger.error(f"❌ Failed to generate invoice for user {user_id}: {str(e)}")
         await client.send_message(
             chat_id,
             INVOICE_FAILED_TEXT,
@@ -205,12 +194,13 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
     finally:
         active_invoices.pop(user_id, None)
 
-# Handle Callback Queries for Donation Buttons
 async def handle_donate_callback(client: Client, callback_query: CallbackQuery):
     data = callback_query.data
     chat_id = callback_query.message.chat.id
     user_id = callback_query.from_user.id
 
+    logger.info(f"Callback query received: data={data}, user: {user_id}, chat: {chat_id}")
+    
     if data == "donate":
         reply_markup = get_donation_buttons()
         await callback_query.message.edit_text(
@@ -242,41 +232,100 @@ async def handle_donate_callback(client: Client, callback_query: CallbackQuery):
             reply_markup=reply_markup
         )
         await callback_query.answer(f"Updated to {new_amount} Stars")
+    elif data == "show_donate_options":
+        reply_markup = get_donation_buttons()
+        await callback_query.message.edit_text(
+            DONATION_OPTIONS_TEXT,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+        await callback_query.answer()
+    elif data.startswith("refund_"):
+        admin_ids = OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]
+        if user_id in admin_ids or user_id == DEVELOPER_USER_ID:
+            payment_id = data.replace("refund_", "")
+            
+            user_info = payment_data.get(payment_id)
+            if not user_info:
+                await callback_query.answer("❌ Payment data not found!", show_alert=True)
+                return
+            
+            refund_user_id = user_info['user_id']
+            refund_amount = user_info['amount']
+            full_charge_id = user_info['charge_id']
+            full_name = user_info['full_name']
+            
+            try:
+                result = await client.refund_star_payment(refund_user_id, full_charge_id)
+                if result:
+                    await callback_query.message.edit_text(
+                        REFUND_SUCCESS_TEXT.format(refund_amount, full_name, refund_user_id),
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    await callback_query.answer("✅ Refund processed successfully!")
+                    payment_data.pop(payment_id, None)
+                else:
+                    await callback_query.answer("❌ Refund failed!", show_alert=True)
+            except Exception as e:
+                logger.error(f"❌ Refund failed for user {refund_user_id}: {str(e)}")
+                await callback_query.message.edit_text(
+                    REFUND_FAILED_TEXT.format(refund_amount, full_name, refund_user_id, str(e)),
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                await callback_query.answer("❌ Refund failed!", show_alert=True)
+        else:
+            await callback_query.answer("❌ You don't have permission to refund!", show_alert=True)
 
-# Raw Update Handler for Payment Processing
 async def raw_update_handler(client: Client, update, users, chats):
     if isinstance(update, UpdateBotPrecheckoutQuery):
         try:
             await client.invoke(
-                SetBotPrecheckoutResults(query_id=update.query_id, success=True)
+                SetBotPrecheckoutResults(
+                    query_id=update.query_id,
+                    success=True
+                )
             )
+            logger.info(f"✅ Pre-checkout query {update.query_id} OK for user {update.user_id}")
         except Exception as e:
+            logger.error(f"❌ Pre-checkout query {update.query_id} failed: {str(e)}")
             await client.invoke(
                 SetBotPrecheckoutResults(
                     query_id=update.query_id,
                     success=False,
-                    error="Failed to process pre-checkout query."
+                    error="Failed to process pre-checkout."
                 )
             )
     elif isinstance(update, UpdateBotShippingQuery):
         try:
             await client.invoke(
-                SetBotShippingResults(query_id=update.query_id, shipping_options=[])
+                SetBotShippingResults(
+                    query_id=update.query_id,
+                    shipping_options=[]
+                )
             )
+            logger.info(f"✅ Shipping query {update.query_id} OK for user {update.user_id}")
         except Exception as e:
+            logger.error(f"❌ Shipping query {update.query_id} failed: {str(e)}")
             await client.invoke(
                 SetBotShippingResults(
                     query_id=update.query_id,
-                    error="Shipping not required for donations."
+                    error="Shipping not needed for contributions."
                 )
             )
     elif isinstance(update, UpdateNewMessage) and isinstance(update.message, MessageService) and isinstance(update.message.action, MessageActionPaymentSentMe):
         payment = update.message.action
+        user_id = None
+        chat_id = None
+        
         try:
-            user_id = update.message.from_id.user_id if update.message.from_id and hasattr(update.message.from_id, 'user_id') else None
-            if not user_id and users:
+            if update.message.from_id and hasattr(update.message.from_id, 'user_id'):
+                user_id = update.message.from_id.user_id
+            elif users:
                 possible_user_ids = [uid for uid in users if uid > 0]
                 user_id = possible_user_ids[0] if possible_user_ids else None
+
+            if not user_id:
+                raise ValueError(f"Invalid user_id ({user_id})")
 
             if isinstance(update.message.peer_id, PeerUser):
                 chat_id = update.message.peer_id.user_id
@@ -287,30 +336,59 @@ async def raw_update_handler(client: Client, update, users, chats):
             else:
                 chat_id = user_id
 
-            if not user_id or not chat_id:
-                raise ValueError(f"Invalid chat_id ({chat_id}) or user_id ({user_id})")
+            if not chat_id:
+                raise ValueError(f"Invalid chat_id ({chat_id})")
 
-            user = users.get(user_id)
+            user = users.get(user_id) if users else None
             full_name = f"{user.first_name} {getattr(user, 'last_name', '')}".strip() or "Unknown" if user else "Unknown"
             username = f"@{user.username}" if user and user.username else "@N/A"
 
+            payment_id = str(uuid.uuid4())[:16]
+            payment_data[payment_id] = {
+                'user_id': user_id,
+                'full_name': full_name,
+                'username': username,
+                'amount': payment.total_amount,
+                'charge_id': payment.charge.id
+            }
+
+            success_message = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Transaction ID", copy_text=payment.charge.id)]
+            ])
+
             await client.send_message(
-                chat_id,
-                PAYMENT_SUCCESS_TEXT.format(full_name, payment.total_amount, payment.charge.id),
-                parse_mode=ParseMode.MARKDOWN
+                chat_id=chat_id,
+                text=PAYMENT_SUCCESS_TEXT.format(full_name, payment.total_amount, payment.charge.id),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=success_message
             )
 
             admin_text = ADMIN_NOTIFICATION_TEXT.format(full_name, user_id, username, payment.total_amount, payment.charge.id)
-            for admin_id in OWNER_ID:
+            refund_button = InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"Refund {payment.total_amount} ⭐️", callback_data=f"refund_{payment_id}")]
+            ])
+
+            admin_ids = OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]
+            if DEVELOPER_USER_ID not in admin_ids:
+                admin_ids.append(DEVELOPER_USER_ID)
+
+            for admin_id in admin_ids:
                 try:
-                    await client.send_message(admin_id, admin_text, parse_mode=ParseMode.MARKDOWN)
-                except Exception:
-                    pass
+                    await client.send_message(
+                        chat_id=admin_id,
+                        text=admin_text,
+                        parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=refund_button
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to notify admin {admin_id}: {str(e)}")
+
         except Exception as e:
-            if 'chat_id' in locals():
+            logger.error(f"❌ Payment processing failed for user {user_id if user_id else 'unknown'}: {str(e)}")
+            if chat_id:
                 await client.send_message(
-                    chat_id,
-                    PAYMENT_FAILED_TEXT,
+                    chat_id=chat_id,
+                    text=PAYMENT_FAILED_TEXT,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Support", user_id=DEVELOPER_USER_ID)]])
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Contact Support", user_id=DEVELOPER_USER_ID)]])
                 )
