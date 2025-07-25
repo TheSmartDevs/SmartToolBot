@@ -12,14 +12,14 @@ def get_flag(country_code, client=None, message=None):
     try:
         country = pycountry.countries.get(alpha_2=country_code)
         if not country:
-            raise ValueError("Invalid country code")
+            return None, "🏚"
         country_name = country.name
         flag_emoji = chr(0x1F1E6 + ord(country_code[0]) - ord('A')) + chr(0x1F1E6 + ord(country_code[1]) - ord('A'))
         return country_name, flag_emoji
     except Exception as e:
         error_msg = f"Error in get_flag: {str(e)}"
         LOGGER.error(error_msg)
-        return None, "👁"
+        return None, "🏚"
 
 def setup_fake_handler(app: Client):
     @app.on_message(filters.command(["fake", "rnd"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
@@ -39,14 +39,7 @@ def setup_fake_handler(app: Client):
         if country_code == "UK":
             country_code = "GB"
         
-        country = pycountry.countries.get(alpha_2=country_code) or pycountry.countries.get(name=country_code)
-        
-        if not country:
-            await client.send_message(message.chat.id, "**❌ Please Provide A Valid Country Code**", parse_mode=ParseMode.MARKDOWN)
-            LOGGER.warning(f"Invalid country code: {country_code}")
-            return
-        
-        api_url = f"https://smartfake.vercel.app/api/address?code={country.alpha_2}"
+        api_url = f"https://smartfake.vercel.app/api/address?code={country_code}"
         
         generating_message = await client.send_message(message.chat.id, "**Generating Fake Address...**", parse_mode=ParseMode.MARKDOWN)
         
@@ -55,7 +48,7 @@ def setup_fake_handler(app: Client):
                 async with session.get(api_url) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    _, flag_emoji = get_flag(country.alpha_2, client, message)
+                    _, flag_emoji = get_flag(country_code, client, message)
                     keyboard = InlineKeyboardMarkup([
                         [InlineKeyboardButton("Copy Postal Code", copy_text=data['postal_code'])]
                     ])
