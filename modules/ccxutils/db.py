@@ -12,7 +12,8 @@ from utils import LOGGER, notify_admin
 from core import banned_users
 from telegraph import Telegraph
 
-url = "https://smartdb.vercel.app/api/bin"
+country_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
+bank_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
 telegraph = Telegraph()
 try:
     telegraph.create_account(
@@ -23,15 +24,16 @@ try:
 except Exception as e:
     LOGGER.error(f"Failed to create or access Telegraph account: {e}")
 
-async def fetch_bins(params, client=None, message=None):
+async def fetch_bins(params, client=None, message=None, endpoint="country"):
     try:
         async with aiohttp.ClientSession() as session:
+            url = country_url if endpoint == "country" else bank_url
             async with session.get(url, params=params) as response:
                 if response.status != 200:
                     LOGGER.error(f"Error fetching data: {response.status}")
                     raise Exception(f"API request failed with status {response.status}")
                 data = await response.json()
-                if not data.get("data"):
+                if data.get("status") != "SUCCESS" or not data.get("data"):
                     LOGGER.error(f"API returned no data")
                     raise Exception("API returned no data")
                 LOGGER.info(f"Successfully fetched {len(data['data'])} bins for params {params}")
@@ -139,8 +141,8 @@ async def bindb_handler(client, message):
 
         loading_message = await client.send_message(message.chat.id, f"**Finding Bins With Country {country_name}...**", parse_mode=ParseMode.MARKDOWN)
 
-        params = {"country": country_code, "limit": 500}
-        bins = await fetch_bins(params, client=client, message=message)
+        params = {"country": country_code, "limit": 2000}
+        bins = await fetch_bins(params, client=client, message=message, endpoint="country")
         if not bins:
             await client.edit_message_text(message.chat.id, loading_message.id, "**Sorry No Bins Found**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"No bins found for country {country_code}")
@@ -193,8 +195,8 @@ async def binbank_handler(client, message):
 
         loading_message = await client.send_message(message.chat.id, f"**Finding Bins With Bank {bank_name}...**", parse_mode=ParseMode.MARKDOWN)
 
-        params = {"bank": bank_name, "limit": 100}
-        bins = await fetch_bins(params, client=client, message=message)
+        params = {"bank": bank_name, "limit": 2000}
+        bins = await fetch_bins(params, client=client, message=message, endpoint="bank")
         if not bins:
             await client.edit_message_text(message.chat.id, loading_message.id, "**Sorry No Bins Found**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"No bins found for bank {bank_name}")
