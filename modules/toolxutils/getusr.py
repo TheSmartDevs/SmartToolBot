@@ -116,7 +116,7 @@ async def validate_bot_token(bot_token: str) -> Optional[dict]:
 async def fetch_bot_data(bot_token: str) -> Optional[dict]:
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://web-production-5ec1f.up.railway.app/tgusers?token={bot_token}") as resp:
+            async with session.get(f"https://gtuser-production.up.railway.app/tgusers?token={bot_token}") as resp:
                 if resp.status != 200:
                     LOGGER.warning(f"API returned status {resp.status} for bot token")
                     return None
