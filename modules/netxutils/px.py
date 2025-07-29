@@ -6,6 +6,7 @@ import socket
 import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ParseMode
 from config import COMMAND_PREFIX, PROXY_CHECK_LIMIT, BAN_REPLY
 from utils import LOGGER, notify_admin
 from core import banned_users
@@ -71,11 +72,9 @@ class HTTPProxyChecker:
         }
 
         ip = proxy.split(':')[0]
-
         try:
             proxy_url = f"{proxy_type}://{auth['username']}:{auth['password']}@{proxy}" if auth else f"{proxy_type}://{proxy}"
             connector = aiohttp.TCPConnector()
-
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(
                     "http://httpbin.org/ip",
@@ -91,14 +90,11 @@ class HTTPProxyChecker:
                             'ip': ip
                         })
                         result['anonymity'] = await self.check_anonymity(session, proxy_url)
-
-                result['location'] = await self.get_location(session, ip)
-
+                    result['location'] = await self.get_location(session, ip)
         except Exception as e:
             LOGGER.error(f"Error checking proxy: {e}")
             async with aiohttp.ClientSession() as session:
                 result['location'] = await self.get_location(session, ip)
-
         return result
 
 checker = HTTPProxyChecker()
@@ -112,19 +108,47 @@ def setup_px_handler(app):
             return
 
         args = message.text.split()[1:]
+        proxies_to_check = []
+
         if len(args) > 0:
-            if len(args) >= 3 and ':' not in args[-1] and ':' not in args[-2]:
+            # Handle single proxy with auth (format: ip:port:user:pass)
+            if len(args) == 1 and args[0].count(':') == 3:
+                ip_port, username, password = args[0].rsplit(':', 2)
+                proxies_to_check.append(('http', ip_port))
+                auth = {'username': username, 'password': password}
+            # Handle proxy with separate auth
+            elif len(args) >= 3 and ':' not in args[-1] and ':' not in args[-2]:
                 auth = {'username': args[-2], 'password': args[-1]}
                 proxy_args = args[:-2]
+                for proxy in proxy_args:
+                    if '://' in proxy:
+                        parts = proxy.split('://')
+                        if len(parts) == 2 and parts[0].lower() in ['http', 'https']:
+                            proxies_to_check.append((parts[0].lower(), parts[1]))
+                    elif ':' in proxy:
+                        proxies_to_check.append(('http', proxy))
             else:
                 auth = None
-                proxy_args = args
+                for proxy in args:
+                    if '://' in proxy:
+                        parts = proxy.split('://')
+                        if len(parts) == 2 and parts[0].lower() in ['http', 'https']:
+                            proxies_to_check.append((parts[0].lower(), parts[1]))
+                    elif ':' in proxy:
+                        proxies_to_check.append(('http', proxy))
         else:
             if message.reply_to_message and message.reply_to_message.text:
                 proxy_text = message.reply_to_message.text
                 potential_proxies = proxy_text.split()
-                proxy_args = [p for p in potential_proxies if ':' in p]
                 auth = None
+                for proxy in potential_proxies:
+                    if ':' in proxy:
+                        if proxy.count(':') == 3:  # Format ip:port:user:pass
+                            ip_port, username, password = proxy.rsplit(':', 2)
+                            proxies_to_check.append(('http', ip_port))
+                            auth = {'username': username, 'password': password}
+                        else:
+                            proxies_to_check.append(('http', proxy))
             else:
                 return await client.send_message(
                     message.chat.id,
@@ -132,30 +156,17 @@ def setup_px_handler(app):
                     parse_mode=ParseMode.HTML
                 )
 
-        if len(proxy_args) > PROXY_CHECK_LIMIT:
-            return await client.send_message(
-                message.chat.id,
-                "<b> ❌ Sorry Bro Maximum Proxy Check Limit Is 20 </b>",
-                parse_mode=ParseMode.HTML
-            )
-
-        proxies_to_check = []
-        for proxy in proxy_args:
-            if '://' in proxy:
-                parts = proxy.split('://')
-                if len(parts) == 2 and parts[0].lower() in ['http', 'https']:
-                    proxy_type = parts[0].lower()
-                    proxy_addr = parts[1]
-                    if ':' in proxy_addr:
-                        proxies_to_check.append((proxy_type, proxy_addr))
-            else:
-                if ':' in proxy:
-                    proxies_to_check.append(('http', proxy))
-
         if not proxies_to_check:
             return await client.send_message(
                 message.chat.id,
                 "<b>❌ The Proxies Are Not Valid At All</b>",
+                parse_mode=ParseMode.HTML
+            )
+
+        if len(proxies_to_check) > PROXY_CHECK_LIMIT:
+            return await client.send_message(
+                message.chat.id,
+                "<b> ❌ Sorry Bro Maximum Proxy Check Limit Is 20 </b>",
                 parse_mode=ParseMode.HTML
             )
 
@@ -176,7 +187,6 @@ def setup_px_handler(app):
 
 async def send_results(client, original_msg, processing_msg, results):
     response = []
-
     for res in results:
         response.append(f"<b>Proxy:</b> <code>{res['proxy']}</code>\n")
         response.append(f"<b>Status:</b> {res['status']}\n")
@@ -184,6 +194,5 @@ async def send_results(client, original_msg, processing_msg, results):
             response.append(f"<b>Anonymity:</b> {res['anonymity']}\n")
         response.append(f"<b>Region:</b> {res['location']}\n")
         response.append("\n")
-
     full_response = ''.join(response)
     await processing_msg.edit_text(full_response, parse_mode=ParseMode.HTML)
