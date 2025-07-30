@@ -1,5 +1,3 @@
-#Copyright @ISmartCoder
-#Updates Channel https://t.me/TheSmartDev
 import re
 import os
 import random
@@ -115,9 +113,9 @@ def generate_credit_card(bin, amount, month=None, year=None, cvv=None):
         if not luhn_algorithm(card_number):
             LOGGER.error(f"Generated invalid card: {card_number}")
             continue
-        card_month = month or f"{random.randint(1, 12):02d}"
-        card_year = year or str(random.randint(2025, 2035))
-        card_cvv = cvv or ''.join([str(random.randint(0, 9)) for _ in range(cvv_length)])
+        card_month = month if month is not None else f"{random.randint(1, 12):02d}"
+        card_year = year if year is not None else str(random.randint(2025, 2035))
+        card_cvv = cvv if cvv is not None else ''.join([str(random.randint(0, 9)) for _ in range(cvv_length)])
         formatted_card = f"{card_number}|{card_month}|{card_year}|{card_cvv}"
         cards.append(formatted_card)
         LOGGER.debug(f"Generated valid card: {formatted_card}")
@@ -150,25 +148,33 @@ def parse_input(user_input):
             return None, None, None, None, None
     else:
         return None, None, None, None, None
-    if len(parts) > 1 and parts[1].isdigit() and len(parts[1]) == 2:
-        month_val = int(parts[1])
-        if 1 <= month_val <= 12:
-            month = f"{month_val:02d}"
-    if len(parts) > 2 and parts[2].isdigit():
-        year_str = parts[2]
-        if len(year_str) == 2:
-            year_int = int(year_str)
-            if year_int >= 25:
-                year = f"20{year_str}"
-            else:
-                year = f"20{year_str}"
-        elif len(year_str) == 4:
-            year_int = int(year_str)
-            if 2025 <= year_int <= 2099:
-                year = year_str
+    if len(parts) > 1:
+        if parts[1].lower() in ['xx', 'xxx']:
+            month = None
+        elif parts[1].isdigit() and len(parts[1]) == 2:
+            month_val = int(parts[1])
+            if 1 <= month_val <= 12:
+                month = f"{month_val:02d}"
+    if len(parts) > 2:
+        if parts[2].lower() in ['xx', 'xxxx']:
+            year = None
+        elif parts[2].isdigit():
+            year_str = parts[2]
+            if len(year_str) == 2:
+                year_int = int(year_str)
+                if year_int >= 25:
+                    year = f"20{year_str}"
+                else:
+                    year = f"20{year_str}"
+            elif len(year_str) == 4:
+                year_int = int(year_str)
+                if 2025 <= year_int <= 2099:
+                    year = year_str
     if len(parts) > 3 and parts[3]:
-        cvv_str = parts[3]
-        if cvv_str.isdigit():
+        if parts[3].lower() in ['xxx', 'xxxx']:
+            cvv = None
+        elif parts[3].isdigit():
+            cvv_str = parts[3]
             is_amex = is_amex_bin(bin) if bin else False
             expected_cvv_length = 4 if is_amex else 3
             if len(cvv_str) == expected_cvv_length:
@@ -380,7 +386,7 @@ def setup_gen_handler(app: Client):
                 with open(file_name, "w") as file:
                     file.write("\n".join(cards))
                 await progress_message.delete()
-                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\nC𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
                 await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
                 await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
