@@ -1,4 +1,5 @@
 # Copyright @ISmartCoder
+
 # Updates Channel t.me/TheSmartDev
 
 import os
@@ -34,7 +35,7 @@ class PinterestDownloader:
     async def download_media(self, url: str, downloading_message: Message) -> Optional[dict]:
         self.temp_dir.mkdir(exist_ok=True)
         api_url = f"https://pin-teal.vercel.app/dl?url={url}"
-        
+
         try:
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(limit=100),
@@ -54,7 +55,6 @@ class PinterestDownloader:
                         title = data.get("title", "Pinterest Media")
                         high_quality_video = None
                         thumbnail = None
-
                         for item in media:
                             if item.get("type") == "video/mp4" and (not high_quality_video or "720p" in item.get("quality")):
                                 high_quality_video = item.get("url")
@@ -84,16 +84,20 @@ class PinterestDownloader:
                             result['image_filename'] = str(image_filename)
 
                         return result
+
                     logger.error(f"API request failed: HTTP status {response.status}")
                     return None
+
         except aiohttp.ClientError as e:
             logger.error(f"Pinterest download error: {e}")
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}pnt", e, downloading_message)
             return None
+
         except asyncio.TimeoutError:
             logger.error("Request to Pinterest API timed out")
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}pnt", asyncio.TimeoutError("Request to Pinterest API timed out"), downloading_message)
             return None
+
         except Exception as e:
             logger.error(f"Pinterest download error: {e}")
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}pnt", e, downloading_message)
@@ -118,11 +122,10 @@ class PinterestDownloader:
 
 def setup_pinterest_handler(app: Client):
     pin_downloader = PinterestDownloader(Config.TEMP_DIR)
-
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
 
     @app.on_message(
-        filters.regex(rf"^{command_prefix_regex}(pnt|pint)(\s+https?://\S+)?$") &
+        filters.regex(rf"^{command_prefix_regex}(pnt|pint)(\s+https?://(pin\.it|in\.pinterest\.com|www\.pinterest\.com)/\S+)?$") &
         (filters.private | filters.group)
     )
     async def pin_handler(client: Client, message: Message):
@@ -133,13 +136,14 @@ def setup_pinterest_handler(app: Client):
 
         url = None
         if message.reply_to_message and message.reply_to_message.text:
-            match = re.search(r"https?://(pin\.it|in\.pinterest\.com)/\S+", message.reply_to_message.text)
+            match = re.search(r"https?://(pin\.it|in\.pinterest\.com|www\.pinterest\.com)/\S+", message.reply_to_message.text)
             if match:
                 url = match.group(0)
+
         if not url:
             command_parts = message.text.split(maxsplit=1)
             if len(command_parts) > 1:
-                match = re.search(r"https?://(pin\.it|in\.pinterest\.com)/\S+", command_parts[1])
+                match = re.search(r"https?://(pin\.it|in\.pinterest\.com|www\.pinterest\.com)/\S+", command_parts[1])
                 if match:
                     url = match.group(0)
 
