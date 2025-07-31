@@ -57,6 +57,7 @@ from .timexutils.times import setup_time_handler
 from .toolxutils.rs import setup_rs_handler
 from .toolxutils.getusr import setup_getusr_handler
 from .toolxutils.cpn import setup_cpn_handler
+from .toolxutils.enh import setup_enh_handler
 from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
 from .webxutils.ws import setup_ws_handler
@@ -96,6 +97,7 @@ def setup_modules_handlers(app):
     setup_gmr_handler(app)
     setup_pron_handler(app)
     setup_spl_handler(app)
+    setup_enh_handler(app)
     setup_syn_handler(app)
     setup_tr_handler(app)
     setup_fake_handler(app)
