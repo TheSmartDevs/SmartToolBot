@@ -65,15 +65,19 @@ def setup_enh_handler(app: Client):
             await client.send_message(message.chat.id, "**You have reached your daily limit of 10 enhancements.**")
             return
 
-        if not message.reply_to_message or not message.reply_to_message.photo:
-            await client.send_message(message.chat.id, "**Reply to a photo to enhance face**")
+        replied = message.reply_to_message
+        valid_photo = replied and replied.photo
+        valid_doc = replied and replied.document and replied.document.mime_type and replied.document.mime_type.startswith("image/")
+
+        if not (valid_photo or valid_doc):
+            await client.send_message(message.chat.id, "**Reply to a photo or image file to enhance face**")
             return
 
         async def process_image():
             loading_message = None
             try:
                 loading_message = await client.send_message(message.chat.id, "**Enhancing Your Face....**")
-                file_id = message.reply_to_message.photo.file_id
+                file_id = replied.photo.file_id if valid_photo else replied.document.file_id
                 file_path = await client.download_media(file_id, in_memory=True)
 
                 if not file_path:
@@ -94,9 +98,8 @@ def setup_enh_handler(app: Client):
                                 img_bytes = await img_resp.read()
                                 if not img_bytes:
                                     raise ValueError("Empty image data received from API")
-                               
                                 img_io = BytesIO(img_bytes)
-                                img_io.name = "enhanced.png" 
+                                img_io.name = "enhanced.png"
                                 try:
                                     await client.delete_messages(message.chat.id, loading_message.id)
                                 except MessageIdInvalid:
