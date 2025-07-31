@@ -25,7 +25,7 @@ def extract_bin_from_text(text):
         if text.lower().startswith(f'{prefix}gen'):
             text = text[len(f'{prefix}gen'):].strip()
             break
-    digits_x_pattern = r'(?:[0-9xX][a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};:\'",.<>/?\\|]*)+(?:[|:/][\d]{2}(?:[|:/][\d]{2,4}(?:[|:/][\d]{3,4})?)?)?'
+    digits_x_pattern = r'(?:[0-9xX][a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};:\'",.<>/?\\|]*)+(?:[|:/][\d]{2}|xx|xxx|xxxx]+(?:[|:/][\d]{2,4}|xx|xxx|xxxx]+(?:[|:/][\d]{3,4}|xxx|xxxx]+)?)?)?'
     matches = re.findall(digits_x_pattern, text, re.IGNORECASE)
     if matches:
         for match in matches:
@@ -51,12 +51,12 @@ async def get_bin_info(bin, client, message):
                 else:
                     error_msg = f"API returned status code {response.status}"
                     LOGGER.error(error_msg)
-                    await client.send_message(message.chat.id, f"**Error: {error_msg}**")
+                    await client.send_message(message.chat.id, f"**Invalid Bin Provided ❌**")
                     return None
     except Exception as e:
         error_msg = f"Error fetching BIN info: {str(e)}"
         LOGGER.error(error_msg)
-        await client.send_message(message.chat.id, f"**Error: {error_msg}**")
+        await client.send_message(message.chat.id, f"**Invalid Bin Provided ❌**")
         await notify_admin(client, "/gen", e, message)
         return None
 
@@ -149,14 +149,14 @@ def parse_input(user_input):
     else:
         return None, None, None, None, None
     if len(parts) > 1:
-        if parts[1].lower() in ['xx', 'xxx']:
+        if parts[1].lower() == 'xx':
             month = None
         elif parts[1].isdigit() and len(parts[1]) == 2:
             month_val = int(parts[1])
             if 1 <= month_val <= 12:
                 month = f"{month_val:02d}"
     if len(parts) > 2:
-        if parts[2].lower() in ['xx', 'xxxx']:
+        if parts[2].lower() == 'xx':
             year = None
         elif parts[2].isdigit():
             year_str = parts[2]
@@ -250,13 +250,13 @@ def setup_gen_handler(app: Client):
             for prefix in COMMAND_PREFIX:
                 if command_text.lower().startswith(f'{prefix}gen'):
                     user_input = command_text[len(f'{prefix}gen'):].strip()
+                    if not user_input:
+                        await client.send_message(message.chat.id, "**Please Provide A Valid Bin ❌**")
+                        return
                     break
             else:
-                user_input = command_text.split(maxsplit=1)
-                if len(user_input) == 1:
-                    await client.send_message(message.chat.id, "**Please Provide a valid BIN ❌**")
-                    return
-                user_input = user_input[1]
+                await client.send_message(message.chat.id, "**Please Provide A Valid Bin ❌**")
+                return
         bin, month, year, cvv, amount = parse_input(user_input)
         if not bin:
             LOGGER.error(f"Invalid BIN extracted from: {user_input}")
@@ -294,7 +294,7 @@ def setup_gen_handler(app: Client):
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
             response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{user_id}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -377,7 +377,7 @@ def setup_gen_handler(app: Client):
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
             response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{user_id}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -396,10 +396,11 @@ def setup_gen_handler(app: Client):
                 if os.path.exists(file_name):
                     os.remove(file_name)
 
-    @app.on_callback_query(filters.regex(r"regenerate\|(.+)\|(\d+)"))
+    @app.on_callback_query(filters.regex(r"regenerate\|(.+)\|(.+)\|(.+)\|(.+)\|(\d+)\|(\d+)"))
     async def regenerate_callback(client: Client, callback_query):
         user_id = callback_query.from_user.id if callback_query.from_user else None
-        original_user_id = int(callback_query.data.split('|')[-1])
+        data_parts = callback_query.data.split('|')
+        original_user_id = int(data_parts[-1])
         user_full_name = callback_query.from_user.first_name
         if callback_query.from_user.last_name:
             user_full_name += f" {callback_query.from_user.last_name}"
@@ -413,8 +414,11 @@ def setup_gen_handler(app: Client):
                 original_user_name += f" {original_user.last_name}"
             await callback_query.answer(f"Action Disallowed ❌. This Button Only For {original_user_name}", show_alert=True)
             return
-        original_input = callback_query.data.split('|', 2)[1].replace('_', ' ')
-        bin, month, year, cvv, amount = parse_input(original_input)
+        bin = data_parts[1].replace('_', ' ')
+        month = data_parts[2] if data_parts[2] != 'xx' else None
+        year = data_parts[3] if data_parts[3] != 'xx' else None
+        cvv = data_parts[4] if data_parts[4] != 'xxx' else None
+        amount = int(data_parts[5])
         if not bin:
             await callback_query.answer("Sorry Bin Must Be 6-15 Digits ❌", show_alert=True)
             return
@@ -444,7 +448,8 @@ def setup_gen_handler(app: Client):
         if not cards:
             await callback_query.answer("Sorry Bin Must Be 6-15 Digits❌", show_alert=True)
             return
-        card_text = "\n".join([f"`{card}`" for card in cards[:10]])
+        card_text = "\n".join([f"`{card}`" for card in cards])
         response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=f"regenerate|{bin.replace(' ', '_')}|{user_id}")]])
+        callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
         await callback_query.message.edit_text(response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
