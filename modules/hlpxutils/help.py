@@ -9,7 +9,7 @@ from utils import notify_admin, LOGGER
 from core import banned_users
 
 def setup_help_handler(app: Client):
-    @app.on_message(filters.command(["help", "tutorial"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
+    @app.on_message(filters.command(["help", "cmds"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def help_message(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
