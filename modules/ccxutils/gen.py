@@ -174,11 +174,7 @@ def parse_input(user_input):
         if parts[3].lower() in ['xxx', 'xxxx']:
             cvv = None
         elif parts[3].isdigit():
-            cvv_str = parts[3]
-            is_amex = is_amex_bin(bin) if bin else False
-            expected_cvv_length = 4 if is_amex else 3
-            if len(cvv_str) == expected_cvv_length:
-                cvv = cvv_str
+            cvv = parts[3]
     return bin, month, year, cvv, amount
 
 def generate_custom_cards(bin, amount, month=None, year=None, cvv=None):
@@ -264,10 +260,8 @@ def setup_gen_handler(app: Client):
             return
         if cvv is not None:
             is_amex = is_amex_bin(bin)
-            expected_cvv_length = 4 if is_amex else 3
-            if len(cvv) != expected_cvv_length:
-                cvv_type = "4 digits for AMEX" if is_amex else "3 digits for non-AMEX"
-                await client.send_message(message.chat.id, f"**Invalid CVV format. CVV must be {cvv_type} ❌**")
+            if is_amex and len(cvv) != 4:
+                await client.send_message(message.chat.id, "**Invalid CVV format. CVV must be 4 digits for AMEX ❌**")
                 return
         if amount > CC_GEN_LIMIT:
             await client.send_message(message.chat.id, f"**You Can Only Generate Upto {CC_GEN_LIMIT} Credit Cards ❌**")
@@ -294,7 +288,7 @@ def setup_gen_handler(app: Client):
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
             response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -303,7 +297,7 @@ def setup_gen_handler(app: Client):
                 with open(file_name, "w") as file:
                     file.write("\n".join(cards))
                 await progress_message.delete()
-                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 �_I𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
                 await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
                 await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
@@ -350,8 +344,7 @@ def setup_gen_handler(app: Client):
             return
         if cvv is not None:
             is_amex = is_amex_bin(bin)
-            expected_cvv_length = 4 if is_amex else 3
-            if len(cvv) != expected_cvv_length:
+            if is_amex and len(cvv) != 4:
                 return
         if amount > CC_GEN_LIMIT:
             return
@@ -376,8 +369,8 @@ def setup_gen_handler(app: Client):
         if amount <= 10:
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
-            response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
+            response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n�_A𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -386,7 +379,7 @@ def setup_gen_handler(app: Client):
                 with open(file_name, "w") as file:
                     file.write("\n".join(cards))
                 await progress_message.delete()
-                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\nC𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
+                caption = f"**🔍 Multiple CC Generate Successful 📋**\n**━━━━━━━━━━━━━━━━**\n𝗕𝗜𝗡: {bin}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n**━━━━━━━━━━━━━━━━**\n**👁 Thanks For Using Our Tool ✅**"
                 await client.send_document(message.chat.id, document=file_name, caption=caption, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
                 await client.send_message(message.chat.id, "**Sorry Bro API Response Unavailable**")
@@ -417,17 +410,15 @@ def setup_gen_handler(app: Client):
         bin = data_parts[1].replace('_', ' ')
         month = data_parts[2] if data_parts[2] != 'xx' else None
         year = data_parts[3] if data_parts[3] != 'xx' else None
-        cvv = data_parts[4] if data_parts[4] != 'xxx' else None
+        cvv = data_parts[4] if data_parts[4] not in ['xxx', 'xxxx'] else None
         amount = int(data_parts[5])
         if not bin:
             await callback_query.answer("Sorry Bin Must Be 6-15 Digits ❌", show_alert=True)
             return
         if cvv is not None:
             is_amex = is_amex_bin(bin)
-            expected_cvv_length = 4 if is_amex else 3
-            if len(cvv) != expected_cvv_length:
-                cvv_type = "4 digits for AMEX" if is_amex else "3 digits for non-AMEX"
-                await callback_query.answer(f"Invalid CVV format. CVV must be {cvv_type} ❌", show_alert=True)
+            if is_amex and len(cvv) != 4:
+                await callback_query.answer("Invalid CVV format. CVV must be 4 digits for AMEX ❌", show_alert=True)
                 return
         if amount > CC_GEN_LIMIT:
             await callback_query.answer(f"You can only generate up to {CC_GEN_LIMIT} credit cards ❌", show_alert=True)
@@ -450,6 +441,6 @@ def setup_gen_handler(app: Client):
             return
         card_text = "\n".join([f"`{card}`" for card in cards])
         response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-        callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else 'xxx'}|{amount}|{user_id}"
+        callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
         await callback_query.message.edit_text(response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
