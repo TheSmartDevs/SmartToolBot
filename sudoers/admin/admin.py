@@ -135,10 +135,6 @@ async def process_broadcast(client: Client, content, is_broadcast: bool = True, 
         bot_info = await client.get_me()
         bot_id = bot_info.id
 
-        cutoff_date = datetime.utcnow() - timedelta(days=90)
-        await user_activity_collection.delete_many({"last_activity": {"$lt": cutoff_date}})
-        LOGGER.info("Cleaned up old entries from user_activity_collection")
-
         chats = await user_activity_collection.find({}, {"user_id": 1, "is_group": 1}).to_list(None)
         user_ids = [chat["user_id"] for chat in chats if not chat.get("is_group", False) and chat["user_id"] != bot_id]
         group_ids = [chat["user_id"] for chat in chats if chat.get("is_group", False) and chat["user_id"] != bot_id]
@@ -184,21 +180,18 @@ async def process_broadcast(client: Client, content, is_broadcast: bool = True, 
             except UserIsBlocked:
                 LOGGER.error(f"User blocked the bot: chat_id {target_chat_id}")
                 if target_chat_id in user_ids:
-                    await user_activity_collection.delete_one({"user_id": target_chat_id, "is_group": False})
                     return ("user", "blocked")
                 else:
                     return ("group", "failed")
             except (InputUserDeactivated, ChatWriteForbidden, PeerIdInvalid) as e:
                 LOGGER.error(f"Failed to send to chat_id {target_chat_id}: {str(e)}")
                 if target_chat_id in user_ids:
-                    await user_activity_collection.delete_one({"user_id": target_chat_id, "is_group": False})
                     return ("user", "blocked")
                 else:
                     return ("group", "failed")
             except Exception as e:
                 LOGGER.error(f"Error sending to chat_id {target_chat_id}: {str(e)}")
                 if target_chat_id in user_ids:
-                    await user_activity_collection.delete_one({"user_id": target_chat_id, "is_group": False})
                     return ("user", "blocked")
                 else:
                     return ("group", "failed")
