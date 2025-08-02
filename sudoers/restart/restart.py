@@ -1,6 +1,3 @@
-#Copyright @ISmartCoder
-#Updates Channel https://t.me/TheSmartDev
-
 import os
 import shutil
 import asyncio
@@ -9,7 +6,7 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import OWNER_ID, UPDATE_CHANNEL_URL, COMMAND_PREFIX
-from core import auth_admins
+from core import auth_admins, restart_messages
 from utils import LOGGER
 
 async def get_auth_admins():
@@ -53,7 +50,6 @@ def setup_restart_handler(app: Client):
             text="**Restarting bot... Please wait.**",
             parse_mode=ParseMode.MARKDOWN
         )
-
         session_file = "SmartTools.session"
         if not check_session_permissions(session_file):
             await client.edit_message_text(
@@ -63,7 +59,6 @@ def setup_restart_handler(app: Client):
                 parse_mode=ParseMode.MARKDOWN
             )
             return
-
         directories = ["downloads", "temp", "temp_media", "data", "repos", "temp_dir"]
         for directory in directories:
             try:
@@ -72,7 +67,6 @@ def setup_restart_handler(app: Client):
                     LOGGER.info(f"Cleared directory: {directory}")
             except Exception as e:
                 LOGGER.error(f"Failed to clear directory {directory}: {e}")
-
         log_file = "botlog.txt"
         if os.path.exists(log_file):
             try:
@@ -80,7 +74,6 @@ def setup_restart_handler(app: Client):
                 LOGGER.info(f"Cleared log file: {log_file}")
             except Exception as e:
                 LOGGER.error(f"Failed to clear log file {log_file}: {e}")
-
         start_script = "start.sh"
         if not os.path.exists(start_script):
             LOGGER.error("Start script not found")
@@ -91,27 +84,13 @@ def setup_restart_handler(app: Client):
                 parse_mode=ParseMode.MARKDOWN
             )
             return
-
         try:
-            await asyncio.sleep(4)
-            await client.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=response.id,
-                text="**Bot Successfully Restarted 💥**",
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as e:
-            LOGGER.error(f"Failed to update restart message: {e}")
-            await client.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=response.id,
-                text="** Failed To Restart Due To Telegram Limit ❌**",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-
-        try:
-            subprocess.run(["bash", start_script], check=True)
+            await restart_messages.insert_one({
+                "chat_id": message.chat.id,
+                "msg_id": response.id
+            })
+            LOGGER.info(f"Stored restart message details for chat {message.chat.id}")
+            subprocess.Popen(["bash", start_script])
             os._exit(0)
         except Exception as e:
             LOGGER.error(f"Restart command execution failed: {e}")
@@ -133,7 +112,6 @@ def setup_restart_handler(app: Client):
             text="**Stopping bot and clearing data...**",
             parse_mode=ParseMode.MARKDOWN
         )
-
         directories = ["downloads", "temp", "temp_media", "data", "repos"]
         for directory in directories:
             try:
@@ -142,7 +120,6 @@ def setup_restart_handler(app: Client):
                     LOGGER.info(f"Cleared directory: {directory}")
             except Exception as e:
                 LOGGER.error(f"Failed to clear directory {directory}: {e}")
-
         log_file = "botlog.txt"
         if os.path.exists(log_file):
             try:
@@ -150,7 +127,6 @@ def setup_restart_handler(app: Client):
                 LOGGER.info(f"Cleared log file: {log_file}")
             except Exception as e:
                 LOGGER.error(f"Failed to clear log file {log_file}: {e}")
-
         try:
             await client.edit_message_text(
                 chat_id=message.chat.id,
@@ -158,24 +134,12 @@ def setup_restart_handler(app: Client):
                 text="**Bot stopped successfully, data cleared**",
                 parse_mode=ParseMode.MARKDOWN
             )
-        except Exception as e:
-            LOGGER.error(f"Failed to update stop message: {e}")
-            await client.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=response.id,
-                text="**Failed To Stop Bot Due To Telegram Limit ❌ **",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
-
-        try:
-            subprocess.run(["pkill", "-f", "main.py"], check=True)
             os._exit(0)
         except Exception as e:
             LOGGER.error(f"Failed to stop bot: {e}")
             await client.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=response.id,
-                text="**Failed To Stop Bot Due To Permission Lack❌ **",
+                text="**Failed To Stop Bot Due To Telegram Limit ❌ **",
                 parse_mode=ParseMode.MARKDOWN
             )
