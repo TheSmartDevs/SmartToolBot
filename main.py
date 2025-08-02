@@ -1,6 +1,6 @@
 from misc import handle_callback_query
 from pyrogram.enums import ParseMode 
-from utils import LOGGER
+from utils import LOGGER, setup_nfy_handler
 from modules import setup_modules_handlers
 from sudoers import setup_sudoers_handlers
 from core import setup_start_handler, restart_messages
@@ -31,6 +31,7 @@ async def main():
     setup_modules_handlers(app)
     setup_sudoers_handlers(app)
     setup_start_handler(app)
+    setup_nfy_handler(app)
     
     @app.on_callback_query()
     async def handle_callback(client, callback_query):
@@ -53,3 +54,4 @@ if __name__ == '__main__':
         finally:
             if not loop.is_closed():
                 loop.close()
+
