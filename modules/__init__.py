@@ -57,6 +57,7 @@ from .timexutils.times import setup_time_handler
 from .toolxutils.rs import setup_rs_handler
 from .toolxutils.getusr import setup_getusr_handler
 from .toolxutils.cpn import setup_cpn_handler
+from .toolxutils.wth import setup_weather_handler
 from .toolxutils.enh import setup_enh_handler
 from .toolxutils.vnote import setup_vnote_handler
 from .txtxutils.sptxt import setup_txt_handler
@@ -116,6 +117,7 @@ def setup_modules_handlers(app):
     setup_privacy_handler(app)
     setup_scr_handler(app)
     setup_mailscr_handler(app)
+    setup_weather_handler(app)
     setup_string_handler(app)
     setup_kang_handler(app)
     setup_q_handler(app)
@@ -130,3 +132,4 @@ def setup_modules_handlers(app):
     setup_getusr_handler(app)
     setup_tx_handler(app)
     setup_cla_handler(app)
+
