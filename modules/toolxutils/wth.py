@@ -206,7 +206,7 @@ async def get_weather_data(city):
         }
 
 def setup_weather_handler(app: Client):
-    @app.on_message(filters.command(["wth"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
+    @app.on_message(filters.command(["wth", "weather"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def start(client, message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.find_one({"user_id": user_id}):
