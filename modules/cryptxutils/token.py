@@ -81,7 +81,7 @@ async def create_crypto_info_card(
         x = (inner_width - (bbox[2] - bbox[0])) // 2 + 20
         draw.text((x, y), line, font=font_text, fill=text_white)
         y += (bbox[3] - bbox[1]) + gap
-    credit_text = "Powered By SmartUtilBot"
+    credit_text = "Powered By @ISmartCoder"
     bbox_credit = draw.textbbox((0, 0), credit_text, font=font_credit)
     x_credit = (inner_width - (bbox_credit[2] - bbox_credit[0])) // 2 + 20
     draw.text((x_credit + 2, outer_height - 80), credit_text, font=font_credit, fill=(0, 200, 120))
