@@ -14,6 +14,7 @@ from telegraph import Telegraph
 
 country_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
 bank_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
+
 telegraph = Telegraph()
 try:
     telegraph.create_account(
@@ -66,11 +67,10 @@ async def create_telegraph_page(content: str) -> list:
         page_content = ""
         current_size = 0
         lines = truncated_content.splitlines(keepends=True)
-
         for line in lines:
             line_bytes = line.encode('utf-8', errors='ignore')
             if current_size + len(line_bytes) > max_size_bytes and page_content:
-                safe_content = page_content.replace('<', '<').replace('>', '>')
+                safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
                 html_content = f'<pre>{safe_content}</pre>'
                 page = telegraph.create_page(
                     title="SmartBins",
@@ -78,16 +78,16 @@ async def create_telegraph_page(content: str) -> list:
                     author_name="SmartUtilBot",
                     author_url="https://t.me/TheSmartDevs"
                 )
-                pages.append(page['url'])
+                # Replace telegra.ph with graph.org in the URL
+                graph_url = page['url'].replace('telegra.ph', 'graph.org')
+                pages.append(graph_url)
                 page_content = ""
                 current_size = 0
                 await asyncio.sleep(0.5)
-                
             page_content += line
             current_size += len(line_bytes)
-
         if page_content:
-            safe_content = page_content.replace('<', '<').replace('>', '>')
+            safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
             html_content = f'<pre>{safe_content}</pre>'
             page = telegraph.create_page(
                 title="SmartBins",
@@ -95,9 +95,10 @@ async def create_telegraph_page(content: str) -> list:
                 author_name="SmartUtilBot",
                 author_url="https://t.me/TheSmartDevs"
             )
-            pages.append(page['url'])
+            # Replace telegra.ph with graph.org in the URL
+            graph_url = page['url'].replace('telegra.ph', 'graph.org')
+            pages.append(graph_url)
             await asyncio.sleep(0.5)
-
         return pages
     except Exception as e:
         LOGGER.error(f"Failed to create Telegraph page: {e}")
@@ -117,13 +118,11 @@ async def bindb_handler(client, message):
         await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /bindb")
         return
-
     try:
         if len(message.command) != 2:
             await client.send_message(message.chat.id, "**Please provide a country name or code. e.g. /bindb BD or /bindb Bangladesh**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"Invalid command format: {message.text}")
             return
-
         country_input = message.command[1].upper()
         if country_input in ["UK", "UNITED KINGDOM"]:
             country_code = "GB"
@@ -136,21 +135,16 @@ async def bindb_handler(client, message):
                 return
             country_code = country.alpha_2.upper()
             country_name = country.name
-
         LOGGER.info(f"Fetching BINs for country {country_name} ({country_code})")
-
         loading_message = await client.send_message(message.chat.id, f"**Finding Bins With Country {country_name}...**", parse_mode=ParseMode.MARKDOWN)
-
-        params = {"country": country_code, "limit": 2000}
+        params = {"country": country_code, "limit": 8000}
         bins = await fetch_bins(params, client=client, message=message, endpoint="country")
         if not bins:
             await client.edit_message_text(message.chat.id, loading_message.id, "**Sorry No Bins Found**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"No bins found for country {country_code}")
             return
-
         processed_bins = process_bins_to_json(bins)
         message_text = generate_message(processed_bins, country_code)
-
         keyboard = None
         if len(processed_bins) > 5:
             bins_content = json.dumps(processed_bins[5:], indent=2)
@@ -169,7 +163,6 @@ async def bindb_handler(client, message):
                             row.append(InlineKeyboardButton(f"Output {i+2}", url=telegraph_urls[i+1]))
                         buttons.append(row)
                 keyboard = InlineKeyboardMarkup(buttons)
-
         await client.edit_message_text(message.chat.id, loading_message.id, message_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Sent BINs for country {country_code} to chat {message.chat.id}")
     except Exception as e:
@@ -183,28 +176,22 @@ async def binbank_handler(client, message):
         await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Banned user {user_id} attempted to use /binbank")
         return
-
     try:
         if len(message.command) < 2:
             await client.send_message(message.chat.id, "**Please provide a bank name. e.g. /binbank Pubali**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"Invalid command format: {message.text}")
             return
-
         bank_name = ' '.join(message.command[1:]).title()
         LOGGER.info(f"Fetching BINs for bank {bank_name}")
-
         loading_message = await client.send_message(message.chat.id, f"**Finding Bins With Bank {bank_name}...**", parse_mode=ParseMode.MARKDOWN)
-
-        params = {"bank": bank_name, "limit": 2000}
+        params = {"bank": bank_name, "limit": 8000}
         bins = await fetch_bins(params, client=client, message=message, endpoint="bank")
         if not bins:
             await client.edit_message_text(message.chat.id, loading_message.id, "**Sorry No Bins Found**", parse_mode=ParseMode.MARKDOWN)
             LOGGER.warning(f"No bins found for bank {bank_name}")
             return
-
         processed_bins = process_bins_to_json(bins)
         message_text = generate_message(processed_bins, bank_name)
-
         keyboard = None
         if len(processed_bins) > 5:
             bins_content = json.dumps(processed_bins[5:], indent=2)
@@ -223,7 +210,6 @@ async def binbank_handler(client, message):
                             row.append(InlineKeyboardButton(f"Output {i+2}", url=telegraph_urls[i+1]))
                         buttons.append(row)
                 keyboard = InlineKeyboardMarkup(buttons)
-
         await client.edit_message_text(message.chat.id, loading_message.id, message_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
         LOGGER.info(f"Sent BINs for bank {bank_name} to chat {message.chat.id}")
     except Exception as e:
