@@ -21,12 +21,11 @@ from utils import (
     generate_invoice,
     handle_donate_callback
 )
-
 async def handle_callback_query(client, callback_query):
     call = callback_query
     chat_id = call.message.chat.id
     user_id = call.from_user.id
-    
+   
     if call.data == "stats":
         now = datetime.utcnow()
         daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(days=1)}})
@@ -50,7 +49,7 @@ async def handle_callback_query(client, callback_query):
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
         await call.message.edit_text(stats_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
-       
+      
     if call.data == "server":
         ping_output = subprocess.getoutput("ping -c 1 google.com")
         ping = ping_output.split("time=")[1].split()[0] if "time=" in ping_output else "N/A"
@@ -89,7 +88,7 @@ async def handle_callback_query(client, callback_query):
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
         await call.message.edit_text(server_status_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
-    
+   
     if call.data in responses:
         # Define back_button based on the menu structure
         if call.data == "server" or call.data == "stats":
@@ -103,13 +102,13 @@ async def handle_callback_query(client, callback_query):
             ])
         elif call.data in ["ai_tools", "credit_cards", "crypto", "converter", "coupons", "decoders", "downloaders", "domain_check", "education_utils", "rembg"]:
             back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
-        elif call.data in ["github", "info", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split", "translate"]:
+        elif call.data in ["file_to_link", "github", "info", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split"]:
             back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="second_menu")]])
-        elif call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "weather", "yt_tools"]:
+        elif call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "weather", "yt_tools", "translate"]:
             back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="third_menu")]])
         else:
             back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
-        
+       
         await call.message.edit_text(
             responses[call.data][0],
             parse_mode=responses[call.data][1]['parse_mode'],
