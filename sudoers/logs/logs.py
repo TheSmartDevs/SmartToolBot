@@ -7,7 +7,7 @@ from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.enums import ParseMode
-from telegraph import Telegraph 
+from telegraph import Telegraph
 from config import OWNER_ID, COMMAND_PREFIX, UPDATE_CHANNEL_URL
 from core import auth_admins
 from utils import LOGGER
@@ -48,43 +48,38 @@ def setup_logs_handler(app: Client):
             page_content = ""
             current_size = 0
             lines = truncated_content.splitlines(keepends=True)
-
             for line in lines:
                 line_bytes = line.encode('utf-8', errors='ignore')
                 if current_size + len(line_bytes) > max_size_bytes and page_content:
-                   
                     safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
-                   
                     html_content = f'<pre>{safe_content}</pre>'
-                    
-                    
                     page = telegraph.create_page(
                         title="SmartLogs",
                         html_content=html_content,
                         author_name="SmartUtilBot",
                         author_url="https://t.me/TheSmartDevs"
                     )
-                    pages.append(page['url']) 
+                    # Replace telegra.ph with graph.org in the URL
+                    graph_url = page['url'].replace('telegra.ph', 'graph.org')
+                    pages.append(graph_url)
                     page_content = ""
                     current_size = 0
                     await asyncio.sleep(0.5)
-                    
                 page_content += line
                 current_size += len(line_bytes)
-
             if page_content:
                 safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
                 html_content = f'<pre>{safe_content}</pre>'
-                
                 page = telegraph.create_page(
                     title="SmartLogs",
                     html_content=html_content,
                     author_name="SmartUtilBot",
                     author_url="https://t.me/TheSmartDevs"
                 )
-                pages.append(page['url'])
+                # Replace telegra.ph with graph.org in the URL
+                graph_url = page['url'].replace('telegra.ph', 'graph.org')
+                pages.append(graph_url)
                 await asyncio.sleep(0.5)
-
             return pages
         except Exception as e:
             logger.error(f"Failed to create Telegraph page: {e}")
@@ -97,22 +92,18 @@ def setup_logs_handler(app: Client):
         if not await is_admin(user_id):
             logger.info("User not admin, ignoring command")
             return
-
         loading_message = await client.send_message(
             chat_id=message.chat.id,
             text="**Checking The Logs...💥**",
             parse_mode=ParseMode.MARKDOWN
         )
-
         await asyncio.sleep(2)
-
         if not os.path.exists("botlog.txt"):
             await loading_message.edit_text(
                 text="**Sorry, No Logs Found ❌**",
                 parse_mode=ParseMode.MARKDOWN
             )
             return await loading_message.delete()
-
         logger.info("User is admin, sending log document")
         try:
             file_size_bytes = os.path.getsize("botlog.txt")
@@ -122,7 +113,6 @@ def setup_logs_handler(app: Client):
             now = datetime.now()
             time_str = now.strftime("%H-%M-%S")
             date_str = now.strftime("%Y-%m-%d")
-
             response = await client.send_document(
                 chat_id=message.chat.id,
                 document="botlog.txt",
@@ -163,7 +153,6 @@ def setup_logs_handler(app: Client):
         if not await is_admin(user_id):
             logger.info("User not admin, ignoring callback")
             return
-
         logger.info("User is admin, processing callback")
         if data == "close_doc$":
             await query.message.delete()
