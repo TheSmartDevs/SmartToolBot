@@ -21,20 +21,33 @@ def setup_cpn_handler(app: Client):
 
         if await banned_users.find_one({"user_id": user_id}):
             LOGGER.info(f"[CPN] Blocked banned user: {user_id}")
-            await client.send_message(chat_id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(
+                chat_id, BAN_REPLY,
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
             return
 
         args = message.text.split()
         if len(args) < 2:
             LOGGER.warning(f"[CPN] Missing site name from user: {user_id}")
-            await client.send_message(chat_id, "**❌ Missing store name! Try like this: /cpn amazon**", parse_mode=ParseMode.MARKDOWN)
+            await client.send_message(
+                chat_id, "**❌ Missing store name! Try like this: /cpn amazon**",
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
             return
 
         sitename = args[1].strip().lower()
         sitename_with_com = f"{sitename}.com"
         LOGGER.info(f"[CPN] Processing site: {sitename_with_com} for user: {user_id}")
 
-        loading = await client.send_message(chat_id, f"**🔍 Searching Coupon For {sitename}**", parse_mode=ParseMode.MARKDOWN)
+        loading = await client.send_message(
+            chat_id,
+            f"**🔍 Searching Coupon For {sitename}**",
+            parse_mode=ParseMode.MARKDOWN,
+            disable_web_page_preview=True
+        )
 
         try:
             LOGGER.info(f"[CPN] Sending API request for {sitename_with_com}")
@@ -48,12 +61,20 @@ def setup_cpn_handler(app: Client):
         except Exception as e:
             LOGGER.error(f"[CPN] API connection error for {sitename_with_com}: {e}")
             await notify_admin(client, "/cpn", e, message)
-            await loading.edit("**❌ Site unreachable or error occurred. Try again later.**", parse_mode=ParseMode.MARKDOWN)
+            await loading.edit(
+                "**❌ Site unreachable or error occurred. Try again later.**",
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
             return
 
         if "results" not in data or not data["results"]:
             LOGGER.warning(f"[CPN] No results found for {sitename_with_com}")
-            await loading.edit("**❌ No promo code found. Store name is incorrect?**", parse_mode=ParseMode.MARKDOWN)
+            await loading.edit(
+                "**❌ No promo code found. Store name is incorrect?**",
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
             return
 
         coupons = data["results"]
@@ -85,11 +106,16 @@ def setup_cpn_handler(app: Client):
             await loading.edit(
                 await format_page(0),
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=InlineKeyboardMarkup(buttons)
+                reply_markup=InlineKeyboardMarkup(buttons),
+                disable_web_page_preview=True
             )
         except Exception as e:
             LOGGER.warning(f"[CPN] Failed to apply reply markup: {e}")
-            await loading.edit(await format_page(0), parse_mode=ParseMode.MARKDOWN)
+            await loading.edit(
+                await format_page(0),
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
 
         LOGGER.info(f"[CPN] First page sent to user {user_id}")
 
@@ -140,13 +166,15 @@ def setup_cpn_handler(app: Client):
                 await callback_query.message.edit_text(
                     await format_page(page),
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=InlineKeyboardMarkup([buttons] if buttons else None)
+                    reply_markup=InlineKeyboardMarkup([buttons] if buttons else None),
+                    disable_web_page_preview=True
                 )
             except Exception as e:
                 LOGGER.warning(f"[CPN] Failed to edit with reply markup: {e}")
                 await callback_query.message.edit_text(
                     await format_page(page),
-                    parse_mode=ParseMode.MARKDOWN
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True
                 )
 
             await callback_query.answer()
