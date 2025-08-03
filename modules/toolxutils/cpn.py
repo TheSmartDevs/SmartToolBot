@@ -13,7 +13,7 @@ import time
 pagination_sessions = {}
 
 def setup_cpn_handler(app: Client):
-    @app.on_message(filters.command(["cpn"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
+    @app.on_message(filters.command(["cpn", "promo"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def cpn_handler(client: Client, message: Message):
         user_id = message.from_user.id
         chat_id = message.chat.id
