@@ -21,10 +21,12 @@ from utils import (
     generate_invoice,
     handle_donate_callback
 )
+
 async def handle_callback_query(client, callback_query):
     call = callback_query
     chat_id = call.message.chat.id
     user_id = call.from_user.id
+    
     if call.data == "stats":
         now = datetime.utcnow()
         daily_users = await user_activity_collection.count_documents({"is_group": False, "last_activity": {"$gte": now - timedelta(days=1)}})
@@ -48,7 +50,7 @@ async def handle_callback_query(client, callback_query):
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
         await call.message.edit_text(stats_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
-        
+       
     if call.data == "server":
         ping_output = subprocess.getoutput("ping -c 1 google.com")
         ping = ping_output.split("time=")[1].split()[0] if "time=" in ping_output else "N/A"
@@ -64,7 +66,6 @@ async def handle_callback_query(client, callback_query):
         total_mem = mem.total / (2**30)
         used_mem = mem.used / (2**30)
         available_mem = mem.available / (2**30)
-
         server_status_text = (
             f"**Smart Bot Status ⇾ Report ✅**\n"
             f"**━━━━━━━━━━━━━**\n"
@@ -85,29 +86,30 @@ async def handle_callback_query(client, callback_query):
             f"**━━━━━━━━━━━━━**\n"
             f"**Server Stats Check Successful ✅**"
         )
-
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
         await call.message.edit_text(server_status_text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button)
         return
-
+    
     if call.data in responses:
-        back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]]) if call.data == "server" else (
-            InlineKeyboardMarkup([
+        # Define back_button based on the menu structure
+        if call.data == "server" or call.data == "stats":
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="about_me")]])
+        elif call.data == "about_me":
+            back_button = InlineKeyboardMarkup([
                 [InlineKeyboardButton("📊 Status", callback_data="stats"),
                  InlineKeyboardButton("💾 Server", callback_data="server"),
                  InlineKeyboardButton("⭐️ Donate", callback_data="donate")],
                 [InlineKeyboardButton("⬅️ Back", callback_data="start_message")]
-            ]) if call.data == "about_me" else (
-                InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="main_menu")]]) if call.data in ["ai_tools", "credit_cards", "crypto", "converter", "decoders", "downloaders", "domain_check", "education_utils", "rembg", "github"] else (
-                    InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="second_menu")]]) if call.data in ["info", "mail_tools", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split", "translate"] else (
-                        InlineKeyboardMarkup([[InlineKeyboardButton(" Back", callback_data="third_menu")]]) if call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "yt_tools"] else (
-                            InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
-                        )
-                    )
-                )
-            )
-        )
-
+            ])
+        elif call.data in ["ai_tools", "credit_cards", "crypto", "converter", "coupons", "decoders", "downloaders", "domain_check", "education_utils", "rembg"]:
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
+        elif call.data in ["github", "info", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split", "translate"]:
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="second_menu")]])
+        elif call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "weather", "yt_tools"]:
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="third_menu")]])
+        else:
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
+        
         await call.message.edit_text(
             responses[call.data][0],
             parse_mode=responses[call.data][1]['parse_mode'],
@@ -166,16 +168,16 @@ async def handle_callback_query(client, callback_query):
             "<b>📜 Privacy Policy for Smart Tool ⚙️</b>\n\n"
             "Welcome to <b>Smart Tool ⚙️</b> Bot. By using our services, you agree to this privacy policy.\n\n"
             "1. <b>Personal Information</b>:\n"
-            "   - Personal Information: User ID and username for personalization.\n"
-            "   - <b>Usage Data</b>: Information on how you use the app to improve our services.\n\n"
+            " - Personal Information: User ID and username for personalization.\n"
+            " - <b>Usage Data</b>: Information on how you use the app to improve our services.\n\n"
             "2. Usage of Information:\n"
-            "   - <b>Service Enhancement</b>: To provide and improve <b>Smart Tool ⚙️</b>\n"
-            "   - <b>Communication</b>: Updates and new features.\n"
-            "   - <b>Security</b>: To prevent unauthorized access.\n"
-            "   - <b>Advertisements</b>: Display of promotions.\n\n"
+            " - <b>Service Enhancement</b>: To provide and improve <b>Smart Tool ⚙️</b>\n"
+            " - <b>Communication</b>: Updates and new features.\n"
+            " - <b>Security</b>: To prevent unauthorized access.\n"
+            " - <b>Advertisements</b>: Display of promotions.\n\n"
             "3. Data Security:\n"
-            "   - These tools do not store any data, ensuring your privacy.\n"
-            "   - We use strong security measures, although no system is 100% secure.\n\n"
+            " - These tools do not store any data, ensuring your privacy.\n"
+            " - We use strong security measures, although no system is 100% secure.\n\n"
             "Thank you for using <b>Smart Tool ⚙️</b>. We prioritize your privacy and security."
         )
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="policy_terms")]])
@@ -185,25 +187,25 @@ async def handle_callback_query(client, callback_query):
             "<b>📜 Terms & Conditions for Smart Tool ⚙️</b>\n\n"
             "Welcome to <b>Smart Tool ⚙️</b>. By using our services, you accept these <b>Terms & Conditions</b>.\n\n"
             "<b>1. Usage Guidelines</b>\n"
-            "   - Eligibility: Must be 13 years of age or older.\n\n"
+            " - Eligibility: Must be 13 years of age or older.\n\n"
             "<b>2. Prohibited</b>\n"
-            "   - Illegal and unauthorized uses are strictly forbidden.\n"
-            "   - Spamming and abusing are not allowed in this Bot\n\n"
+            " - Illegal and unauthorized uses are strictly forbidden.\n"
+            " - Spamming and abusing are not allowed in this Bot\n\n"
             "<b>3. Tools and Usage</b>\n"
-            "   - For testing/development purposes only, not for illegal use.\n"
-            "   - We <b>do not support</b> misuse for fraud or policy violations.\n"
-            "   - Automated requests may lead to service limitations or suspension.\n"
-            "   - We are not responsible for any account-related issues.\n\n"
+            " - For testing/development purposes only, not for illegal use.\n"
+            " - We <b>do not support</b> misuse for fraud or policy violations.\n"
+            " - Automated requests may lead to service limitations or suspension.\n"
+            " - We are not responsible for any account-related issues.\n\n"
             "<b>4. User Responsibility</b>\n"
-            "   - You are responsible for all activities performed using the bot.\n"
-            "   - Ensure that your activities comply with platform policies.\n\n"
+            " - You are responsible for all activities performed using the bot.\n"
+            " - Ensure that your activities comply with platform policies.\n\n"
             "<b>5. Disclaimer of Warranties</b>\n"
-            "   - We do not guarantee uninterrupted service, accuracy, or reliability.\n"
-            "   - We are not responsible for any consequences arising from your use of the bot.\n\n"
+            " - We do not guarantee uninterrupted service, accuracy, or reliability.\n"
+            " - We are not responsible for any consequences arising from your use of the bot.\n\n"
             "<b>6. Termination</b>\n"
-            "   - Access may be terminated for any violations without prior notice.\n\n"
+            " - Access may be terminated for any violations without prior notice.\n\n"
             "<b>7. Contact Information</b>\n"
-            "   - Contact My Dev for any inquiries or concerns. <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury👨‍💻</a> \n\n"
+            " - Contact My Dev for any inquiries or concerns. <a href='tg://user?id=7303810912'>Abir Arafat Chawdhury👨‍💻</a> \n\n"
             "Thank you for using <b>Smart Tool ⚙️</b>. We prioritize your safety, security, and best user experience. 🚀"
         )
         back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="policy_terms")]])
