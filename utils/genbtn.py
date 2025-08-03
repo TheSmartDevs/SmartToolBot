@@ -2,7 +2,6 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import UPDATE_CHANNEL_URL
 from pyrogram.enums import ParseMode
 
-# Inline Keyboard Buttons Setup By @abirxdhackz & @ISmartDevs
 main_menu_keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("AI Tools", callback_data="ai_tools"), InlineKeyboardButton("CC Tools", callback_data="credit_cards")],
     [InlineKeyboardButton("Crypto", callback_data="crypto"), InlineKeyboardButton("Converter", callback_data="converter")],
@@ -13,11 +12,11 @@ main_menu_keyboard = InlineKeyboardMarkup([
 ])
 
 second_menu_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Github Utils", callback_data="github"), InlineKeyboardButton("Info", callback_data="info")],
-    [InlineKeyboardButton("Network Tools", callback_data="network_tools"), InlineKeyboardButton("Random Address", callback_data="random_address")],
-    [InlineKeyboardButton("String Session", callback_data="string_session"), InlineKeyboardButton("Stripe Keys", callback_data="stripe_keys")],
-    [InlineKeyboardButton("Sticker", callback_data="sticker"), InlineKeyboardButton("Time Date", callback_data="time_date")],
-    [InlineKeyboardButton("Txt Spilt", callback_data="text_split"), InlineKeyboardButton("Translate", callback_data="translate")],
+    [InlineKeyboardButton("File To Link", callback_data="file_to_link"), InlineKeyboardButton("Github Utils", callback_data="github")],
+    [InlineKeyboardButton("Info", callback_data="info"), InlineKeyboardButton("Network Tools", callback_data="network_tools")],
+    [InlineKeyboardButton("Random Address", callback_data="random_address"), InlineKeyboardButton("String Session", callback_data="string_session")],
+    [InlineKeyboardButton("Stripe Keys", callback_data="stripe_keys"), InlineKeyboardButton("Sticker", callback_data="sticker")],
+    [InlineKeyboardButton("Time Date", callback_data="time_date"), InlineKeyboardButton("Txt Spilt", callback_data="text_split")],
     [InlineKeyboardButton("Previous ⬅️", callback_data="previous_1"), InlineKeyboardButton("Next ➡️", callback_data="next_2")],
     [InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
@@ -26,10 +25,10 @@ third_menu_keyboard = InlineKeyboardMarkup([
     [InlineKeyboardButton("Temp Mail", callback_data="tempmail"), InlineKeyboardButton("Text OCR", callback_data="text_ocr")],
     [InlineKeyboardButton("User Export", callback_data="bot_users_export"), InlineKeyboardButton("Web Capture", callback_data="web_capture")],
     [InlineKeyboardButton("Weather", callback_data="weather"), InlineKeyboardButton("Yt Tools", callback_data="yt_tools")],
-    [InlineKeyboardButton("Previous ⬅️", callback_data="previous_2"), InlineKeyboardButton("Close ❌", callback_data="close")]
+    [InlineKeyboardButton("Translate", callback_data="translate"), InlineKeyboardButton("Previous ⬅️", callback_data="previous_2")],
+    [InlineKeyboardButton("Close ❌", callback_data="close")]
 ])
 
-# ALL BUTTONS CALLBACK RESPONSES WRITTEN BY @abirxdhackz & @ISmartDevs & @nkka404
 responses = {
     "ai_tools": (
         "<b>🤖 AI Assistant Utils ⚙️</b>\n"
@@ -53,6 +52,19 @@ responses = {
         " - Example 2: Reply to an image with <code>/imgai What is this?</code> (Provides a specific response based on the prompt and image).\n\n"
         "<b>✨NOTE:</b>\n"
         "1️⃣ These tools leverage advanced AI models for accurate and detailed outputs.\n\n"
+        "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
+        {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
+    ),
+    "file_to_link": (
+        "<b>📥 File to Link</b>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>USAGE:</b>\n"
+        "Easily generate direct download links for any supported media file using the following command:\n\n"
+        "➤ <b>/fdl</b> – Reply to a message containing a Video, Audio, or Document.\n"
+        " - Example: Reply to a file with <code>/fdl</code> (Bot replies with a streaming/downloadable link).\n\n"
+        "<b>✨ NOTE:</b>\n"
+        "1️⃣ Only <b>Video</b>, <b>Audio</b>, and <b>Document</b> files are supported.\n"
+        "2️⃣ The generated link can be used for streaming or direct download in any browser or media player.\n\n"
         "<b>🔔 For Bot Update News</b>: <a href='{UPDATE_CHANNEL_URL}'>Join Now</a>".format(UPDATE_CHANNEL_URL=UPDATE_CHANNEL_URL),
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     ),
