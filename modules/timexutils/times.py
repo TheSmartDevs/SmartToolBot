@@ -19,64 +19,61 @@ def get_flag(country_code):
         if not country:
             return None, "🏳️"
         country_name = country.name
-        
         flag_emoji = ''.join(chr(0x1F1E6 + ord(c) - ord('A')) for c in country_code.upper())
-        if not all(0x1F1E6 <= ord(c) <= 0x1F1FF for c in flag_emoji):  
-            return country_name, "🏳️"  
+        if not all(0x1F1E6 <= ord(c) <= 0x1F1FF for c in flag_emoji):
+            return country_name, "🏳️"
         return country_name, flag_emoji
     except Exception as e:
         LOGGER.error(f"Error in get_flag: {str(e)}")
         return None, "🏳️"
 
-async def create_centered_calendar_image(country_name, time_str, date_str, output_path):
-    outer_width, outer_height = 1340, 740
-    inner_width, inner_height = 1300, 700
-    background_color = (0, 0, 0)
-    inner_color = (30, 39, 50)
-    border_color = (255, 215, 0)
-    text_white = (255, 255, 255)
-    text_yellow = (255, 215, 0)
-    img = Image.new("RGB", (outer_width, outer_height), color=background_color)
+async def create_clock_image(country_name, time_str, date_str, day_str, output_path):
+    width, height = 1240, 740
+    bg_color = (8, 12, 18)
+    card_color = (19, 26, 34)
+    accent_color = (0, 230, 255)
+    white = (255, 255, 255)
+    gray = (168, 177, 186)
+    font_time = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 110)
+    font_date = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 48)
+    font_day = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 42)
+    font_country = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+    img = Image.new("RGB", (width, height), bg_color)
     draw = ImageDraw.Draw(img)
-    font_time = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 160)
-    font_date = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 50)
-    font_country = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 45)
-    bbox_time = draw.textbbox((0, 0), time_str, font=font_time)
-    time_top = bbox_time[1]
-    time_bottom = bbox_time[3]
-    time_width = bbox_time[2] - bbox_time[0]
-    visual_h_time = time_bottom - time_top
-    bbox_date = draw.textbbox((0, 0), date_str, font=font_date)
-    date_top = bbox_date[1]
-    date_bottom = bbox_date[3]
-    date_width = bbox_date[2] - bbox_date[0]
-    visual_h_date = date_bottom - date_top
-    bbox_country = draw.textbbox((0, 0), country_name, font=font_country)
-    country_top = bbox_country[1]
-    country_bottom = bbox_country[3]
-    country_width = bbox_country[2] - bbox_country[0]
-    visual_h_country = country_bottom - country_top
-    gap_time_date = 60
-    gap_date_country = 40
-    gap_country_credit = 20
-    total_visual_height = visual_h_time + gap_time_date + visual_h_date + gap_date_country + visual_h_country + gap_country_credit
-    start_y = ((outer_height - inner_height) // 2 + (inner_height - total_visual_height) // 2) - time_top
-    draw.rectangle([(20, 20), (20 + inner_width - 1, 20 + inner_height - 1)], fill=inner_color)
-    draw.rectangle([(20, 20), (20 + inner_width - 1, 20 + inner_height - 1)], outline=border_color, width=5)
-    x_time = (inner_width - time_width) // 2 + 20
-    draw.text((x_time, start_y), time_str, font=font_time, fill=text_white)
-    date_y = start_y + time_bottom + gap_time_date - date_top
-    x_date = (inner_width - date_width) // 2 + 20
-    draw.text((x_date, date_y), date_str, font=font_date, fill=text_white)
-    country_y = date_y + date_bottom + gap_date_country - country_top
-    x_country = (inner_width - country_width) // 2 + 20
-    draw.text((x_country, country_y), country_name, font=font_country, fill=text_yellow)
-    credit_text = "Smart Time By @ISmartCoder"
-    bbox_credit = draw.textbbox((0, 0), credit_text, font=font_country)
-    credit_width = bbox_credit[2] - bbox_credit[0]
-    credit_y = country_y + country_bottom + gap_country_credit - country_top
-    x_credit = (inner_width - credit_width) // 2 + 20
-    draw.text((x_credit, credit_y), credit_text, font=font_country, fill=text_white)
+    margin = 60
+    card_rect = [margin, margin, width - margin, height - margin]
+    draw.rounded_rectangle(card_rect, radius=30, fill=card_color, outline=accent_color, width=4)
+    line_margin = 100
+    line_width = width - 2 * (margin + line_margin)
+    top_line_y = 180
+    bottom_line_y = height - margin - line_margin
+    draw.line([(margin + line_margin, top_line_y), (margin + line_margin + line_width, top_line_y)], fill=accent_color, width=3)
+    draw.line([(margin + line_margin, bottom_line_y), (margin + line_margin + line_width, bottom_line_y)], fill=accent_color, width=3)
+    dot_radius = 6
+    side_dot_x_left = margin + 10
+    side_dot_x_right = width - margin - 10
+    dot_y_positions = [260, 310, 360]
+    for y in dot_y_positions:
+        draw.ellipse((side_dot_x_left - dot_radius, y - dot_radius, side_dot_x_left + dot_radius, y + dot_radius), fill=accent_color)
+        draw.ellipse((side_dot_x_right - dot_radius, y - dot_radius, side_dot_x_right + dot_radius, y + dot_radius), fill=accent_color)
+    time_bbox = draw.textbbox((0, 0), time_str, font=font_time)
+    time_x = (width - (time_bbox[2] - time_bbox[0])) // 2
+    time_y = 220
+    draw.text((time_x, time_y), time_str, font=font_time, fill=white)
+    date_bbox = draw.textbbox((0, 0), date_str, font=font_date)
+    date_x = (width - (date_bbox[2] - date_bbox[0])) // 2
+    date_y = time_y + 120
+    draw.text((date_x, date_y), date_str, font=font_date, fill=gray)
+    day_spacing = 30
+    day_bbox = draw.textbbox((0, 0), day_str, font=font_day)
+    day_x = (width - (day_bbox[2] - day_bbox[0])) // 2
+    day_y = date_y + 55 + day_spacing
+    draw.text((day_x, day_y), day_str, font=font_day, fill=white)
+    country_spacing = 25
+    country_bbox = draw.textbbox((0, 0), country_name, font=font_country)
+    country_x = (width - (country_bbox[2] - country_bbox[0])) // 2
+    country_y = day_y + 55 + country_spacing
+    draw.text((country_x, country_y), country_name, font=font_country, fill=accent_color)
     img.save(output_path)
     return output_path
 
@@ -84,7 +81,6 @@ async def create_calendar_image(country_code):
     try:
         country = pycountry.countries.get(alpha_2=country_code)
         country_name = country.name if country else "Unknown"
-        
         time_zones = {
             "gb": ["Europe/London"],
             "ae": ["Asia/Dubai"]
@@ -93,11 +89,13 @@ async def create_calendar_image(country_code):
             tz = pytz.timezone(time_zones[0])
             now = datetime.now(tz)
             time_str = now.strftime("%I:%M:%S %p")
-            date_str = now.strftime("%d %b, %Y (%A)")
+            date_str = now.strftime("%d %b, %Y")
+            day_str = now.strftime("%A")
         else:
             time_str = "00:00:00 AM"
             date_str = "Unknown Date"
-        await create_centered_calendar_image(country_name, time_str, date_str, f"calendar_{country_code}.png")
+            day_str = "Unknown Day"
+        await create_clock_image(country_name, time_str, date_str, day_str, f"calendar_{country_code}.png")
         def delete_image():
             time.sleep(20)
             if os.path.exists(f"calendar_{country_code}.png"):
@@ -163,7 +161,6 @@ async def get_time_and_calendar(country_input, year=None, month=None):
     country_code = None
     try:
         country_input = country_input.lower().strip()
-        
         if country_input in ["uk", "united kingdom"]:
             country_code = "gb"
         elif country_input in ["uae", "united arab emirates"]:
@@ -194,7 +191,7 @@ async def get_time_and_calendar(country_input, year=None, month=None):
         if year is None or month is None:
             year = now.year
             month = now.month
-        date_str = now.strftime("%d %b, %Y (%A)")
+        date_str = now.strftime("%d %b, %Y")
         message = f"📅 {flag_emoji} <b>{country_name} Calendar | ⏰ {time_str} 👇</b>"
         calendar_markup = await get_calendar_markup(year, month, country_code)
         await create_calendar_image(country_code)
@@ -244,6 +241,7 @@ def setup_time_handler(app: Client):
                 "<b>The Country Is Not In My Database</b>",
                 parse_mode=ParseMode.HTML
             )
+
     @app.on_callback_query(filters.regex(r'^nav_'))
     async def handle_calendar_nav(client, callback_query):
         try:
@@ -261,9 +259,11 @@ def setup_time_handler(app: Client):
         except Exception as e:
             LOGGER.error(f"Exception in handle_calendar_nav: {str(e)}")
             await callback_query.answer(f"Sorry Invalid Button Query", show_alert=True)
+
     @app.on_callback_query(filters.regex(r'^alert_'))
     async def handle_alert(client, callback_query):
         await callback_query.answer("This Is The Button For Calendar", show_alert=True)
+
     @app.on_callback_query(filters.regex(r'^day_'))
     async def handle_day_click(client, callback_query):
         try:
