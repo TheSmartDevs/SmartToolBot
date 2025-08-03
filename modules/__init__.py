@@ -56,6 +56,7 @@ from .stikxutils.quote import setup_q_handler
 from .timexutils.times import setup_time_handler
 from .toolxutils.rs import setup_rs_handler
 from .toolxutils.getusr import setup_getusr_handler
+from .toolxutils.fdl import setup_fdl_handler
 from .toolxutils.cpn import setup_cpn_handler
 from .toolxutils.wth import setup_weather_handler
 from .toolxutils.enh import setup_enh_handler
@@ -96,6 +97,7 @@ def setup_modules_handlers(app):
     setup_tt_handler(app)
     setup_yt_handler(app)
     setup_gmr_handler(app)
+    setup_fdl_handler(app)
     setup_pron_handler(app)
     setup_spl_handler(app)
     setup_enh_handler(app)
@@ -132,4 +134,5 @@ def setup_modules_handlers(app):
     setup_getusr_handler(app)
     setup_tx_handler(app)
     setup_cla_handler(app)
+
 
