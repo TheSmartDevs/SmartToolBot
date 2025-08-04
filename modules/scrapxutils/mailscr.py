@@ -24,7 +24,6 @@ def filter_messages(message):
     if message is None:
         LOGGER.warning("Message is None, returning empty list")
         return []
-
     pattern = r'(\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b:\S+)'
     matches = re.findall(pattern, message)
     LOGGER.info(f"Found {len(matches)} matches in message")
@@ -38,19 +37,15 @@ async def collect_channel_data(channel_identifier, amount):
         if matches:
             messages.extend(matches)
             LOGGER.info(f"Collected {len(matches)} email-password combos from message")
-
         if len(messages) >= amount:
             LOGGER.info(f"Reached limit of {amount} messages, stopping collection")
             break
-
     unique_messages = list(set(messages))
     duplicates_removed = len(messages) - len(unique_messages)
     LOGGER.info(f"Total messages: {len(messages)}, Unique messages: {len(unique_messages)}, Duplicates removed: {duplicates_removed}")
-
     if not unique_messages:
         LOGGER.warning("No email and password combinations found")
         return [], 0, "<b>❌ No Email and Password Combinations were found</b>"
-
     return unique_messages[:amount], duplicates_removed, None
 
 async def join_private_chat(client, invite_link):
@@ -104,14 +99,12 @@ def setup_mailscr_handler(app):
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         LOGGER.info(f"Received command: {message.text}")
         args = message.text.split()
         if len(args) < 3:
             LOGGER.warning("Insufficient arguments provided")
             await client.send_message(message.chat.id, "<b>❌ Please provide a channel with amount</b>", parse_mode=ParseMode.HTML)
             return
-
         channel_identifier = args[1]
         try:
             amount = int(args[2])
@@ -119,22 +112,17 @@ def setup_mailscr_handler(app):
             LOGGER.warning("Invalid amount provided")
             await client.send_message(message.chat.id, "<b>❌ Amount must be a number</b>", parse_mode=ParseMode.HTML)
             return
-
         user_id = message.from_user.id if message.from_user else None
-        limit = SUDO_MAILSCR_LIMIT if user_id in OWNER_ID else MAIL_SCR_LIMIT
+        limit = SUDO_MAILSCR_LIMIT if user_id in (OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]) else MAIL_SCR_LIMIT
         LOGGER.info(f"User ID: {user_id}, Applying limit: {limit}")
-
         if amount > limit:
             LOGGER.warning(f"Requested amount {amount} exceeds limit {limit} for user {user_id}")
             await client.send_message(message.chat.id, f"<b>❌ Amount exceeds limit of {limit}</b>", parse_mode=ParseMode.HTML)
             return
-
         chat = None
         channel_name = ""
-
         progress_message = await client.send_message(message.chat.id, "<b>Checking Username...</b>", parse_mode=ParseMode.HTML)
         LOGGER.info(f"Sent progress message: Checking Username...")
-
         if channel_identifier.startswith(("t.me/", "https://t.me/", "http://t.me/")):
             LOGGER.info(f"Processing t.me link: {channel_identifier}")
             if not channel_identifier.startswith(("http://", "https://")):
@@ -192,22 +180,17 @@ def setup_mailscr_handler(app):
                 LOGGER.error(f"Failed to fetch channel {channel_username}: {e}")
                 await progress_message.edit_text("<b>Hey Bro Incorrect Username ❌</b>", parse_mode=ParseMode.HTML)
                 return
-
         await progress_message.edit_text("<b>Scraping In Progress</b>", parse_mode=ParseMode.HTML)
         LOGGER.info("Updated progress message: Scraping In Progress")
-
         messages, duplicates_removed, error_msg = await collect_channel_data(channel_identifier, amount)
-
         if error_msg:
             LOGGER.error(f"Error during data collection: {error_msg}")
             await progress_message.edit_text(error_msg, parse_mode=ParseMode.HTML)
             return
-
         if not messages:
             LOGGER.warning("No email-password combos found")
             await progress_message.edit_text("<b>Sorry Bro ❌ No Mail Pass Found</b>", parse_mode=ParseMode.HTML)
             return
-
         file_path = f'{channel_identifier}_combos.txt'
         LOGGER.info(f"Writing {len(messages)} combos to file: {file_path}")
         async with aiofiles.open(file_path, 'w', encoding='utf-8') as file:
@@ -217,7 +200,6 @@ def setup_mailscr_handler(app):
                 except UnicodeEncodeError:
                     LOGGER.warning(f"Skipped combo due to UnicodeEncodeError: {combo}")
                     continue
-
         user_info, user_full_name = get_user_info(message)
         output_message = (f"<b>Mail Scraped Successful ✅</b>\n"
                           f"<b>━━━━━━━━━━━━━━━━</b>\n"
@@ -228,7 +210,6 @@ def setup_mailscr_handler(app):
                           f"<b>Scrapped By:</b> <a href='{user_info}'>{user_full_name}</a>")
         LOGGER.info(f"Sending document with caption: {output_message}")
         await client.send_document(message.chat.id, file_path, caption=output_message, parse_mode=ParseMode.HTML)
-
         LOGGER.info(f"Removing temporary file: {file_path}")
         os.remove(file_path)
         LOGGER.info("Deleting progress message")
