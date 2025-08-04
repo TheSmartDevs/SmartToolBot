@@ -30,9 +30,7 @@ async def scrape_messages(client, channel_username, limit, start_number=None, ba
     count = 0
     pattern = r'\d{16}\D*\d{2}\D*\d{2,4}\D*\d{3,4}'
     bin_pattern = re.compile(r'^\d{6}') if start_number else None
-
     LOGGER.info(f"Starting to scrape messages from {channel_username} with limit {limit}")
-
     async for message in user.search_messages(channel_username):
         if count >= limit:
             break
@@ -69,7 +67,7 @@ async def send_results(client, message, unique_messages, duplicates_removed, sou
         file_name = f"x{len(unique_messages)}_{source_name.replace(' ', '_')}.txt"
         async with aiofiles.open(file_name, mode='w') as f:
             await f.write("\n".join(unique_messages))
-        
+       
         async with aiofiles.open(file_name, mode='rb') as f:
             user_link = await get_user_link(message)
             caption = (
@@ -139,20 +137,16 @@ def setup_scr_handler(app):
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         args = message.text.split()[1:]
         user_id = message.from_user.id if message.from_user else None
-
         if len(args) < 2:
             await client.send_message(message.chat.id, "<b>⚠️ Provide channel username and amount to scrape ❌</b>")
             LOGGER.warning("Invalid command: Missing arguments")
             return
-
         channel_identifier = args[0]
         chat = None
         channel_name = ""
         channel_username = ""
-
         if channel_identifier.lstrip("-").isdigit():
             chat_id = int(channel_identifier)
             try:
@@ -183,7 +177,6 @@ def setup_scr_handler(app):
                 channel_username = channel_identifier[5:]
             else:
                 channel_username = channel_identifier
-
             if not chat:
                 try:
                     chat = await user.get_chat(channel_username)
@@ -193,7 +186,6 @@ def setup_scr_handler(app):
                     await client.send_message(message.chat.id, "<b>Hey Bro! 🥲 Incorrect username or chat ID ❌</b>")
                     LOGGER.error(f"Failed to fetch public channel: {e}")
                     return
-
         try:
             limit = int(args[1])
             LOGGER.info(f"Scraping limit set to: {limit}")
@@ -201,7 +193,6 @@ def setup_scr_handler(app):
             await client.send_message(message.chat.id, "<b>⚠️ Invalid limit value. Please provide a valid number ❌</b>")
             LOGGER.warning("Invalid limit value provided")
             return
-
         start_number = None
         bank_name = None
         bin_filter = None
@@ -213,20 +204,16 @@ def setup_scr_handler(app):
             else:
                 bank_name = " ".join(args[2:])
                 LOGGER.info(f"Bank filter applied: {bank_name}")
-
-        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_ID else CC_SCRAPPER_LIMIT
+        max_lim = SUDO_CCSCR_LIMIT if user_id in (OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]) else CC_SCRAPPER_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
             LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
             return
-
         temporary_msg = await client.send_message(message.chat.id, "<b>Checking The Username...✨</b>")
         await asyncio.sleep(1.5)
-
         await temporary_msg.edit_text("<b>Scraping In Progress✨</b>")
         scrapped_results = await scrape_messages(user, chat.id, limit, start_number=start_number, bank_name=bank_name)
         unique_messages, duplicates_removed = remove_duplicates(scrapped_results)
-
         if not unique_messages:
             await temporary_msg.edit_text("<b>Sorry Bro ❌ No Credit Card Found</b>")
         else:
@@ -238,13 +225,11 @@ def setup_scr_handler(app):
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         args = message.text.split()[1:]
         if len(args) < 2:
             await client.send_message(message.chat.id, "<b>⚠️ Provide at least one channel username</b>")
             LOGGER.warning("Invalid command: Missing arguments")
             return
-
         channel_identifiers = args[:-1]
         try:
             limit = int(args[-1])
@@ -252,30 +237,24 @@ def setup_scr_handler(app):
             await client.send_message(message.chat.id, "<b>⚠️ Invalid limit value. Please provide a valid number ❌</b>")
             LOGGER.warning("Invalid limit value provided")
             return
-
         user_id = message.from_user.id if message.from_user else None
-        max_lim = SUDO_CCSCR_LIMIT if user_id in OWNER_ID else MULTI_CCSCR_LIMIT
+        max_lim = SUDO_CCSCR_LIMIT if user_id in (OWNER_ID if isinstance(OWNER_ID, (list, tuple)) else [OWNER_ID]) else MULTI_CCSCR_LIMIT
         if limit > max_lim:
             await client.send_message(message.chat.id, f"<b>Sorry Bro! Amount over Max limit is {max_lim} ❌</b>")
             LOGGER.warning(f"Limit exceeded: {limit} > {max_lim}")
             return
-
         temporary_msg = await client.send_message(message.chat.id, "<b>Scraping In Progress✨</b>")
         all_messages = []
         tasks = []
-
         for channel_identifier in channel_identifiers:
             parsed_url = urlparse(channel_identifier)
             channel_username = parsed_url.path.lstrip('/') if parsed_url.scheme else channel_identifier
             tasks.append(scrape_messages_task(user, channel_username, limit, client, message))
-
         results = await asyncio.gather(*tasks)
         for result in results:
             all_messages.extend(result)
-
         unique_messages, duplicates_removed = remove_duplicates(all_messages)
         unique_messages = unique_messages[:limit]
-
         if not unique_messages:
             await temporary_msg.edit_text("<b>Sorry Bro ❌ No Credit Card Found</b>")
         else:
@@ -297,7 +276,6 @@ async def scrape_messages_task(client, channel_username, limit, bot_client, mess
                 chat = await client.get_chat(invite_link)
         else:
             chat = await client.get_chat(channel_username)
-
         return await scrape_messages(client, chat.id, limit)
     except Exception as e:
         await bot_client.send_message(message.chat.id, f"<b>Hey Bro! 🥲 Incorrect username for {channel_username} ❌</b>")
