@@ -11,16 +11,17 @@ from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, notify_admin
 from core import banned_users
 from telegraph import Telegraph
+from datetime import datetime
 
 country_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
 bank_url = "https://smartdb-production-9dbf.up.railway.app/api/bin"
-
 telegraph = Telegraph()
+
 try:
     telegraph.create_account(
-        short_name="SmartUtilBot",
-        author_name="SmartUtilBot",
-        author_url="https://t.me/TheSmartDevs"
+        short_name="SmartToolBot",
+        author_name="SmartToolBot",
+        author_url="https://t.me/TheSmartDev"
     )
 except Exception as e:
     LOGGER.error(f"Failed to create or access Telegraph account: {e}")
@@ -59,43 +60,47 @@ def process_bins_to_json(bins):
         })
     return processed
 
-async def create_telegraph_page(content: str) -> list:
+async def create_telegraph_page(content: str, part_number: int) -> list:
     try:
+        current_date = datetime.now().strftime("%m-%d")
+        title = f"Smart-Tool-Bin-DB---Part-{part_number}-{current_date}"
         truncated_content = content[:40000]
         max_size_bytes = 20 * 1024
         pages = []
         page_content = ""
         current_size = 0
         lines = truncated_content.splitlines(keepends=True)
+        part_count = part_number
+        
         for line in lines:
             line_bytes = line.encode('utf-8', errors='ignore')
             if current_size + len(line_bytes) > max_size_bytes and page_content:
                 safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
                 html_content = f'<pre>{safe_content}</pre>'
                 page = telegraph.create_page(
-                    title="SmartBins",
+                    title=f"Smart-Tool-Bin-DB---Part-{part_count}-{current_date}",
                     html_content=html_content,
-                    author_name="SmartUtilBot",
-                    author_url="https://t.me/TheSmartDevs"
+                    author_name="ISmartCoder",
+                    author_url="https://t.me/TheSmartDev"
                 )
-                # Replace telegra.ph with graph.org in the URL
                 graph_url = page['url'].replace('telegra.ph', 'graph.org')
                 pages.append(graph_url)
                 page_content = ""
                 current_size = 0
+                part_count += 1
                 await asyncio.sleep(0.5)
             page_content += line
             current_size += len(line_bytes)
+        
         if page_content:
             safe_content = page_content.replace('<', '&lt;').replace('>', '&gt;')
             html_content = f'<pre>{safe_content}</pre>'
             page = telegraph.create_page(
-                title="SmartBins",
+                title=f"Smart-Tool-Bin-DB---Part-{part_count}-{current_date}",
                 html_content=html_content,
-                author_name="SmartUtilBot",
+                author_name="TheSmartDev",
                 author_url="https://t.me/TheSmartDevs"
             )
-            # Replace telegra.ph with graph.org in the URL
             graph_url = page['url'].replace('telegra.ph', 'graph.org')
             pages.append(graph_url)
             await asyncio.sleep(0.5)
@@ -106,11 +111,19 @@ async def create_telegraph_page(content: str) -> list:
 
 def generate_message(bins, identifier):
     message = f"**Smart Tool - Bin database 📋**\n**━━━━━━━━━━━━━━━━━━**\n\n"
-    for i, bin_data in enumerate(bins[:5], start=1):
-        message += (f"{i}. **BIN:** `{bin_data['bin']}`\n"
+    for bin_data in bins[:10]:
+        message += (f"**BIN:** `{bin_data['bin']}`\n"
                     f"**Bank:** {bin_data['bank']}\n"
                     f"**Country:** {bin_data['country_code']}\n\n")
     return message
+
+def generate_telegraph_content(bins):
+    content = f"Smart Tool - Bin database 📋\n━━━━━━━━━━━━━━━━━━\n\n"
+    for bin_data in bins:
+        content += (f"BIN: {bin_data['bin']}\n"
+                    f"Bank: {bin_data['bank']}\n"
+                    f"Country: {bin_data['country_code']}\n\n")
+    return content
 
 async def bindb_handler(client, message):
     user_id = message.from_user.id if message.from_user else None
@@ -146,10 +159,10 @@ async def bindb_handler(client, message):
         processed_bins = process_bins_to_json(bins)
         message_text = generate_message(processed_bins, country_code)
         keyboard = None
-        if len(processed_bins) > 5:
-            bins_content = json.dumps(processed_bins[5:], indent=2)
+        if len(processed_bins) > 10:
+            bins_content = generate_telegraph_content(processed_bins[10:])
             content_size = len(bins_content.encode('utf-8'))
-            telegraph_urls = await create_telegraph_page(bins_content)
+            telegraph_urls = await create_telegraph_page(bins_content, part_number=1)
             if telegraph_urls:
                 buttons = []
                 if content_size <= 20 * 1024:
@@ -193,10 +206,10 @@ async def binbank_handler(client, message):
         processed_bins = process_bins_to_json(bins)
         message_text = generate_message(processed_bins, bank_name)
         keyboard = None
-        if len(processed_bins) > 5:
-            bins_content = json.dumps(processed_bins[5:], indent=2)
+        if len(processed_bins) > 10:
+            bins_content = generate_telegraph_content(processed_bins[10:])
             content_size = len(bins_content.encode('utf-8'))
-            telegraph_urls = await create_telegraph_page(bins_content)
+            telegraph_urls = await create_telegraph_page(bins_content, part_number=1)
             if telegraph_urls:
                 buttons = []
                 if content_size <= 20 * 1024:
