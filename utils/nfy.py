@@ -14,9 +14,9 @@ async def check_channel_membership(client: Client, user_id: int) -> tuple[bool, 
     try:
         if not LOG_CHANNEL_ID:
             return False, "LOG_CHANNEL_ID is not configured", None
-        
+       
         channel_id = LOG_CHANNEL_ID
-        
+       
         if isinstance(channel_id, str):
             if channel_id.startswith('@'):
                 pass
@@ -25,21 +25,21 @@ async def check_channel_membership(client: Client, user_id: int) -> tuple[bool, 
                     channel_id = int(channel_id)
                 except (ValueError, TypeError):
                     return False, f"Invalid LOG_CHANNEL_ID format: {LOG_CHANNEL_ID}. Must be a valid integer or username.", None
-        
+       
         if isinstance(channel_id, int):
             if channel_id > 0:
                 channel_id = -channel_id
-            
+           
             if not str(abs(channel_id)).startswith('100'):
                 channel_id = int(f"-100{abs(channel_id)}")
-        
+       
         member = await client.get_chat_member(channel_id, user_id)
-        
+       
         if member.status in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             return True, "", channel_id
         else:
             return False, f"User {user_id} is not a member of the channel", channel_id
-            
+           
     except Exception as e:
         error_msg = str(e).lower()
         if "user not found" in error_msg:
@@ -52,13 +52,12 @@ async def check_channel_membership(client: Client, user_id: int) -> tuple[bool, 
             return False, f"Bot doesn't have permission to check membership in channel {LOG_CHANNEL_ID}", None
         else:
             return False, f"Failed to check membership: {str(e)}", None
-
 async def notify_admin(client: Client, command: str, error: Union[Exception, str], message: Optional[Message] = None) -> None:
     try:
         is_member, error_msg, channel_id = await check_channel_membership(client, client.me.id)
         if not is_member:
             LOGGER.error(error_msg)
-        
+       
         user_info = {'id': "N/A", 'mention': "Unknown User", 'username': "N/A", 'full_name': "N/A"}
         chat_id_user = "N/A"
         if message and message.from_user:
@@ -66,7 +65,7 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             full_name = f"{user.first_name} {user.last_name or ''}".strip()
             user_info = {'id': user.id, 'mention': f"<a href='tg://user?id={user.id}'>{full_name}</a>", 'username': f"@{user.username}" if user.username else "N/A", 'full_name': full_name}
             chat_id_user = getattr(message.chat, 'id', "N/A")
-        
+       
         if isinstance(error, str):
             error_type = "StringError"
             error_message = error
@@ -77,7 +76,7 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             error_message = str(error)
             traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__)) if error.__traceback__ else "N/A"
             error_level = ("WARNING" if isinstance(error, (ValueError, UserWarning)) else "ERROR" if isinstance(error, RuntimeError) else "CRITICAL")
-        
+       
         now = datetime.now()
         full_timestamp = now.strftime('%d-%m-%Y %H:%M:%S %p')
         formatted_date = now.strftime('%d-%m-%Y')
@@ -95,19 +94,21 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             'formatted_date': formatted_date,
             'formatted_time': formatted_time
         }
-        
+       
         error_report = (
-            "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
-            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-            f"- <b>Command</b>: {command}\n"
-            f"- <b>User's Name</b>: {user_info['full_name']}\n"
-            f"- <b>User's ID</b>: <code>{user_info['id']}</code>\n"
-            f"- <b>Time</b>: {formatted_time}\n"
-            f"- <b>Date</b>: {formatted_date}\n"
-            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-            "<b>🧭 Tap below to buttons investigate.</b>"
+            "<b>🚨 Smart Tools New Bug Report</b>\n"
+            "<b>━━━━━━━━━━━━━━━━</b>\n"
+            f"<b>🧩 Command:</b> {command}\n"
+            f"<b>👤 User:</b> <a href='tg://user?id={user_info['id']}'>{user_info['full_name']}</a>\n"
+            f"<b>⚡️ User ID:</b> <code>{user_info['id']}</code>\n"
+            f"<b>📍 Chat:</b> {chat_id_user}\n"
+            f"<b>📅 Time:</b> {formatted_time}\n"
+            f"<b>❗️ Error:</b> {error_type}\n"
+            f"<b>📝 Message:</b> {error_message}\n"
+            "<b>━━━━━━━━━━━━━━━━</b>\n"
+            "<b>📂 Traceback:</b> Tap below to inspect"
         )
-        
+       
         keyboard_buttons = []
         if user_info['id'] != "N/A":
             keyboard_buttons.append([
@@ -115,7 +116,7 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
                 InlineKeyboardButton("🛠 Dev", user_id=DEVELOPER_USER_ID)
             ])
         keyboard_buttons.append([InlineKeyboardButton("📄 View Traceback", callback_data=f"viewtrcbc{error_id}$")])
-        
+       
         await client.send_message(
             chat_id=OWNER_ID,
             text=error_report,
@@ -124,18 +125,20 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
             disable_notification=(error_level == "WARNING"),
             parse_mode=ParseMode.HTML
         )
-        
+       
         if is_member and channel_id:
             minimal_report = (
-                "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                f"- <b>Command</b>: {command}\n"
-                f"- <b>User's Name</b>: {user_info['full_name']}\n"
-                f"- <b>User's ID</b>: <code>{user_info['id']}</code>\n"
-                f"- <b>Time</b>: {formatted_time}\n"
-                f"- <b>Date</b>: {formatted_date}\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                "<b>🧭 Tap below to buttons investigate.</b>"
+                "<b>🚨 Smart Tools New Bug Report</b>\n"
+                "<b>━━━━━━━━━━━━━━━━</b>\n"
+                f"<b>🧩 Command:</b> {command}\n"
+                f"<b>👤 User:</b> <a href='tg://user?id={user_info['id']}'>{user_info['full_name']}</a>\n"
+                f"<b>⚡️ User ID:</b> <code>{user_info['id']}</code>\n"
+                f"<b>📍 Chat:</b> {chat_id_user}\n"
+                f"<b>📅 Time:</b> {formatted_time}\n"
+                f"<b>❗️ Error:</b> {error_type}\n"
+                f"<b>📝 Message:</b> {error_message}\n"
+                "<b>━━━━━━━━━━━━━━━━</b>\n"
+                "<b>📂 Traceback:</b> Tap below to inspect"
             )
             await client.send_message(
                 chat_id=channel_id,
@@ -145,12 +148,11 @@ async def notify_admin(client: Client, command: str, error: Union[Exception, str
                 disable_notification=(error_level == "WARNING"),
                 parse_mode=ParseMode.HTML
             )
-        
+       
         LOGGER.info(f"Admin notification sent for command: {command} with error_id: {error_id}")
     except Exception as e:
         LOGGER.error(f"Failed to send admin notification: {e}")
         LOGGER.error(traceback.format_exc())
-
 def setup_nfy_handler(app: Client):
     @app.on_callback_query(filters.regex(r"^viewtrcbc.*\$$"))
     async def handle_traceback_callback(client: Client, callback_query):
@@ -163,7 +165,7 @@ def setup_nfy_handler(app: Client):
                 LOGGER.info(f"Available error_ids: {list(TRACEBACK_DATA.keys())}")
                 await callback_query.answer("❌ Traceback data not found or expired!", show_alert=True)
                 return
-            
+           
             data = TRACEBACK_DATA[error_id]
             LOGGER.info(f"Found traceback data for error_id: {error_id}")
             traceback_text = data['traceback_text']
@@ -171,18 +173,19 @@ def setup_nfy_handler(app: Client):
                 traceback_text = traceback_text[:2000] + "\n... (truncated)"
             traceback_escaped = traceback_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             issue_escaped = data['error_message'][:200].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            
+           
             traceback_message = (
-                "<b>🚨 Sure Here Is The Full Issue</b>\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                f"- <b>Command</b>: {data['command']}\n"
-                f"- <b>Error Type</b>: {data['error_type']}\n"
-                f"- <b>Issue</b>: {issue_escaped}\n"
-                f"- <b>Traceback</b>: <blockquote expandable=True>{traceback_escaped}</blockquote>\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                "<b>🧭 Tap below to button Back To Main.</b>"
+                "<b>📄 Full Traceback — Smart Tools</b>\n"
+                "<b>━━━━━━━━━━━━━━━━</b>\n"
+                f"<b>🧩 Command:</b> {data['command']}\n"
+                f"<b>⚠️ Error Type:</b> {data['error_type']}\n"
+                f"<b>🧠 Summary:</b> {issue_escaped}\n"
+                f"<b>📂 Traceback Dump:</b>\n"
+                f"<blockquote expandable=True>{traceback_escaped}</blockquote>\n"
+                "<b>━━━━━━━━━━━━━━━━</b>\n"
+                "<b>🔙 Return:</b> Tap below to go back"
             )
-            
+           
             back_button = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back To Main", callback_data=f"backtosummary{error_id}$")]])
             await callback_query.edit_message_text(
                 text=traceback_message,
@@ -199,7 +202,6 @@ def setup_nfy_handler(app: Client):
                 await callback_query.answer("Failed To Show Traceback ❌", show_alert=True)
             except:
                 pass
-
     @app.on_callback_query(filters.regex(r"^backtosummary.*\$$"))
     async def handle_back_callback(client: Client, callback_query):
         try:
@@ -208,20 +210,22 @@ def setup_nfy_handler(app: Client):
             if error_id not in TRACEBACK_DATA:
                 await callback_query.answer("Failed To Show Traceback ❌", show_alert=True)
                 return
-            
+           
             data = TRACEBACK_DATA[error_id]
             error_report = (
-                "<b>🚨 New Bug Discovered in Smart Tools</b>\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                f"- <b>Command</b>: {data['command']}\n"
-                f"- <b>User's Name</b>: {data['user_info']['full_name']}\n"
-                f"- <b>User's ID</b>: <code>{data['user_info']['id']}</code>\n"
-                f"- <b>Time</b>: {data['formatted_time']}\n"
-                f"- <b>Date</b>: {data['formatted_date']}\n"
-                "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-                "<b>🧭 Tap below to buttons investigate.</b>"
+                "<b>🚨 Smart Tools New Bug Report</b>\n"
+                "<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                f"<b>🧩 Command:</b> {data['command']}\n"
+                f"<b>👤 User:</b> <a href='tg://user?id={data['user_info']['id']}'>{data['user_info']['full_name']}</a>\n"
+                f"<b>⚡️ User ID:</b> <code>{data['user_info']['id']}</code>\n"
+                f"<b>📍 Chat:</b> {data['chat_id']}\n"
+                f"<b>📅 Time:</b> {data['formatted_time']}\n"
+                f"<b>❗️ Error:</b> {data['error_type']}\n"
+                f"<b>📝 Message:</b> {data['error_message']}\n"
+                "<b>━━━━━━━━━━━━━━━━</b>\n"
+                "<b>📂 Traceback:</b> Tap below to inspect"
             )
-            
+           
             keyboard_buttons = []
             if data['user_info']['id'] != "N/A":
                 keyboard_buttons.append([
@@ -229,7 +233,7 @@ def setup_nfy_handler(app: Client):
                     InlineKeyboardButton("🛠 Dev", user_id=DEVELOPER_USER_ID)
                 ])
             keyboard_buttons.append([InlineKeyboardButton("📄 View Traceback", callback_data=f"viewtrcbc{error_id}$")])
-            
+           
             await callback_query.edit_message_text(
                 text=error_report,
                 reply_markup=InlineKeyboardMarkup(keyboard_buttons),
@@ -245,7 +249,6 @@ def setup_nfy_handler(app: Client):
                 await callback_query.answer("Error ❌ Loading Summary", show_alert=True)
             except:
                 pass
-
 def cleanup_old_traceback_data():
     try:
         current_time = datetime.now().timestamp() * 1000000
@@ -263,7 +266,6 @@ def cleanup_old_traceback_data():
             LOGGER.info(f"Cleaned up {len(keys_to_remove)} old traceback entries")
     except Exception as e:
         LOGGER.error(f"Error in cleanup: {e}")
-
 try:
     cleanup_old_traceback_data()
 except:
