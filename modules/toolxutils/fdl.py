@@ -11,7 +11,7 @@ from utils import notify_admin, LOGGER
 from core import banned_users
 
 class Server:
-    BASE_URL = "https://filetolink-production-f396.up.railway.app"
+    BASE_URL = "https://fdlapi-ed9a85898ea5.herokuapp.com"
 
 async def get_file_properties(message):
     file_name = None
