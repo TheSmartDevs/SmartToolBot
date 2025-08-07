@@ -530,16 +530,16 @@ responses = {
     ),
     "about_me": (
         "**Name:** Smart Tool\n"
-        "**Version:** v16.0 (Beta) 🛠\n\n"
+        "**Version:** v26.0 (Beta) 🛠\n\n"
         "**Development Team:**\n"
         "- **Creator:** [Abir Arafat Chawdhury 👨‍💻](https://t.me/ISmartCoder)\n"
         "- **Contributor:** [Nyein Ko Ko Aung 🤝](https://t.me/nkka404)\n"
-        "- **Helper:** [Saddam Hossain 👥](https://t.me/Saddam_XD)\n"
+        "- **Helper:** [Rahat Hossain 👥](https://t.me/NeoFrd)\n"
         "**Technical Stacks:**\n"
         "- **Language:** Python 🐍\n"
         "- **Framework:** Fully Written In Pyrogram And Telethon 📚\n"
         "- **Database:** MongoDB Database 🗄\n"
-        "- **Hosting:** Digital Ocean VPS\n\n"
+        "- **Hosting:** Digital Ocean VPS 🌐\n\n"
         "**About:** The all-in-one Telegram toolkit for seamless education, AI, downloads, and more!\n\n",
         {'parse_mode': ParseMode.MARKDOWN, 'disable_web_page_preview': True}
     ),
@@ -561,3 +561,4 @@ responses = {
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     )
 }
+
