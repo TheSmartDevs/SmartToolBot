@@ -79,8 +79,7 @@ required_vars = {
     "OWNER_ID": OWNER_ID,
     "DEVELOPER_USER_ID": DEVELOPER_USER_ID,
     "MONGO_URL": MONGO_URL,
-    "DATABASE_URL": DATABASE_URL,
-    "DB_URL": DB_URL
+    "DATABASE_URL": DATABASE_URL
 }
 
 for var_name, var_value in required_vars.items():
@@ -93,3 +92,4 @@ print(f"OPENAI_API_KEY loaded from {gpt_api_key_source}: {'*' * 10}{OPENAI_API_K
 
 if not COMMAND_PREFIX:
     raise ValueError("No command prefixes found. Set COMMAND_PREFIX in .env, config.py, or Heroku config vars.")
+
