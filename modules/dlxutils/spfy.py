@@ -1,6 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel t.me/TheSmartDev
-
 import os
 import time
 import requests
@@ -18,20 +15,14 @@ from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
 import urllib.parse
-
 logger = LOGGER
-
 class Config:
-    TEMP_DIR = Path("temp")
-
+    TEMP_DIR = Path("./downloads")
 Config.TEMP_DIR.mkdir(exist_ok=True)
-
 executor = ThreadPoolExecutor(max_workers=10)
-
 async def sanitize_filename(title: str) -> str:
     title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).strip()
     return f"{title.replace(' ', '_')}_{int(time.time())}"
-
 async def download_image(url: str, output_path: str) -> Optional[str]:
     logger.info(f"Starting download of image from {url}")
     try:
@@ -49,11 +40,9 @@ async def download_image(url: str, output_path: str) -> Optional[str]:
         logger.error(f"Failed to download image: {e}")
         await notify_admin(None, f"{COMMAND_PREFIX}sp", e, None)
     return None
-
 async def handle_spotify_request(client: Client, message: Message, input_text: Optional[str]):
     if not input_text and message.reply_to_message and message.reply_to_message.text:
         input_text = message.reply_to_message.text.strip()
-
     if not input_text:
         await client.send_message(
             chat_id=message.chat.id,
@@ -62,15 +51,12 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
         )
         logger.warning(f"No input provided, user: {message.from_user.id if message.from_user else 'unknown'}, chat: {message.chat.id}")
         return
-
     is_url = input_text.lower().startswith('http')
-
     status_message = await client.send_message(
         chat_id=message.chat.id,
         text="**Searching The Music**",
         parse_mode=ParseMode.MARKDOWN
     )
-
     try:
         async with aiohttp.ClientSession() as session:
             if is_url:
@@ -128,7 +114,6 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                         logger.error(f"Search API request failed: HTTP status {response.status}")
                         await notify_admin(client, f"{COMMAND_PREFIX}sp", Exception(f"Search API request failed: HTTP status {response.status}"), message)
                         return
-
             title = data["title"]
             artists = data["artist"]
             duration = data["duration"]
@@ -137,7 +122,6 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
             spotify_url = data["track_url"]
             download_url = data["download_url"]
             cover_url = data.get("cover_art")
-
             cover_path = None
             if cover_url:
                 Config.TEMP_DIR.mkdir(exist_ok=True)
@@ -148,7 +132,6 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                 else:
                     logger.warning("Failed to download cover image")
                     cover_path = None
-
             safe_title = await sanitize_filename(title)
             output_filename = Config.TEMP_DIR / f"{safe_title}.mp3"
             logger.info(f"Starting download of audio file from {download_url}")
@@ -162,7 +145,6 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                     logger.error(f"Audio download failed: HTTP status {response.status}")
                     await notify_admin(client, f"{COMMAND_PREFIX}sp", Exception(f"Audio download failed: HTTP status {response.status}"), message)
                     return
-
             if message.from_user:
                 user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
                 user_info = f"[{user_full_name}](tg://user?id={message.from_user.id})"
@@ -170,7 +152,6 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                 group_name = message.chat.title or "this group"
                 group_url = f"https://t.me/{message.chat.username}" if message.chat.username else "this group"
                 user_info = f"[{group_name}]({group_url})"
-
             audio_caption = (
                 f"🌟 **Title**: `{title}`\n"
                 f"💥 **Artist**: `{artists}`\n"
@@ -180,14 +161,11 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"**Downloaded By**: {user_info}"
             )
-
             reply_markup = InlineKeyboardMarkup([
                 [InlineKeyboardButton("🎸 Listen On Spotify", url=spotify_url)]
             ])
-
             last_update_time = [0]
             start_time = time.time()
-
             logger.info("Starting upload of audio file to Telegram")
             await client.send_audio(
                 chat_id=message.chat.id,
@@ -202,31 +180,26 @@ async def handle_spotify_request(client: Client, message: Message, input_text: O
                 progress_args=(status_message, start_time, last_update_time)
             )
             logger.info("Upload of audio successfully completed")
-
             if os.path.exists(output_filename):
                 os.remove(output_filename)
                 logger.info(f"Deleted audio file: {output_filename}")
             if cover_path and os.path.exists(cover_path):
                 os.remove(cover_path)
                 logger.info(f"Deleted cover image: {cover_path}")
-
             await status_message.delete()
             logger.info("Status message deleted")
     except Exception as e:
         await status_message.edit_text("**❌ Sorry Bro Spotify DL API Dead**", parse_mode=ParseMode.MARKDOWN)
         logger.error(f"Error processing Spotify request: {str(e)}")
         await notify_admin(client, f"{COMMAND_PREFIX}sp", Exception(str(e)), status_message)
-
 def setup_spotify_handler(app: Client):
     command_prefix_regex = rf"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
-
     @app.on_message(filters.regex(rf"^{command_prefix_regex}sp(\s+.*)?$") & (filters.private | filters.group))
     async def spotify_command(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         command_parts = message.text.split(maxsplit=1)
         input_text = command_parts[1].strip() if len(command_parts) > 1 else None
         logger.info(f"Spotify command received: input_text='{input_text or 'None'}', user: {user_id or 'unknown'}, chat: {message.chat.id}")
