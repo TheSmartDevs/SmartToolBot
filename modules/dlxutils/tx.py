@@ -1,6 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel t.me/TheSmartDev
-
 import os
 import re
 import asyncio
@@ -16,26 +13,19 @@ from moviepy import VideoFileClip
 from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
-
 logger = LOGGER
-
 class Config:
-    TEMP_DIR = Path("temp")
-
+    TEMP_DIR = Path("./downloads")
 Config.TEMP_DIR.mkdir(exist_ok=True)
-
 class TwitterDownloader:
     def __init__(self, temp_dir: Path):
         self.temp_dir = temp_dir
-
     async def sanitize_filename(self, title: str) -> str:
         title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).strip()
         return f"{title.replace(' ', '_')}_{int(time.time())}"
-
     async def download_video(self, url: str, downloading_message: Message) -> Optional[dict]:
         self.temp_dir.mkdir(exist_ok=True)
         api_url = f"https://twitsave.com/info?url={url}"
-
         try:
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(limit_per_host=10),
@@ -87,7 +77,6 @@ class TwitterDownloader:
             logger.error(f"Twitter download error: {e}")
             await notify_admin(downloading_message._client, f"{COMMAND_PREFIX}tx", e, downloading_message)
             return None
-
     async def _download_file(self, session: aiohttp.ClientSession, url: str, dest: Path):
         try:
             async with session.get(url) as response:
@@ -104,19 +93,15 @@ class TwitterDownloader:
             logger.error(f"Error downloading file from {url}: {e}")
             await notify_admin(None, f"{COMMAND_PREFIX}tx", e, None)
             raise
-
 def setup_tx_handler(app: Client):
     twitter_downloader = TwitterDownloader(Config.TEMP_DIR)
-
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
-
     @app.on_message(filters.regex(rf"^{command_prefix_regex}tx(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def tx_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         url = None
         if message.reply_to_message and message.reply_to_message.text:
             match = re.search(r"https?://(x\.com|twitter\.com)/\S+", message.reply_to_message.text)
@@ -128,7 +113,6 @@ def setup_tx_handler(app: Client):
                 match = re.search(r"https?://(x\.com|twitter\.com)/\S+", command_parts[1])
                 if match:
                     url = match.group(0)
-
         if not url:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -137,29 +121,24 @@ def setup_tx_handler(app: Client):
             )
             logger.warning(f"No Twitter URL provided, user: {user_id or 'unknown'}, chat: {message.chat.id}")
             return
-
         logger.info(f"Twitter URL received: {url}, user: {user_id or 'unknown'}, chat: {message.chat.id}")
         downloading_message = await client.send_message(
             chat_id=message.chat.id,
             text="**Searching The Media**",
             parse_mode=ParseMode.MARKDOWN
         )
-
         try:
             video_info = await twitter_downloader.download_video(url, downloading_message)
             if not video_info:
                 await downloading_message.edit_text("**Invalid Video URL or Video is Private**", parse_mode=ParseMode.MARKDOWN)
                 logger.error(f"Failed to download video for URL: {url}")
                 return
-
             title = video_info['title']
             filename = video_info['filename']
             webpage_url = video_info['webpage_url']
-
             video_clip = VideoFileClip(filename)
             duration = video_clip.duration
             video_clip.close()
-
             if message.from_user:
                 user_full_name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
                 user_info = f"[{user_full_name}](tg://user?id={user_id})"
@@ -167,7 +146,6 @@ def setup_tx_handler(app: Client):
                 group_name = message.chat.title or "this group"
                 group_url = f"https://t.me/{message.chat.username}" if message.chat.username else "this group"
                 user_info = f"[{group_name}]({group_url})"
-
             caption = (
                 f"🎥 **Title**: `{title}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
@@ -175,7 +153,6 @@ def setup_tx_handler(app: Client):
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
                 f"**Downloaded By**: {user_info}"
             )
-
             async with aiofiles.open(filename, 'rb'):
                 start_time = time.time()
                 last_update_time = [start_time]
@@ -191,12 +168,10 @@ def setup_tx_handler(app: Client):
                     progress=progress_bar,
                     progress_args=(downloading_message, start_time, last_update_time)
                 )
-
             await downloading_message.delete()
             if os.path.exists(filename):
                 os.remove(filename)
                 logger.info(f"Deleted video file: {filename}")
-
         except Exception as e:
             logger.error(f"Error processing Twitter video: {e}")
             await notify_admin(client, f"{COMMAND_PREFIX}tx", e, downloading_message)
