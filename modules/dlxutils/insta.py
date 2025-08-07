@@ -1,6 +1,3 @@
-# Copyright @ISmartCoder
-# Updates Channel t.me/TheSmartDev
-
 import os
 import re
 import time
@@ -16,31 +13,24 @@ from moviepy import VideoFileClip
 from config import COMMAND_PREFIX, BAN_REPLY
 from utils import LOGGER, progress_bar
 from core import banned_users
-
 logger = LOGGER
-
 class Config:
-    TEMP_DIR = Path("temp")
+    TEMP_DIR = Path("./downloads")
     MAX_MEDIA_PER_GROUP = 10
     DOWNLOAD_RETRIES = 3
     RETRY_DELAY = 2
-
 Config.TEMP_DIR.mkdir(exist_ok=True)
-
 class InstagramDownloader:
     def __init__(self, temp_dir: Path):
         self.temp_dir = temp_dir
-
     async def sanitize_filename(self, shortcode: str, index: int, media_type: str) -> str:
         safe_shortcode = re.sub(r'[<>:"/\\|?*]', '', shortcode[:30]).strip()
         return f"{safe_shortcode}_{index}_{int(time.time())}.{ 'mp4' if media_type == 'video' else 'jpg' }"
-
     async def sanitize_caption(self, caption: str) -> str:
         if not caption or caption.lower() == "unknown":
             return "Instagram Content"
         sanitized = re.sub(r'@\w+', '', caption).strip()
         return sanitized if sanitized else "Instagram Content"
-
     async def download_file(self, session: aiohttp.ClientSession, url: str, dest: Path, retries: int = Config.DOWNLOAD_RETRIES) -> Path:
         for attempt in range(1, retries + 1):
             try:
@@ -70,11 +60,9 @@ class InstagramDownloader:
             logger.info(f"Retrying download for {url} in {Config.RETRY_DELAY} seconds...")
             await asyncio.sleep(Config.RETRY_DELAY)
         raise Exception(f"Failed to download {url} after {retries} attempts")
-
     async def download_content(self, url: str, downloading_message: Message, content_type: str) -> Optional[dict]:
         self.temp_dir.mkdir(exist_ok=True)
         api_url = f"https://insta.bdbots.xyz/dl?url={url}"
-        
         try:
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(limit=100),
@@ -90,13 +78,11 @@ class InstagramDownloader:
                     if data.get("status") != "success":
                         logger.error("API response indicates failure")
                         return None
-                    
                     if content_type in ["reel", "igtv"]:
                         await downloading_message.edit_text(
                             "**Found ☑️ Downloading...**",
                             parse_mode=ParseMode.MARKDOWN
                         )
-                    
                     media_files = []
                     tasks = []
                     thumbnail_tasks = []
@@ -105,7 +91,6 @@ class InstagramDownloader:
                         media_type = media["type"]
                         filename = self.temp_dir / await self.sanitize_filename(data["data"]["metadata"]["shortcode"], index, media_type)
                         tasks.append(self.download_file(session, media["url"], filename))
-                        
                         thumbnail_url = media.get("thumbnail")
                         thumbnail_filename = None
                         if thumbnail_url:
@@ -115,10 +100,8 @@ class InstagramDownloader:
                         else:
                             thumbnail_tasks.append(None)
                             thumbnail_paths.append(None)
-                    
                     downloaded_files = await asyncio.gather(*tasks, return_exceptions=True)
                     downloaded_thumbnails = await asyncio.gather(*[t for t in thumbnail_tasks if t], return_exceptions=True) if any(t for t in thumbnail_tasks) else [None] * len(tasks)
-                    
                     thumbnail_index = 0
                     for index, (result, thumbnail_result, thumbnail_path) in enumerate(zip(downloaded_files, thumbnail_tasks, thumbnail_paths)):
                         if isinstance(result, Exception):
@@ -136,11 +119,9 @@ class InstagramDownloader:
                             "type": data["data"]["media"][index]["type"],
                             "thumbnail": thumbnail_filename
                         })
-                    
                     if not media_files:
                         logger.error("No media files downloaded successfully")
                         return None
-                        
                     return {
                         "title": await self.sanitize_caption(data["data"]["caption"]),
                         "media_files": media_files,
@@ -150,19 +131,15 @@ class InstagramDownloader:
         except Exception as e:
             logger.error(f"Instagram download error: {e}")
             return None
-
 def setup_insta_handlers(app: Client):
     ig_downloader = InstagramDownloader(Config.TEMP_DIR)
-
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
-
     @app.on_message(filters.regex(rf"^{command_prefix_regex}(in|insta|ig)(\s+https?://\S+)?$") & (filters.private | filters.group))
     async def ig_handler(client: Client, message: Message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         url = None
         if message.reply_to_message and message.reply_to_message.text:
             match = re.search(r"https?://(www\.)?instagram\.com/\S+", message.reply_to_message.text)
@@ -174,7 +151,6 @@ def setup_insta_handlers(app: Client):
                 match = re.search(r"https?://(www\.)?instagram\.com/\S+", command_parts[1])
                 if match:
                     url = match.group(0)
-
         if not url:
             await client.send_message(
                 chat_id=message.chat.id,
@@ -183,7 +159,6 @@ def setup_insta_handlers(app: Client):
             )
             logger.warning(f"No Instagram URL provided, user: {user_id or 'unknown'}, chat: {message.chat.id}")
             return
-
         logger.info(f"Instagram URL received: {url}, user: {user_id or 'unknown'}, chat: {message.chat.id}")
         content_type = "reel" if "/reel/" in url else "igtv" if "/tv/" in url else "story" if "/stories/" in url else "post"
         downloading_message = await client.send_message(
@@ -191,7 +166,6 @@ def setup_insta_handlers(app: Client):
             text="**Searching The Video**" if content_type in ["reel", "igtv"] else "`🔍 Fetching media from Instagram...`",
             parse_mode=ParseMode.MARKDOWN
         )
-        
         try:
             content_info = await ig_downloader.download_content(url, downloading_message, content_type)
             if not content_info:
@@ -200,16 +174,13 @@ def setup_insta_handlers(app: Client):
                 )
                 logger.error(f"Failed to download content for URL: {url}")
                 return
-
             media_files = content_info["media_files"]
             content_type = content_info["type"]
-            
             if content_type == "carousel" or media_files[0]["type"] == "image":
                 await downloading_message.edit_text(
                     "`📤 Uploading...`",
                     parse_mode=ParseMode.MARKDOWN
                 )
-
             if content_type == "carousel" and len(media_files) > 1:
                 for i in range(0, len(media_files), Config.MAX_MEDIA_PER_GROUP):
                     media_group = []
@@ -224,7 +195,6 @@ def setup_insta_handlers(app: Client):
                             video_clip = VideoFileClip(media["filename"])
                             duration = video_clip.duration
                             video_clip.close()
-                            
                             media_group.append(
                                 InputMediaVideo(
                                     media=media["filename"],
@@ -246,7 +216,6 @@ def setup_insta_handlers(app: Client):
                         video_clip = VideoFileClip(media["filename"])
                         duration = video_clip.duration
                         video_clip.close()
-                        
                         start_time = time.time()
                         last_update_time = [start_time]
                         await client.send_video(
@@ -265,7 +234,6 @@ def setup_insta_handlers(app: Client):
                             chat_id=message.chat.id,
                             photo=media["filename"]
                         )
-
             await downloading_message.delete()
             for media in media_files:
                 if os.path.exists(media["filename"]):
@@ -274,7 +242,6 @@ def setup_insta_handlers(app: Client):
                 if media["thumbnail"] and os.path.exists(media["thumbnail"]):
                     os.remove(media["thumbnail"])
                     logger.info(f"Deleted thumbnail file: {media['thumbnail']}")
-
         except Exception as e:
             logger.error(f"Error processing Instagram content: {e}")
             await downloading_message.edit_text(
