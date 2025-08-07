@@ -71,7 +71,6 @@ def sync_load_env_vars():
                     if key not in seen_keys:
                         variables[key] = value
                         seen_keys.add(key)
-            LOGGER.info("Environment variables loaded successfully")
             return variables
     except Exception as e:
         LOGGER.error(f"Error loading environment variables: {e}")
@@ -272,3 +271,4 @@ def setup_settings_handler(app: Client):
     app.add_handler(CallbackQueryHandler(edit_var, filters.regex(r"^settings_edit_(.+)")), group=2)
     app.add_handler(CallbackQueryHandler(cancel_edit, filters.regex(r"^settings_cancel_edit$")), group=2)
     app.add_handler(CallbackQueryHandler(close_menu, filters.regex(r"^settings_closesettings$")), group=2)
+
