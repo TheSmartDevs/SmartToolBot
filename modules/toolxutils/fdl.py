@@ -1,6 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatMemberStatus
 from datetime import datetime
 from mimetypes import guess_type
 import secrets
@@ -75,22 +75,28 @@ def setup_fdl_handler(app: Client):
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY)
             return
-
         if not message.reply_to_message:
             await client.send_message(message.chat.id, "**Please Reply To File For Link**", parse_mode=ParseMode.MARKDOWN)
             return
-
         reply_message = message.reply_to_message
         if not (reply_message.document or reply_message.video or reply_message.photo or reply_message.audio or reply_message.video_note):
             await client.send_message(message.chat.id, "**Please Reply To A Valid File**", parse_mode=ParseMode.MARKDOWN)
             return
-
         processing_msg = await client.send_message(message.chat.id, "**Processing Your File.....**", parse_mode=ParseMode.MARKDOWN)
-
         try:
+            # Check if bot is admin in the log channel
+            bot_member = await client.get_chat_member(LOG_CHANNEL_ID, "me")
+            if bot_member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                await client.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=processing_msg.id,
+                    text="**Error: Bot must be an admin in the log channel**",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
             code = secrets.token_urlsafe(6)[:6]
             file_name, file_size, mime_type = await get_file_properties(reply_message)
-
+            file_id = None  # Initialize file_id
             if message.chat.id == LOG_CHANNEL_ID:
                 file_id = reply_message.id
                 sent = await client.copy_message(
@@ -110,19 +116,16 @@ def setup_fdl_handler(app: Client):
                     caption=code
                 )
                 file_id = sent.id
-
             quoted_code = urllib.parse.quote(code)
             base_url = Server.BASE_URL.rstrip('/')
             download_link = f"{base_url}/dl/{file_id}?code={quoted_code}"
             is_video = mime_type.startswith('video') or reply_message.video or reply_message.video_note
             stream_link = f"{base_url}/stream/{file_id}?code={quoted_code}" if is_video else None
-
             buttons = [
                 InlineKeyboardButton("🚀 Download Link", url=download_link)
             ]
             if stream_link:
                 buttons.append(InlineKeyboardButton("🖥️ Stream Link", url=stream_link))
-
             response = (
                 f"**✨ Your Links are Ready! ✨**\n\n"
                 f"> {file_name}\n\n"
@@ -132,7 +135,6 @@ def setup_fdl_handler(app: Client):
             if stream_link:
                 response += f"**🖥️ Stream Link:** {stream_link}\n\n"
             response += "**⌛️ Note: Links remain active while the bot is running and the file is accessible.**"
-
             await client.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=processing_msg.id,
@@ -143,7 +145,7 @@ def setup_fdl_handler(app: Client):
             )
             LOGGER.info(f"Generated links for file_id: {file_id}, download: {download_link}, stream: {stream_link}")
         except Exception as e:
-            LOGGER.error(f"Error generating links for file_id: {file_id}, error: {str(e)}")
+            LOGGER.error(f"Error generating links for file_id: {file_id if 'file_id' in locals() else 'unknown'}, error: {str(e)}")
             await client.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=processing_msg.id,
