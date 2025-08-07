@@ -1,6 +1,5 @@
 # Copyright @ISmartCoder
 # Updates Channel t.me/TheSmartDev
-
 import os
 import re
 import io
@@ -22,35 +21,28 @@ import yt_dlp
 from config import COMMAND_PREFIX, YT_COOKIES_PATH, VIDEO_RESOLUTION, MAX_VIDEO_SIZE, BAN_REPLY
 from utils import LOGGER, progress_bar, notify_admin
 from core import banned_users
-
 logger = LOGGER
-
 class Config:
-    TEMP_DIR = Path("temp")
+    TEMP_DIR = Path("./downloads")
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     }
-
 Config.TEMP_DIR.mkdir(exist_ok=True)
 executor = ThreadPoolExecutor(max_workers=6)
-
 def sanitize_filename(title: str) -> str:
     title = re.sub(r'[<>:"/\\|?*]', '', title[:50]).replace(' ', '_')
     return f"{title}_{int(time.time())}"
-
 def format_size(size_bytes: int) -> str:
     if not size_bytes:
         return "0B"
     units = ("B", "KB", "MB", "GB")
     i = int(math.log(size_bytes, 1024))
     return f"{round(size_bytes / (1024 ** i), 2)} {units[i]}"
-
 def format_duration(seconds: int) -> str:
     hours, seconds = divmod(seconds, 3600)
     minutes, seconds = divmod(seconds, 60)
     return f"{hours}h {minutes}m {seconds}s" if hours else f"{minutes}m {seconds}s" if minutes else f"{seconds}s"
-
 async def get_video_duration(video_path: str) -> float:
     try:
         clip = VideoFileClip(video_path)
@@ -62,7 +54,6 @@ async def get_video_duration(video_path: str) -> float:
         logger.error(f"Failed to get duration for {video_path}: {e}")
         await notify_admin(None, f"{COMMAND_PREFIX}yt", e, None)
         return 0.0
-
 def youtube_parser(url: str) -> Optional[str]:
     youtube_patterns = [
         r"(?:youtube\.com/shorts/)([^\"&?/ ]{11})(\?.*)?",
@@ -72,7 +63,7 @@ def youtube_parser(url: str) -> Optional[str]:
         r"(?:youtube\.com/embed/)([^\"&?/ ]{11})",
         r"(?:youtube\.com/v/)([^\"&?/ ]{11})"
     ]
-    
+   
     for pattern in youtube_patterns:
         match = re.search(pattern, url)
         if match:
@@ -85,10 +76,9 @@ def youtube_parser(url: str) -> Optional[str]:
                 standardized_url = f"https://www.youtube.com/watch?v={video_id}"
                 logger.info(f"Parsed YouTube URL: {standardized_url}")
                 return standardized_url
-    
+   
     logger.warning(f"Invalid YouTube URL: {url}")
     return None
-
 def get_ydl_opts(output_path: str, is_audio: bool = False) -> dict:
     width, height = VIDEO_RESOLUTION
     base = {
@@ -124,7 +114,6 @@ def get_ydl_opts(output_path: str, is_audio: bool = False) -> dict:
         })
     logger.info(f"YDL options configured for {'audio' if is_audio else 'video'} download")
     return base
-
 async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Optional[dict], Optional[str]]:
     parsed_url = youtube_parser(url)
     if not parsed_url:
@@ -132,10 +121,10 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
         logger.error(f"Invalid YouTube URL provided: {url}")
         await notify_admin(status._client, f"{COMMAND_PREFIX}yt", Exception("Invalid YouTube URL"), status)
         return None, "Invalid YouTube URL"
-    
+   
     try:
         ydl_opts_info = {
-            'cookiefile': YT_COOKIES_PATH, 
+            'cookiefile': YT_COOKIES_PATH,
             'quiet': True,
             'socket_timeout': 30,
             'retries': 2
@@ -145,31 +134,31 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
                 asyncio.get_event_loop().run_in_executor(executor, ydl.extract_info, parsed_url, False),
                 timeout=45
             )
-        
+       
         if not info:
             await status.edit_text(f"**Sorry Bro {'Audio' if is_audio else 'Video'} Not Found**", parse_mode=ParseMode.MARKDOWN)
             logger.error(f"No media info found for URL: {parsed_url}")
             await notify_admin(status._client, f"{COMMAND_PREFIX}yt", Exception("No media info found"), status)
             return None, "No media info found"
-        
+       
         duration = info.get('duration', 0)
         if duration > 7200:
             await status.edit_text(f"**Sorry Bro {'Audio' if is_audio else 'Video'} Is Over 2hrs**", parse_mode=ParseMode.MARKDOWN)
             logger.error(f"Media duration exceeds 2 hours: {duration} seconds")
             await notify_admin(status._client, f"{COMMAND_PREFIX}yt", Exception("Media duration exceeds 2 hours"), status)
             return None, "Media duration exceeds 2 hours"
-        
+       
         await status.edit_text("**Found ☑️ Downloading...**", parse_mode=ParseMode.MARKDOWN)
         logger.info(f"Download started: {info.get('title', 'Unknown')} ({'audio' if is_audio else 'video'})")
-        
+       
         title = info.get('title', 'Unknown')
         safe_title = sanitize_filename(title)
         output_path = f"{Config.TEMP_DIR}/{safe_title}"
-        
+       
         opts = get_ydl_opts(output_path, is_audio)
         with yt_dlp.YoutubeDL(opts) as ydl:
             await asyncio.get_event_loop().run_in_executor(executor, ydl.download, [parsed_url])
-        
+       
         file_path = f"{output_path}.mp3" if is_audio else f"{output_path}.mp4"
         if not os.path.exists(file_path) and not is_audio:
             for ext in ['.webm', '.mkv']:
@@ -188,13 +177,13 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
                         continue
                 else:
                     continue
-        
+       
         if not os.path.exists(file_path):
             await status.edit_text(f"**Sorry Bro {'Audio' if is_audio else 'Video'} Not Found**", parse_mode=ParseMode.MARKDOWN)
             logger.error(f"Download failed, file not found: {file_path}")
             await notify_admin(status._client, f"{COMMAND_PREFIX}yt", Exception(f"Download failed, file not found: {file_path}"), status)
             return None, "Download failed"
-        
+       
         file_size = os.path.getsize(file_path)
         if file_size > MAX_VIDEO_SIZE:
             os.remove(file_path)
@@ -202,10 +191,10 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
             logger.error(f"File size exceeds 2GB: {file_size} bytes")
             await notify_admin(status._client, f"{COMMAND_PREFIX}yt", Exception("File size exceeds 2GB"), status)
             return None, "File exceeds 2GB"
-        
+       
         thumbnail_path = await prepare_thumbnail(info.get('thumbnail'), output_path)
         duration = await get_video_duration(file_path) if not is_audio else info.get('duration', 0)
-        
+       
         metadata = {
             'file_path': file_path,
             'title': title,
@@ -215,7 +204,7 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
             'thumbnail_path': thumbnail_path
         }
         logger.info(f"{'Audio' if is_audio else 'Video'} metadata prepared: {metadata}")
-        
+       
         return metadata, None
     except asyncio.TimeoutError:
         logger.error(f"Timeout fetching metadata for URL: {url}")
@@ -227,7 +216,6 @@ async def download_media(url: str, is_audio: bool, status: Message) -> Tuple[Opt
         await status.edit_text("**Sorry Bro YouTubeDL API Dead**", parse_mode=ParseMode.MARKDOWN)
         await notify_admin(status._client, f"{COMMAND_PREFIX}yt", e, status)
         return None, f"Download failed: {str(e)}"
-
 async def prepare_thumbnail(thumbnail_url: str, output_path: str) -> Optional[str]:
     if not thumbnail_url:
         logger.warning("No thumbnail URL provided")
@@ -240,7 +228,7 @@ async def prepare_thumbnail(thumbnail_url: str, output_path: str) -> Optional[st
                     await notify_admin(None, f"{COMMAND_PREFIX}yt", Exception(f"Failed to fetch thumbnail, status: {resp.status}"), None)
                     return None
                 data = await resp.read()
-        
+       
         thumbnail_path = f"{output_path}_thumb.jpg"
         with Image.open(io.BytesIO(data)) as img:
             img.convert('RGB').save(thumbnail_path, "JPEG", quality=85)
@@ -250,7 +238,6 @@ async def prepare_thumbnail(thumbnail_url: str, output_path: str) -> Optional[st
         logger.error(f"Thumbnail error: {e}")
         await notify_admin(None, f"{COMMAND_PREFIX}yt", e, None)
         return None
-
 async def search_youtube(query: str, retries: int = 2) -> Optional[str]:
     opts = {
         'default_search': 'ytsearch1',
@@ -258,7 +245,7 @@ async def search_youtube(query: str, retries: int = 2) -> Optional[str]:
         'quiet': True,
         'simulate': True,
     }
-    
+   
     for attempt in range(retries):
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -267,7 +254,7 @@ async def search_youtube(query: str, retries: int = 2) -> Optional[str]:
                     url = info['entries'][0]['webpage_url']
                     logger.info(f"YouTube search successful, found URL: {url} for query: {query}")
                     return url
-                
+               
                 simplified_query = re.sub(r'[^\w\s]', '', query).strip()
                 if simplified_query != query:
                     info = await asyncio.get_event_loop().run_in_executor(executor, ydl.extract_info, simplified_query, False)
@@ -283,7 +270,6 @@ async def search_youtube(query: str, retries: int = 2) -> Optional[str]:
                 await asyncio.sleep(1)
     logger.error(f"YouTube search failed after {retries} attempts for query: {query}")
     return None
-
 async def handle_media_request(client: Client, message: Message, query: str, is_audio: bool = False):
     logger.info(f"Handling media request: {'audio' if is_audio else 'video'}, query: {query}, user: {message.from_user.id if message.from_user else 'unknown'}, chat: {message.chat.id}")
     status = await client.send_message(
@@ -291,19 +277,19 @@ async def handle_media_request(client: Client, message: Message, query: str, is_
         f"**Searching The {'Audio' if is_audio else 'Video'}**",
         parse_mode=ParseMode.MARKDOWN
     )
-    
+   
     video_url = youtube_parser(query) if youtube_parser(query) else await search_youtube(query)
     if not video_url:
         await status.edit_text(f"**Sorry Bro {'Audio' if is_audio else 'Video'} Not Found**", parse_mode=ParseMode.MARKDOWN)
         logger.error(f"No video URL found for query: {query}")
         await notify_admin(client, f"{COMMAND_PREFIX}yt", Exception("No video URL found"), message)
         return
-    
+   
     result, error = await download_media(video_url, is_audio, status)
     if error:
         logger.error(f"Media download failed: {error}")
         return
-    
+   
     user_info = (
         f"[{message.from_user.first_name}{' ' + message.from_user.last_name if message.from_user.last_name else ''}](tg://user?id={message.from_user.id})" if message.from_user else
         f"[{message.chat.title}](https://t.me/{message.chat.username or 'this group'})"
@@ -317,7 +303,7 @@ async def handle_media_request(client: Client, message: Message, query: str, is_
         f"━━━━━━━━━━━━━━━━━━━━━\n"
         f"**Downloaded By** {user_info}"
     )
-    
+   
     last_update_time = [0]
     start_time = time.time()
     send_func = client.send_audio if is_audio else client.send_video
@@ -339,7 +325,7 @@ async def handle_media_request(client: Client, message: Message, query: str, is_
             'width': 1280,
             'duration': int(await get_video_duration(result['file_path']))
         })
-    
+   
     try:
         await send_func(**kwargs)
         logger.info(f"Media uploaded successfully: {'audio' if is_audio else 'video'}, file: {result['file_path']}")
@@ -348,35 +334,33 @@ async def handle_media_request(client: Client, message: Message, query: str, is_
         await status.edit_text("**Sorry Bro YouTubeDL API Dead**", parse_mode=ParseMode.MARKDOWN)
         await notify_admin(client, f"{COMMAND_PREFIX}yt", e, message)
         return
-    
+   
     for path in (result['file_path'], result['thumbnail_path']):
         if path and os.path.exists(path):
             os.remove(path)
             logger.info(f"Cleaned up file: {path}")
     await status.delete()
     logger.info("Status message deleted")
-
 def setup_yt_handler(app: Client):
     prefix = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
-    
+   
     @app.on_message(filters.regex(rf"^{prefix}(yt|video)(\s+.+)?$") & (filters.private | filters.group))
     async def video_command(client, message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         user_id = message.from_user.id if message.from_user else "unknown"
         chat_id = message.chat.id
         logger.info(f"Video command received from user: {user_id}, chat: {chat_id}, text: {message.text}")
-        
+       
         if message.reply_to_message and message.reply_to_message.text:
             query = message.reply_to_message.text.strip()
             logger.info(f"Using replied message as query: {query}")
         else:
             query = message.text.split(maxsplit=1)[1] if len(message.text.split(maxsplit=1)) > 1 else None
             logger.info(f"Using direct query: {query if query else 'none'}")
-        
+       
         if not query:
             await client.send_message(
                 message.chat.id,
@@ -385,27 +369,26 @@ def setup_yt_handler(app: Client):
             )
             logger.warning(f"No query provided for video command, user: {user_id}, chat: {chat_id}")
             return
-        
+       
         await handle_media_request(client, message, query)
-    
+   
     @app.on_message(filters.regex(rf"^{prefix}song(\s+.+)?$") & (filters.private | filters.group))
     async def song_command(client, message):
         user_id = message.from_user.id if message.from_user else None
         if user_id and await banned_users.banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY, parse_mode=ParseMode.MARKDOWN)
             return
-
         user_id = message.from_user.id if message.from_user else "unknown"
         chat_id = message.chat.id
         logger.info(f"Song command received from user: {user_id}, chat: {chat_id}, text: {message.text}")
-        
+       
         if message.reply_to_message and message.reply_to_message.text:
             query = message.reply_to_message.text.strip()
             logger.info(f"Using replied message as query: {query}")
         else:
             query = message.text.split(maxsplit=1)[1] if len(message.text.split(maxsplit=1)) > 1 else None
             logger.info(f"Using direct query: {query if query else 'none'}")
-        
+       
         if not query:
             await client.send_message(
                 message.chat.id,
@@ -414,5 +397,5 @@ def setup_yt_handler(app: Client):
             )
             logger.warning(f"No query provided for song command, user: {user_id}, chat: {chat_id}")
             return
-        
+       
         await handle_media_request(client, message, query, is_audio=True)
