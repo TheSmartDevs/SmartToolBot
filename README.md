@@ -137,7 +137,7 @@ Follow these steps to set up and deploy **SmartToolBot**:
      ```bash
      docker compose down
      ```
-> **Special Note:** 💫: Configure the bot by setting values in either the `.env` file or directly in `config.py`—your choice! The default YouTube cookies path is `SmartToolBot/cookies.txt`. Admins can dynamically adjust variables using the `/settings` command within the bot for quick and easy management. 👨‍💻
+> **Special Note:** 💫: Configure the bot by setting values in either the `.env` file or directly in `config.py`—your choice! The default YouTube cookies path is `SmartToolBot/cookies/ISmartToolBot.txt`. Admins can dynamically adjust variables using the `/settings` command within the bot for quick and easy management. 👨‍💻
 
 ## Deploy to Heroku
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy/?template=https://github.com/TheSmartDevs/SmartToolBot)
