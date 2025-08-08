@@ -10,7 +10,6 @@ pycountry
 beautifulsoup4
 pillow
 yt-dlp
-spotipy
 python-dateutil
 motor
 gTTS
@@ -22,3 +21,4 @@ pydub
 moviepy
 speedtest-cli
 lxml
+
