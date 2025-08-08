@@ -98,7 +98,7 @@ class TikTokDownloader:
             logger.error(f"Error downloading file from {url}: {e}")
             await notify_admin(None, f"{COMMAND_PREFIX}tik", e, None)
             raise
-def setup_tiktok_handler(app: Client):
+def setup_tt_handler(app: Client):
     tik_downloader = TikTokDownloader(Config.TEMP_DIR)
     command_prefix_regex = f"[{''.join(map(re.escape, COMMAND_PREFIX))}]"
     @app.on_message(
@@ -171,3 +171,4 @@ def setup_tiktok_handler(app: Client):
             logger.error(f"Error processing TikTok media: {e}")
             await notify_admin(client, f"{COMMAND_PREFIX}tik", e, downloading_message)
             await downloading_message.edit_text("**TikTok Downloader API Dead**", parse_mode=ParseMode.MARKDOWN)
+
