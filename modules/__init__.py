@@ -38,6 +38,7 @@ from .fakexutils.fake import setup_fake_handler
 from .ghxutils.git import setup_git_handler
 from .grpxutils.wlc import setup_wlc_handler
 from .hlpxutils.help import setup_help_handler
+from .hlpxutils.tpusers import setup_tp_handler
 from .infoxutils.info import setup_info_handler
 from .mailxutils.fmail import setup_fmail_handlers
 from .mailxutils.tmail import setup_tmail_handler
@@ -107,6 +108,7 @@ def setup_modules_handlers(app):
     setup_git_handler(app)
     setup_wlc_handler(app)
     setup_help_handler(app)
+    setup_tp_handler(app)
     setup_info_handler(app)
     setup_fmail_handlers(app)
     setup_tmail_handler(app)
@@ -134,5 +136,6 @@ def setup_modules_handlers(app):
     setup_getusr_handler(app)
     setup_tx_handler(app)
     setup_cla_handler(app)
+
 
 
