@@ -3,13 +3,9 @@ import uuid
 import hashlib
 import time
 from pyrogram import Client
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.raw.functions.messages import SendMedia, SetBotPrecheckoutResults, SetBotShippingResults
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InlineKeyboardButtonBuy, LabeledPrice
+from pyrogram.raw.functions.messages import SetBotPrecheckoutResults, SetBotShippingResults
 from pyrogram.raw.types import (
-    InputMediaInvoice,
-    Invoice,
-    DataJSON,
-    LabeledPrice,
     UpdateBotPrecheckoutQuery,
     UpdateBotShippingQuery,
     UpdateNewMessage,
@@ -17,10 +13,7 @@ from pyrogram.raw.types import (
     MessageActionPaymentSentMe,
     PeerUser,
     PeerChat,
-    PeerChannel,
-    ReplyInlineMarkup,
-    KeyboardButtonRow,
-    KeyboardButtonBuy
+    PeerChannel
 )
 from pyrogram.enums import ParseMode
 from config import OWNER_ID, DEVELOPER_USER_ID
@@ -113,40 +106,16 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
         timestamp = int(time.time())
         unique_id = str(uuid.uuid4())[:8]
         invoice_payload = f"contribution_{user_id}_{quantity}_{timestamp}_{unique_id}"
-        random_id = int(hashlib.sha256(invoice_payload.encode()).hexdigest(), 16) % (2**63)
 
         title = "Support Smart Tools"
         description = f"Contribute {quantity} Stars to support ongoing development and keep the tools free, fast, and reliable for everyone 💫 Every star helps us grow!"
         currency = "XTR"
 
-        invoice = Invoice(
-            currency=currency,
-            prices=[LabeledPrice(label=f"⭐️ {quantity} Stars", amount=quantity)],
-            max_tip_amount=0,
-            suggested_tip_amounts=[],
-            recurring=False,
-            test=False,
-            name_requested=False,
-            phone_requested=False,
-            email_requested=False,
-            shipping_address_requested=False,
-            flexible=False
-        )
-
-        media = InputMediaInvoice(
-            title=title,
-            description=description,
-            invoice=invoice,
-            payload=invoice_payload.encode(),
-            provider="STARS",
-            provider_data=DataJSON(data="{}")
-        )
-
-        markup = ReplyInlineMarkup(
-            rows=[KeyboardButtonRow(buttons=[KeyboardButtonBuy(text="💫 Donate Via Stars")])]
-        )
-
-        peer = await client.resolve_peer(chat_id)
+        prices = [LabeledPrice(label=f"⭐️ {quantity} Stars", amount=quantity)]
+        
+        reply_markup = InlineKeyboardMarkup([
+            [InlineKeyboardButtonBuy("💫 Donate Via Stars")]
+        ])
 
         if not is_callback:
             loading_message = await client.send_message(
@@ -156,14 +125,14 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
                 reply_markup=back_button
             )
 
-        await client.invoke(
-            SendMedia(
-                peer=peer,
-                media=media,
-                message="",
-                random_id=random_id,
-                reply_markup=markup
-            )
+        await client.send_invoice(
+            chat_id=chat_id,
+            title=title,
+            description=description,
+            payload=invoice_payload,
+            currency=currency,
+            prices=prices,
+            reply_markup=reply_markup
         )
 
         if is_callback:
@@ -279,21 +248,17 @@ async def handle_donate_callback(client: Client, callback_query: CallbackQuery):
 async def raw_update_handler(client: Client, update, users, chats):
     if isinstance(update, UpdateBotPrecheckoutQuery):
         try:
-            await client.invoke(
-                SetBotPrecheckoutResults(
-                    query_id=update.query_id,
-                    success=True
-                )
+            await client.answer_pre_checkout_query(
+                pre_checkout_query_id=update.query_id,
+                success=True
             )
             logger.info(f"✅ Pre-checkout query {update.query_id} OK for user {update.user_id}")
         except Exception as e:
             logger.error(f"❌ Pre-checkout query {update.query_id} failed: {str(e)}")
-            await client.invoke(
-                SetBotPrecheckoutResults(
-                    query_id=update.query_id,
-                    success=False,
-                    error="Failed to process pre-checkout."
-                )
+            await client.answer_pre_checkout_query(
+                pre_checkout_query_id=update.query_id,
+                success=False,
+                error="Failed to process pre-checkout."
             )
     elif isinstance(update, UpdateBotShippingQuery):
         try:
