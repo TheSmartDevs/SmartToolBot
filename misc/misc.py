@@ -204,7 +204,7 @@ Stay Updated With Real Time Insights....⚡️
         start_message = (
             f"<b>Hi {full_name}! Welcome To This Bot</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
-            f"<b>Smart Tool ⚙️ </b>: The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
+            f"<b>Smart Tool</b> The ultimate toolkit on Telegram, offering education, AI, downloaders, temp mail, credit card tool, and more. Simplify your tasks with ease!\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━</b>\n"
             f"<b>Don't Forget To <a href='{UPDATE_CHANNEL_URL}'>Join Here</a> For Updates!</b>"
         )
@@ -283,4 +283,5 @@ Stay Updated With Real Time Insights....⚡️
         await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "third_menu":
         await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+
 
