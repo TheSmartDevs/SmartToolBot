@@ -8,30 +8,44 @@ import pycountry
 from smartfaker import Faker
 from utils import LOGGER
 
-def get_flag(country_code, client=None, message=None):
+def get_flag(country_code, address_data=None, client=None, message=None):
     try:
         country = pycountry.countries.get(alpha_2=country_code)
+        if not country and address_data and 'country_flag' in address_data:
+            return address_data['country'], address_data['country_flag']
         if not country:
             return None, "🏚"
         country_name = country.name
         flag_emoji = chr(0x1F1E6 + ord(country_code[0]) - ord('A')) + chr(0x1F1E6 + ord(country_code[1]) - ord('A'))
         return country_name, flag_emoji
     except Exception as e:
-        error_msg = f"Error in get_flag: {str(e)}"
-        LOGGER.error(error_msg)
+        if address_data and 'country_flag' in address_data:
+            return address_data['country'], address_data['country_flag']
+        LOGGER.error(f"Error in get_flag: {str(e)}")
         return None, "🏚"
 
 def resolve_country(input_str):
     input_str = input_str.strip().upper()
+    country_mappings = {
+        "UK": ("GB", "United Kingdom"),
+        "UAE": ("AE", "United Arab Emirates"),
+        "AE": ("AE", "United Arab Emirates"),
+        "UNITED KINGDOM": ("GB", "United Kingdom"),
+        "UNITED ARAB EMIRATES": ("AE", "United Arab Emirates")
+    }
+    if input_str in country_mappings:
+        return country_mappings[input_str]
+    
     if len(input_str) == 2:
         country = pycountry.countries.get(alpha_2=input_str)
         if country:
             return country.alpha_2, country.name
+    
     try:
         country = pycountry.countries.search_fuzzy(input_str)[0]
         return country.alpha_2, country.name
     except LookupError:
-        return None, None
+        return input_str, input_str
 
 def setup_fake_handler(app: Client):
     @app.on_message(filters.command(["fake", "rnd"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
@@ -50,19 +64,16 @@ def setup_fake_handler(app: Client):
         country_input = message.command[1]
         country_code, country_name = resolve_country(country_input)
         if not country_code:
-            if country_input == "UK":
-                country_code, country_name = "GB", "United Kingdom"
-            else:
-                await client.send_message(message.chat.id, "**❌ Invalid Country Code or Name**", parse_mode=ParseMode.MARKDOWN)
-                LOGGER.warning(f"Invalid country input: {country_input}")
-                return
+            await client.send_message(message.chat.id, "**❌ Invalid Country Code or Name**", parse_mode=ParseMode.MARKDOWN)
+            LOGGER.warning(f"Invalid country input: {country_input}")
+            return
 
         generating_message = await client.send_message(message.chat.id, "**Generating Fake Address...**", parse_mode=ParseMode.MARKDOWN)
 
         try:
             fake = Faker()
             address = await fake.address(country_code, 1)
-            _, flag_emoji = get_flag(country_code, client, message)
+            _, flag_emoji = get_flag(country_code, address, client, message)
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Copy Postal Code", copy_text=address['postal_code'])]
             ])
