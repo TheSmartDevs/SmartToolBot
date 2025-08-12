@@ -3,6 +3,7 @@ tgcrypto
 google-generativeai
 aiohttp
 telethon
+cryptg
 asyncio
 pytz
 telegraph
@@ -21,4 +22,6 @@ pydub
 moviepy
 speedtest-cli
 lxml
+smartfaker
+
 
