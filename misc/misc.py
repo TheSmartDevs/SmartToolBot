@@ -171,13 +171,13 @@ Stay Updated With Real Time Insights....⚡️
                 [InlineKeyboardButton("⬅️ Back", callback_data="start_message")]
             ])
         elif call.data in ["ai_tools", "credit_cards", "crypto", "converter", "coupons", "decoders", "downloaders", "domain_check", "education_utils", "rembg"]:
-            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="main_menu")]])
         elif call.data in ["file_to_link", "github", "info", "network_tools", "random_address", "string_session", "stripe_keys", "sticker", "time_date", "text_split"]:
-            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="second_menu")]])
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="second_menu")]])
         elif call.data in ["tempmail", "text_ocr", "bot_users_export", "web_capture", "weather", "yt_tools", "translate"]:
-            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="third_menu")]])
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="third_menu")]])
         else:
-            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]])
+            back_button = InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="main_menu")]])
        
         await call.message.edit_text(
             responses[call.data][0],
@@ -283,3 +283,4 @@ Stay Updated With Real Time Insights....⚡️
         await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=second_menu_keyboard)
     elif call.data == "third_menu":
         await call.message.edit_text("<b>Here are the Smart-Tool Options: 👇</b>", parse_mode=ParseMode.HTML, reply_markup=third_menu_keyboard)
+
