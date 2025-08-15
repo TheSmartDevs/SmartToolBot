@@ -218,13 +218,16 @@ bin_pattern_filter = filters.create(contains_bin_pattern)
 def setup_gen_handler(app: Client):
     @app.on_message(filters.command(["gen"], prefixes=COMMAND_PREFIX) & (filters.private | filters.group))
     async def generate_handler(client: Client, message: Message):
-        user_id = message.from_user.id if message.from_user else None
+        user_id = None
+        user_full_name = "Anonymous"
+        if message.from_user:
+            user_id = message.from_user.id
+            user_full_name = message.from_user.first_name or "Anonymous"
+            if message.from_user.last_name:
+                user_full_name += f" {message.from_user.last_name}"
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(message.chat.id, BAN_REPLY)
             return
-        user_full_name = message.from_user.first_name
-        if message.from_user.last_name:
-            user_full_name += f" {message.from_user.last_name}"
         if message.reply_to_message and message.reply_to_message.text:
             user_input = message.reply_to_message.text
             extracted_bin = extract_bin_from_text(user_input)
@@ -288,7 +291,7 @@ def setup_gen_handler(app: Client):
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
             response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id if user_id else '0'}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -325,12 +328,15 @@ def setup_gen_handler(app: Client):
                 break
         if not gen_command_found:
             return
-        user_id = message.from_user.id if message.from_user else None
+        user_id = None
+        user_full_name = "Anonymous"
+        if message.from_user:
+            user_id = message.from_user.id
+            user_full_name = message.from_user.first_name or "Anonymous"
+            if message.from_user.last_name:
+                user_full_name += f" {message.from_user.last_name}"
         if user_id and await banned_users.find_one({"user_id": user_id}):
             return
-        user_full_name = message.from_user.first_name
-        if message.from_user.last_name:
-            user_full_name += f" {message.from_user.last_name}"
         current_text = message.text or message.caption
         if not current_text:
             return
@@ -370,7 +376,7 @@ def setup_gen_handler(app: Client):
             card_text = "\n".join([f"`{card}`" for card in cards])
             await progress_message.delete()
             response_text = f"𝗕𝗜𝗡 ⇾ {bin}\nA𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
+            callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id if user_id else '0'}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
             await client.send_message(message.chat.id, response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
         else:
@@ -391,21 +397,16 @@ def setup_gen_handler(app: Client):
 
     @app.on_callback_query(filters.regex(r"regenerate\|(.+)\|(.+)\|(.+)\|(.+)\|(\d+)\|(\d+)"))
     async def regenerate_callback(client: Client, callback_query):
-        user_id = callback_query.from_user.id if callback_query.from_user else None
+        user_id = None
+        user_full_name = "Anonymous"
+        if callback_query.from_user:
+            user_id = callback_query.from_user.id
+            user_full_name = callback_query.from_user.first_name or "Anonymous"
+            if callback_query.from_user.last_name:
+                user_full_name += f" {callback_query.from_user.last_name}"
         data_parts = callback_query.data.split('|')
-        original_user_id = int(data_parts[-1])
-        user_full_name = callback_query.from_user.first_name
-        if callback_query.from_user.last_name:
-            user_full_name += f" {callback_query.from_user.last_name}"
         if user_id and await banned_users.find_one({"user_id": user_id}):
             await client.send_message(callback_query.message.chat.id, BAN_REPLY)
-            return
-        if user_id != original_user_id:
-            original_user = await client.get_users(original_user_id)
-            original_user_name = original_user.first_name
-            if original_user.last_name:
-                original_user_name += f" {original_user.last_name}"
-            await callback_query.answer(f"Action Disallowed ❌. This Button Only For {original_user_name}", show_alert=True)
             return
         bin = data_parts[1].replace('_', ' ')
         month = data_parts[2] if data_parts[2] != 'xx' else None
@@ -441,7 +442,6 @@ def setup_gen_handler(app: Client):
             return
         card_text = "\n".join([f"`{card}`" for card in cards])
         response_text = f"𝗕𝗜𝗡 ⇾ {bin}\n𝗔𝗺𝗼𝘂𝗻𝘁 ⇾ {amount}\n\n{card_text}\n\n𝗕𝗮𝗻𝗸: {bank_text}\n𝗖𝗼𝘂𝗻𝘁𝗿𝘆: {country_name} {flag_emoji}\n𝗕𝗜𝗡 𝗜𝗻𝗳𝗼: {bin_info_text}"
-        callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id}"
+        callback_data = f"regenerate|{bin.replace(' ', '_')}|{month if month else 'xx'}|{year if year else 'xx'}|{cvv if cvv else ('xxxx' if is_amex_bin(bin) else 'xxx')}|{amount}|{user_id if user_id else '0'}"
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Re-Generate", callback_data=callback_data)]])
         await callback_query.message.edit_text(response_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
-
