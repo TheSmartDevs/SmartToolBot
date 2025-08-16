@@ -3,5 +3,4 @@ build:
     web: Dockerfile
 
 run:
-  web: python3 flask.py
   worker: python3 main.py
