@@ -11,7 +11,6 @@ from .ccxutils.extp import setup_extp_handler
 from .ccxutils.binf import setup_binf_handlers
 from .ccxutils.fcc import setup_fcc_handler
 from .ccxutils.gen import setup_gen_handler
-from .ccxutils.cclean import setup_cln_handler
 from .ccxutils.mbin import setup_mbin_handler
 from .ccxutils.mgen import setup_multi_handler
 from .ccxutils.top import setup_topbin_handler
@@ -80,7 +79,6 @@ def setup_modules_handlers(app):
     setup_binf_handlers(app)
     setup_fcc_handler(app)
     setup_gen_handler(app)
-    setup_cln_handler(app)
     setup_mbin_handler(app)
     setup_multi_handler(app)
     setup_topbin_handler(app)
@@ -136,6 +134,7 @@ def setup_modules_handlers(app):
     setup_getusr_handler(app)
     setup_tx_handler(app)
     setup_cla_handler(app)
+
 
 
 
