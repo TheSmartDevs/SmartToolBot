@@ -123,6 +123,7 @@ def setup_donate_handler(app):
                 payload=invoice_payload,
                 currency=currency,
                 prices=prices,
+                start_parameter="Basic",
                 reply_markup=reply_markup
             )
 
