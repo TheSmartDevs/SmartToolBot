@@ -132,6 +132,7 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
             payload=invoice_payload,
             currency=currency,
             prices=prices,
+            start_parameter="Basic",
             reply_markup=reply_markup
         )
 
