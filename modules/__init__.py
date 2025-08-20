@@ -66,6 +66,7 @@ from .webxutils.ws import setup_ws_handler
 from .webxutils.ss import setup_ss_handler
 from .ytxutils.ytag import setup_ytag_handlers
 from .ytxutils.yth import setup_yth_handler
+from .toolxutils.rembg import setup_bg_handler
 
 def setup_modules_handlers(app):
     setup_ai_handler(app)
@@ -134,7 +135,7 @@ def setup_modules_handlers(app):
     setup_getusr_handler(app)
     setup_tx_handler(app)
     setup_cla_handler(app)
-
+    setup_bg_handler(app)
 
 
 
