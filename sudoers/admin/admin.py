@@ -1,5 +1,3 @@
-#Copyright @ISmartCoder
-#Updates Channel https://t.me/TheSmartDev
 import asyncio
 from datetime import datetime, timedelta
 from pyrogram import Client, filters
@@ -86,34 +84,28 @@ async def broadcast_handler(client: Client, message: Message) -> None:
         LOGGER.info(f"Unauthorized broadcast attempt by user_id {user_id}")
         return
 
-    is_broadcast = message.command[0].lower() in ["broadcast", "b"]
+    if not message.reply_to_message:
+        await client.send_message(
+            message.chat.id, 
+            "**Please reply to a message to broadcast/send it.**", 
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
+
+    if not (message.reply_to_message.text or message.reply_to_message.photo or
+            message.reply_to_message.video or message.reply_to_message.audio or
+            message.reply_to_message.document):
+        await client.send_message(
+            message.chat.id, 
+            "**Please reply to a valid message (text, photo, video, audio, or document).**", 
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
+
+    is_broadcast = message.command[0].lower() == "broadcast"
     LOGGER.info(f"{'Broadcast' if is_broadcast else 'Send'} initiated by user_id {user_id}")
 
-    if message.reply_to_message and (
-        message.reply_to_message.text or message.reply_to_message.photo or
-        message.reply_to_message.video or message.reply_to_message.audio or
-        message.reply_to_message.document
-    ):
-        await process_broadcast(client, message.reply_to_message, is_broadcast, message.chat.id)
-    elif is_broadcast and len(message.command) > 1:
-        await process_broadcast(client, " ".join(message.command[1:]), is_broadcast, message.chat.id)
-    else:
-        action = "broadcast" if is_broadcast else "send"
-        await client.send_message(
-            message.chat.id, f"**Please send a message to {action}.**", parse_mode=ParseMode.MARKDOWN
-        )
-        async def callback(client: Client, msg: Message):
-            if msg.from_user and msg.from_user.id == user_id and msg.chat.id == message.chat.id:
-                if not (msg.text or msg.photo or msg.video or msg.audio or msg.document):
-                    await client.send_message(
-                        msg.chat.id, "**Send a valid text, photo, video, audio, or document ❌ **",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                    return
-                await process_broadcast(client, msg, is_broadcast, msg.chat.id)
-                client.remove_handler(handler, group=2)
-        handler = MessageHandler(callback, filters.user(user_id) & filters.chat(message.chat.id))
-        client.add_handler(handler, group=2)
+    await process_broadcast(client, message.reply_to_message, is_broadcast, message.chat.id)
 
 async def process_broadcast(client: Client, content, is_broadcast: bool = True, chat_id: int = None) -> None:
     try:
@@ -327,12 +319,10 @@ async def update_user_activity_handler(client: Client, message: Message) -> None
         LOGGER.error(f"Error in update_user_activity_handler for message_id {getattr(message, 'id', 'unknown')}: {str(e)}")
 
 def setup_admin_handler(app: Client) -> None:
-    prefixes = COMMAND_PREFIX + [""]
-    
     app.add_handler(
         MessageHandler(
             broadcast_handler,
-            (filters.command(["broadcast", "b", "send", "s"], prefixes=prefixes) & 
+            (filters.command(["broadcast", "send"], prefixes=COMMAND_PREFIX) & 
              (filters.private | filters.group))
         ),
         group=2
@@ -341,7 +331,7 @@ def setup_admin_handler(app: Client) -> None:
     app.add_handler(
         MessageHandler(
             stats_handler,
-            (filters.command(["stats", "report", "status"], prefixes=prefixes) & 
+            (filters.command(["stats", "report", "status"], prefixes=COMMAND_PREFIX) & 
              (filters.private | filters.group))
         ),
         group=2
