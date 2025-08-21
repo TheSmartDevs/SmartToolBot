@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 import uuid
 import hashlib
 import time
@@ -399,3 +401,4 @@ def setup_donate_handler(app):
         RawUpdateHandler(raw_update_handler),
         group=3
     )
+
