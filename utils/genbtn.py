@@ -532,7 +532,7 @@ responses = {
     ),
     "about_me": (
         "**Name:** Smart Tool\n"
-        "**Version:** v26.0 (Beta) 🛠\n\n"
+        "**Version:** v28.0 (Beta) 🛠\n\n"
         "**Development Team:**\n"
         "- **Creator:** [Abir Arafat Chawdhury 👨‍💻](https://t.me/ISmartCoder)\n"
         "- **Contributor:** [Nyein Ko Ko Aung 🤝](https://t.me/nkka404)\n"
@@ -563,5 +563,6 @@ responses = {
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     )
 }
+
 
 
