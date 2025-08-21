@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 import traceback
 from datetime import datetime
 from typing import Optional, Union
@@ -270,3 +272,4 @@ try:
     cleanup_old_traceback_data()
 except:
     pass
+
