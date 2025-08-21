@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 import time
 from .logging_setup import LOGGER as logger
 
@@ -27,3 +29,4 @@ async def progress_bar(current, total, status_message, start_time, last_update_t
         await status_message.edit(text)
     except Exception as e:
         logger.error(f"Error updating progress: {e}")
+
