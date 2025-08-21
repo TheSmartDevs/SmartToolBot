@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 import logging
 import uuid
 import hashlib
@@ -132,7 +134,7 @@ async def generate_invoice(client: Client, chat_id: int, user_id: int, quantity:
             payload=invoice_payload,
             currency=currency,
             prices=prices,
-            start_parameter="Basic",
+            start_parameter="donate-stars-to-smarttool",
             reply_markup=reply_markup
         )
 
@@ -358,3 +360,4 @@ async def raw_update_handler(client: Client, update, users, chats):
                     parse_mode=ParseMode.MARKDOWN,
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📞 Contact Support", user_id=DEVELOPER_USER_ID)]])
                 )
+
