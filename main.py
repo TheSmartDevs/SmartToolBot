@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 from misc import handle_callback_query
 from pyrogram.enums import ParseMode 
 from utils import LOGGER, setup_nfy_handler
@@ -54,4 +56,5 @@ if __name__ == '__main__':
         finally:
             if not loop.is_closed():
                 loop.close()
+
 
