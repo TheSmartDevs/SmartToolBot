@@ -1,7 +1,5 @@
-# dc_locations.py
-# Copyright @ISmartDevs
-# Channel t.me/TheSmartDev
-
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 def get_dc_locations():
     """Returns a dictionary mapping Data Center IDs to their locations"""
     return {
@@ -20,4 +18,5 @@ def get_dc_locations():
         13: "DXB, Dubai, UAE, AE",
         14: "CDG, Paris, France, FR",
         15: "ICN, Seoul, South Korea, KR",
+
     }
