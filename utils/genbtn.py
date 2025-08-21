@@ -1,3 +1,5 @@
+#Copyright @ISmartCoder
+#Updates Channel t.me/TheSmartDev 
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import UPDATE_CHANNEL_URL
 from pyrogram.enums import ParseMode
@@ -537,7 +539,7 @@ responses = {
         "- **Helper:** [Rahat Hossain 👥](https://t.me/NeoFrd)\n"
         "**Technical Stacks:**\n"
         "- **Language:** Python 🐍\n"
-        "- **Framework:** Fully Written In Pyrogram And Telethon 📚\n"
+        "- **Libraries:** Pyrofork & Telethon 📚\n"
         "- **Database:** MongoDB Database 🗄\n"
         "- **Hosting:** Digital Ocean VPS 🌐\n\n"
         "**About:** The all-in-one Telegram toolkit for seamless education, AI, downloads, and more!\n\n",
@@ -561,4 +563,5 @@ responses = {
         {'parse_mode': ParseMode.HTML, 'disable_web_page_preview': True}
     )
 }
+
 
